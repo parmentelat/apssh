@@ -25,6 +25,13 @@ This tool aims at running commands remotely using ssh on a large number of targe
 
 #
     $ apssh -u root -f alive -i ~/.ssh/id_rsa -i ~/ple_debug.rsa -- grep VERSION_ID /etc/os-release
+    
+## max connections
+
+* By default there is no limit on the number of simultaneous connections, which is likely to be a problem as soon as you go for several tens of hosts, as you would then run into limitations on open connections in your OS or network. To run at most 50 connections at a time
+
+# 
+    $ apssh -w 50 -f tons-of-nodes -- true
 
 ## output formats
 

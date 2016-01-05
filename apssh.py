@@ -7,6 +7,7 @@ import asyncio
 
 from sshproxy import SshProxy
 from formatters import RawFormatter, ColonFormatter, SubdirFormatter
+from window import gather_window
 
 default_username = os.getlogin()
 default_private_key = os.path.expanduser("~/.ssh/id_rsa")
@@ -84,6 +85,8 @@ class Apssh:
         parser.add_argument("-t", "--target", dest='targets',
                             default=[], action='append', type=str,
                             help="comma-separated list of target hosts - additive")
+        parser.add_argument("-w", "--window", type=int, default=0,
+                            help="specify how many connections can run simultaneously; default is no limit")
         # ssh settings
         parser.add_argument("-u", "--username", default=default_username,
                             help="remote user name - default is {}".format(default_username))
@@ -114,7 +117,13 @@ class Apssh:
         tasks = [ proxy.connect_and_run(command) for proxy in proxies ]
 
         loop = asyncio.get_event_loop()
-        results = loop.run_until_complete(asyncio.gather(*tasks))
+        window = self.parsed_args.window
+        if not window:
+            if self.parsed_args.debug: print("No window limit")
+            results = loop.run_until_complete(asyncio.gather(*tasks))
+        else:
+            if self.parsed_args.debug: print("Window limit={}".format(window))
+            results = loop.run_until_complete(gather_window(*tasks, window=window))
 
         # xxx how can we return something more useful
         return 0

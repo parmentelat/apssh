@@ -6,28 +6,36 @@ import asyncssh
 debug = False
 #debug = True
 
-class MySession(asyncssh.SSHClientSession):
+class BufferedSession(asyncssh.SSHClientSession):
+    """
+    a session that records all outputs in its buffer internal attribute
+    """
     def __init__(self, *args, **kwds):
-        self.data = ""
+        self.buffer = ""
         super().__init__(*args, **kwds)
 
     def data_received(self, data, datatype):
         # not adding a \n since it's already in there
-        if debug: print('SSS DR: -> {} [[of type {}]]'.
+        if debug: print('BS DR: -> {} [[of type {}]]'.
                         format(data, datatype))
-        self.data += data
+        self.buffer += data
+        # xxx temporary - should split lines instead
+        if self.proxy.formatter:
+            self.proxy.formatter.line(self.proxy.hostname, data)
 
     def connection_made(self, conn):
-        if debug: print('SSS CM: {}'.format(conn))
+        if debug: print('BS CM: {}'.format(conn))
         pass
 
     def connection_lost(self, exc):
         if exc:
-            if debug: print('SSS CL: exc={}'.format(exc))
+            if debug: print('BS CL: exc={}'.format(exc))
         pass
 
     def eof_received(self):
-        if debug: print('SSS EOF')
+        if debug: print('BS EOF')
+        if self.proxy.formatter:
+            self.proxy.formatter.session_stop(self.proxy.hostname)
 
 
 class MyClient(asyncssh.SSHClient):
@@ -42,22 +50,24 @@ class MyClient(asyncssh.SSHClient):
 class SshProxy:
     """
     a proxy that can connect to a remote, and then can run
-    several commands
-    XXX - todo
-    xxx first draft mentions known_hosts=None, meaning this is not checked at all
-    xxx no way to specify private key yet
+    several commands - a.k.a. sessions
+    formatter - see formatters.py 
     """
-    def __init__(self, hostname, username=None, known_hosts=None, client_keys = None, port=22):
+    def __init__(self, hostname, username=None, known_hosts=None, client_keys=None,
+                 port=22, formatter=None):
         self.hostname = hostname
         self.username = username
         self.known_hosts = known_hosts
         self.client_keys = client_keys if client_keys is not None else []
         self.port = int(port)
+        self.formatter = formatter
         #
         self.conn, self.client = None, None
 
     def __repr__(self):
         text = "{}@{}".format(self.username, self.hostname) if self.username else "@"+self.hostname
+        if self.formatter:
+            text += " [{}]".format(type(self.formatter).__name__)
         return "<SshProxy {}>".format(text)
     
     async def connect(self):
@@ -68,6 +78,8 @@ class SshProxy:
                 MyClient, self.hostname, port=self.port, username=self.username,
                 known_hosts=self.known_hosts, client_keys=self.client_keys
             )
+            if self.formatter:
+                self.formatter.connection_start(self.hostname)
             if debug: print("connected to", self)
             return True
         except (OSError, asyncssh.Error) as e:
@@ -77,16 +89,26 @@ class SshProxy:
 
     async def run(self, command):
         """
-        Run a command and return output in value
-
+        Run a command, outputs it on the fly according to self.formatter
+        and returns the whole output
         """
-        #print(5*'-', "running on ", self.hostname, ':', command)
+        # this closure is a BufferedSession with a .proxy attribute that points back here
+        class session_closure(BufferedSession):
+            def __init__(session_self, *args, **kwds):
+                session_self.proxy = self
+                super().__init__(*args, **kwds)
+
         try:
             if debug: print("{}: sending command {}".format(self, command))
-            chan, session = await self.conn.create_session(MySession, command)
+            chan, session = await self.conn.create_session(session_closure, command)
+            # xxx need to make sure this is clean
+            formatter_command = command.replace('>', '..').replace('<', '..')
+            if self.formatter:
+                self.formatter.session_start(self.hostname,
+                                             formatter_command)
             await chan.wait_closed()
-            if debug: print("{}: command {} returned {}".format(self, command, session.data))
-            return session.data
+            if debug: print("{}: command {} returned {}".format(self, command, session.buffer))
+            return session.buffer
         except:
             import traceback
             traceback.print_exc()

@@ -6,7 +6,9 @@ class Formatter:
     how to handle the incoming line of a remote command
     
     Protocol is quite simple
-    * object is passed to SshProxy
+    * object is created manually, then passed to SshProxy
+    * method connection_failed(
+               hostname, username, port, exc) - display connection error
     * method connection_start(hostname)       - defaults to noop - can do whatever initialization
     * method connection_stop(hostname)        - defaults to noop - can do whatever housecleaning
     * method session_start(hostname, command) - defaults to noop - can do whatever initialization
@@ -21,6 +23,9 @@ class Formatter:
 
     def __init__(self):
         pass
+
+    def connection_failed(self, hostname, username, port, exc):
+        print("{}@{}:{} - Connection failed {}".format(hostname, username, port, exc))
 
     def connection_start(self, hostname):
         pass
@@ -47,14 +52,16 @@ class RawFormatter(Formatter):
     Display raw lines as they come
     mostly useless, but useful for development
     """
+    def __init__(self, debug):
+        self.debug = debug
     def connection_start(self, hostname):
-        print("RF: Connected to {}".format(hostname))
+        if self.debug: print("RF CA: Connected to {}".format(hostname))
     def connection_stop(self, hostname):
-        print("RF: Disconnected from {}".format(hostname))
+        if self.debug: print("RF CO: Disconnected from {}".format(hostname))
     def session_start(self, hostname, command):
-        print("RF: Session {} started on {}".format(command, hostname))
+        if self.debug: print("RF SA: Session on {} started for command {}".format(hostname, command))
     def session_stop(self, hostname):
-        print("RF: Session ended on {}".format(hostname))
+        if self.debug: print("RF SO: Session ended on {}".format(hostname))
     def line(self, hostname, line):
         print(line, end="")
 
@@ -63,7 +70,7 @@ class ColonFormatter(Formatter):
     Display each line prepended with the hostname and a ':'
     """
     def line(self, hostname, line):
-        print("{}:{}".format(hostname, line))
+        print("{}:{}".format(hostname, line), end="")
 
 class SubdirFormatter(Formatter):
 

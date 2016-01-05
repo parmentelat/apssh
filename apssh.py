@@ -39,7 +39,7 @@ class Apssh:
                             for token in line:
                                 targets += token.split(',')
                 except IOError as e:
-                    print("Could not open file {} - aborting".format(self.targets_files))
+                    print("Could not open targets file {} - aborting".format(targets_file))
         # add command line targets
         for target in self.parsed_args.targets:
             targets += target.split(',')
@@ -57,14 +57,15 @@ class Apssh:
         # create proxies
         self.proxies = [ SshProxy(hostname, username=username,
                                   client_keys=self.parsed_args.private_keys,
-                                  formatter = self.get_formatter())
+                                  formatter = self.get_formatter(),
+                                  debug = self.parsed_args.debug)
                          for username, hostname in  (user_host(target) for target in targets) ]
         return self.proxies
 
     def get_formatter(self):
         if self.formatter is None:
             if self.parsed_args.raw_output:
-                self.formatter = RawFormatter()
+                self.formatter = RawFormatter(debug = self.parsed_args.debug)
             elif self.parsed_args.date_time:
                 default_run_name = time.strftime("%Y-%m-%d@%H:%M")
                 self.formatter = SubdirFormatter(default_run_name)
@@ -99,6 +100,9 @@ class Apssh:
         parser.add_argument("-r", "--raw-output", default=None, action='store_true',
                             help="produce raw result")
         
+        # turn on debugging
+        parser.add_argument("-D", "--debug", action='store_true', default=False)
+
         # the commands to run
         parser.add_argument("commands", nargs='+', type=str,
                             help="command to run remotely")

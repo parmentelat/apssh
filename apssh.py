@@ -125,6 +125,9 @@ class Apssh:
             if self.parsed_args.debug: print("Window limit={}".format(window))
             results = loop.run_until_complete(gather_window(*tasks, window=window))
 
+        if self.parsed_args.debug:
+            for p, s in zip(proxies, results):
+                print("{} -> {}".format(p.hostname, s))
         # xxx how can we return something more useful
         return 0
 

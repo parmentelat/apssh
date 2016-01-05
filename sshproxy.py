@@ -10,6 +10,7 @@ class BufferedSession(asyncssh.SSHClientSession):
     def __init__(self, *args, **kwds):
         self._buffer = ""
         self._line = ""
+        self._status = None
         super().__init__(*args, **kwds)
 
     def flush_line(self):
@@ -22,7 +23,8 @@ class BufferedSession(asyncssh.SSHClientSession):
     def data_received(self, data, datatype):
         self._buffer += data
         # not adding a \n since it's already in there
-        if self.proxy.debug: print('BS DR: -> {} [[of type {}]]'.format(data, datatype))
+        if self.proxy.debug: print('BS {} DR: -> {} [[of type {}]]'.
+                                   format(self.proxy, data, datatype))
         chunks = [ x for x in data.split("\n") ]
         # len(chunks) cannot be 0
         assert len(chunks) > 0, "unexpected data received"
@@ -34,20 +36,23 @@ class BufferedSession(asyncssh.SSHClientSession):
             self._line = chunk
 
     def connection_made(self, conn):
-        if self.proxy.debug: print('BS CM: {}'.format(conn))
+        if self.proxy.debug: print('BS {} CM: {}'.format(self.proxy, conn))
         pass
 
     def connection_lost(self, exc):
-        if self.proxy.debug: print('BS CL: exc={}'.format(exc))
+        if self.proxy.debug: print('BS {} CL: exc={}'.format(self.proxy, exc))
         pass
 
     def eof_received(self):
-        if self.proxy.debug: print('BS EOF')
+        if self.proxy.debug: print('BS {} EOF'.format(self.proxy))
         if self._line:
             self.flush_line()
         if self.proxy.formatter:
             self.proxy.formatter.session_stop(self.proxy.hostname)
 
+    def exit_status_received(self, status):
+        if self.proxy.debug: print("BS {} ESR {}".format(self.proxy, status))
+        self._status = status
 
 class VerboseClient(asyncssh.SSHClient):
     def connection_made(self, conn):
@@ -133,7 +138,7 @@ class SshProxy:
                 self.formatter.session_start(self.hostname,
                                              formatter_command)
             await chan.wait_closed()
-            return session._buffer
+            return session._status
         except:
             import traceback
             traceback.print_exc()

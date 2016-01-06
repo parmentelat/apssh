@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# using the develop branch of asyncssh
+import sys
+sys.path.insert(0, "../asyncssh/")
+
 import os, os.path
 import time
 from argparse import ArgumentParser
@@ -10,6 +14,7 @@ from formatters import RawFormatter, ColonFormatter, SubdirFormatter
 from window import gather_window
 
 default_username = os.getlogin()
+default_timeout = 30
 default_private_key = os.path.expanduser("~/.ssh/id_rsa")
 
 class Apssh:
@@ -45,6 +50,10 @@ class Apssh:
         for target in self.parsed_args.targets:
             targets += target.split(',')
 
+        if not targets:
+            self.parser.print_help()
+            exit(1)
+
         # create tuples username, hostname
         # use the username if already present in the target,
         # otherwise the one specified with --username
@@ -59,7 +68,8 @@ class Apssh:
         self.proxies = [ SshProxy(hostname, username=username,
                                   client_keys=self.parsed_args.private_keys,
                                   formatter = self.get_formatter(),
-                                  debug = self.parsed_args.debug)
+                                  debug = self.parsed_args.debug,
+                                  timeout = self.parsed_args.timeout)
                          for username, hostname in  (user_host(target) for target in targets) ]
         return self.proxies
 
@@ -77,7 +87,7 @@ class Apssh:
         return self.formatter
     
     def main(self):
-        parser = ArgumentParser()
+        self.parser = parser = ArgumentParser()
         # scope - on what hosts
         parser.add_argument("-f", "--targets-file", dest='targets_files',
                             default=[], action='append', type=str,
@@ -85,8 +95,12 @@ class Apssh:
         parser.add_argument("-t", "--target", dest='targets',
                             default=[], action='append', type=str,
                             help="comma-separated list of target hosts - additive")
+        # major
         parser.add_argument("-w", "--window", type=int, default=0,
                             help="specify how many connections can run simultaneously; default is no limit")
+        parser.add_argument("-c", "--connect-timeout", dest='timeout',
+                            type=float, default=default_timeout,
+                            help="specify connection timeout, default is {}s".format(default_timeout))
         # ssh settings
         parser.add_argument("-u", "--username", default=default_username,
                             help="remote user name - default is {}".format(default_username))

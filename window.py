@@ -1,5 +1,9 @@
 import asyncio
 
+# xxx todo : connect this debug flag to -D as passed to main
+debug = False
+#debug = True
+
 async def gather_window(*futures, window=1, loop=None, **kwds):
     """
     Performs like asyncio.gather but with a maximum of 
@@ -13,6 +17,13 @@ async def gather_window(*futures, window=1, loop=None, **kwds):
 
     # create the queue that will throttle execution to <window> tasks
     queue = asyncio.Queue(maxsize=window, loop=loop)
+
+    async def monitor_queue():
+        await asyncio.sleep(3)
+        while not queue.empty():
+            print("queue has {}/{} elements busy"
+                  .format(queue.qsize(), window))
+            await asyncio.sleep(3.)
 
     # a decorator-like approach for this aspect
     def wrap(future):
@@ -31,5 +42,7 @@ async def gather_window(*futures, window=1, loop=None, **kwds):
 
     # here we do the call           vv     on the wrapped coroutine
     wrapped_futures = [ wrap(future)() for future in futures ]
+    if debug:
+        wrapped_futures.append(monitor_queue())
     overall = await asyncio.gather(*wrapped_futures, loop=loop, **kwds)
     return overall

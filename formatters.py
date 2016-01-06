@@ -1,37 +1,40 @@
 import os, os.path
+import asyncio
+
+# asyncio.TimeoutError() has a meaningful repr() but an empty str()
+def ensure_visible(exc):
+    if isinstance(exc, asyncio.TimeoutError):
+        exc = repr(exc)
+    return exc
+
 
 class Formatter:
     """
     This class is an abstract class that allows to define
     how to handle the incoming line of a remote command
     
-    Protocol is quite simple
-    * object is created manually, then passed to SshProxy
-    * method connection_failed(
-               hostname, username, port, exc) - display connection error
-    * method connection_start(hostname)       - defaults to noop - can do whatever initialization
-    * method connection_stop(hostname)        - defaults to noop - can do whatever housecleaning
-    * method session_start(hostname, command) - defaults to noop - can do whatever initialization
-    * method session_stop(hostname)           - defaults to noop - can do whatever housecleaning
-    * method line(hostname, line)             - is called each time a command issues a line
+    This object is expected to be created manually outside of SshProxy logic,
+    and then passed to SshProxy
 
     Examples:
     . RawFormatter:    just ouputs line on stdout
     . ColonFormatter:  outputs hostname + ':' + line - a la grep
-    . SubdirFormatter: creates file run/hostname with all outputs from that host
+    . SubdirFormatter: stores in <subdir>/<hostname> all outputs from that host
     """
 
-    def __init__(self):
-        pass
-
+    # this seems like a reasonable default
     def connection_failed(self, hostname, username, port, exc):
+        exc = ensure_visible(exc)
         print("{}@{}:{} - Connection failed {}".format(hostname, username, port, exc))
 
+    def session_failed(self, hostname, command, exc):
+        exc = ensure_visible(exc)
+        print("{} - Session failed {}".format(hostname, e))
+
+    # events
     def connection_start(self, hostname):
         pass
 
-    # WARNING: as of the first rough implementation
-    # this is never called
     def connection_stop(self, hostname):
         pass    
 
@@ -41,6 +44,7 @@ class Formatter:
     def session_stop(self, hostname):
         pass    
     
+    # the bulk of the matter
     def line(self, hostname, line):
         print("WARNING: class Formatter is intended as a pure abstract class")
         print("Received line {} from hostname {}".format(line, hostname))

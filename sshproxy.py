@@ -2,6 +2,7 @@
 
 import asyncio
 import asyncssh
+import socket
 
 class BufferedSession(asyncssh.SSHClientSession):
     """
@@ -78,16 +79,17 @@ class SshProxy:
     formatter - see formatters.py 
     """
     def __init__(self, hostname, username=None, known_hosts=None, client_keys=None,
-                 port=22, formatter=None, debug=False):
+                 port=22, formatter=None, debug=False, timeout=30):
         self.hostname = hostname
         self.username = username
         self.known_hosts = known_hosts
         self.client_keys = client_keys if client_keys is not None else []
         self.port = int(port)
         self.formatter = formatter
+        self.debug = debug
+        self.timeout = timeout
         #
         self.conn, self.client = None, None
-        self.debug = debug
 
     def __repr__(self):
         text = "{}@{}".format(self.username, self.hostname) if self.username else "@"+self.hostname
@@ -103,17 +105,24 @@ class SshProxy:
                     client_self.proxy = self
                     super().__init__(*args, **kwds)
 
-            # see http://asyncssh.readthedocs.org/en/latest/api.html#specifyingprivatekeys
-            self.conn, self.client = await asyncssh.create_connection(
-                client_closure, self.hostname, port=self.port, username=self.username,
-                known_hosts=self.known_hosts, client_keys=self.client_keys
-            )
+            self.conn, self.client = \
+                await asyncio.wait_for( 
+                    asyncssh.create_connection(
+                        client_closure, self.hostname, port=self.port, username=self.username,
+                        known_hosts=self.known_hosts, client_keys=self.client_keys
+                    ),
+                    timeout = self.timeout)
             if self.formatter:
                 self.formatter.connection_start(self.hostname)
             if self.debug: print("{} connected".format(self))
             return True
-        except (OSError, asyncssh.Error) as e:
+        except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
             self.formatter.connection_failed(self.hostname, self.username, self.port, e)
+            self.conn, self.client = None, None
+            return False
+        except Exception as e:
+            print("Unexpected exception in create_connection {}".format(e))
+            self.formatter.connection_failed(self.hostname, self.username, self.port, ("UNHANDLED", e))
             self.conn, self.client = None, None
             return False
 
@@ -131,7 +140,10 @@ class SshProxy:
 
         try:
             if self.debug: print("{}: sending command {}".format(self, command))
-            chan, session = await self.conn.create_session(session_closure, command)
+            chan, session = \
+                await asyncio.wait_for(
+                    self.conn.create_session(session_closure, command),
+                    timeout=self.timeout)
             # xxx need to make sure this is clean
             formatter_command = command.replace('>', '..').replace('<', '..')
             if self.formatter:
@@ -139,19 +151,23 @@ class SshProxy:
                                              formatter_command)
             await chan.wait_closed()
             return session._status
-        except:
-            import traceback
-            traceback.print_exc()
+        except asyncio.TimeoutError as e:
+            self.formatter.session_failed(self.hostname, command, ("UNHANDLED", e))
+        # also seen here : asyncssh.misc.ChannelOpenError
+        except Exception as e:
+            self.formatter.session_failed(self.hostname, command, ("UNHANDLED", e))
             return
 
     async def close(self):
         if self.conn is not None:
             self.conn.close()
+            await self.conn.wait_closed()
             self.conn, self.client = None, None
 
     async def connect_and_run(self, command):
         connected = await self.connect()
         if connected:
+            # xxx protect here with timeout / wait_for
             data = await self.run(command)
             await self.close()
             return data

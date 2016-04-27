@@ -67,3 +67,13 @@ This tool aims at running commands remotely using ssh on a large number of targe
     2016-01-05@14:58/host3.planetlab.informatik.tu-darmstadt.de:VERSION_ID=23
     2016-01-05@14:58/planetlab1.xeno.cl.cam.ac.uk:VERSION_ID=23
     2016-01-05@14:58/planetlab2.xeno.cl.cam.ac.uk:VERSION_ID=23
+    
+# TODO
+
+* investigate `socket.gaierror: [Errno 8] nodename nor servname provided, or not known`
+* some kind of tests
+* improve selection (merge -t and -f)
+* add matching on hostnames
+* some sort of stats : OK (return 0) KO (return something else) FAIL (cannot tell)
+  * could be nice to store in files that can be used again by following calls
+  

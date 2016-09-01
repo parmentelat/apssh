@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
 # using the develop branch of asyncssh
-import sys
-sys.path.insert(0, "../asyncssh/")
+#import sys
+#sys.path.insert(0, "../../asyncssh/")
 
 import os, os.path
 import time
 from argparse import ArgumentParser
 import asyncio
 
-from sshproxy import SshProxy
-from formatters import RawFormatter, ColonFormatter, SubdirFormatter
-from window import gather_window
+from apssh.sshproxy import SshProxy
+from apssh.formatters import RawFormatter, ColonFormatter, SubdirFormatter
+from apssh.window import gather_window
 
 default_username = os.getlogin()
 default_timeout = 30

@@ -4,7 +4,7 @@ import asyncio
 import asyncssh
 import socket
 
-from util import print_stderr
+from apssh.util import print_stderr
 
 class BufferedSession(asyncssh.SSHClientSession):
     """

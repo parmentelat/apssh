@@ -1,3 +1,7 @@
+# 0.0.4 - 2016 Sep 1
+
+* MANIFEST.in was missing
+
 # 0.0.3 - 2016 Sep 1
 
 * COPYING was missing

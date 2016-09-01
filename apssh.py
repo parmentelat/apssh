@@ -29,30 +29,66 @@ class Apssh:
     def __repr__(self):
         return "".join([str(p) for p in self.proxies])
 
-    def create_proxies(self):
-        # gather targets as mentioned in files and on the command line
-        # always assume they can be comma-separated
-        targets = []
-        # read input file(s)
-        if self.parsed_args.targets_files:
-            for targets_file in self.parsed_args.targets_files:
-                try:
-                    with open(targets_file) as input:
-                        for line in input:
-                            line = line.strip()
-                            if line.startswith('#'): continue
-                            line = line.split()
-                            for token in line:
-                                targets += token.split(',')
-                except IOError as e:
-                    print("Could not open targets file {} - aborting".format(targets_file))
-        # add command line targets
-        for target in self.parsed_args.targets:
-            targets += target.split(',')
+    def read_targets_file(self, filename, debug=False):
+        """
+        Returns a tuple success, names
+        If the provided filename exists and could be parsed, returned object will be
+           True, [ name1, ...]
+        Otherwise, return code is
+           False, None
+        """
+        names = []
+        try:
+            with open(filename) as input:
+                for line in input:
+                    line = line.strip()
+                    if line.startswith('#'):
+                        continue
+                    line = line.split()
+                    for token in line:
+                        names += token.split(',')
+            return True, names
+        except FileNotFoundError as e:
+            return False, None
+        except Exception as e:
+            print("Unexpected exception when parsing file {}, {}".format(filename, e),
+                  file=sys.stderr)
+            if debug:
+                import traceback
+                traceback.print_exc()
+            return False, None
 
-        if not targets:
+    def create_proxies(self):
+        # start with parsing excludes if any
+        excludes = set()
+        for exclude in self.parsed_args.excludes:
+            parsed, names = self.read_targets_file(exclude)
+            if parsed:
+                for name in names:
+                    excludes.add(name)
+            else:
+                excludes.add(exclude)
+        if self.parsed_args.debug:
+            print("Excludes = {}".format(excludes))
+
+        # gather targets as mentioned in -t -x args
+        hostnames = []
+        # read input file(s)
+        for target in self.parsed_args.targets:
+            parsed, names = self.read_targets_file(target)
+            if parsed:
+                for name in names:
+                    if name not in excludes:
+                        hostnames.append(name)
+            else:
+                if target not in excludes:
+                    hostnames.append(target)
+        if not hostnames:
             self.parser.print_help()
             exit(1)
+
+        if self.parsed_args.debug:
+            print("Selected {} targets".format(len(hostnames)))
 
         # create tuples username, hostname
         # use the username if already present in the target,
@@ -70,7 +106,7 @@ class Apssh:
                                   formatter = self.get_formatter(),
                                   debug = self.parsed_args.debug,
                                   timeout = self.parsed_args.timeout)
-                         for username, hostname in  (user_host(target) for target in targets) ]
+                         for username, hostname in  (user_host(target) for target in hostnames) ]
         return self.proxies
 
     def get_formatter(self):
@@ -89,12 +125,10 @@ class Apssh:
     def main(self):
         self.parser = parser = ArgumentParser()
         # scope - on what hosts
-        parser.add_argument("-f", "--targets-file", dest='targets_files',
-                            default=[], action='append', type=str,
-                            help="Specify files that contain a list of target hosts - additive")
-        parser.add_argument("-t", "--target", dest='targets',
-                            default=[], action='append', type=str,
-                            help="comma-separated list of target hosts - additive")
+        parser.add_argument("-t", "--target", dest='targets', action='append', default=[],
+                            help="comma-separated list of targets (hostnames or filenames) - additive")
+        parser.add_argument("-x", "--exclude", dest='excludes', action='append', default=[],
+                            help="comma-separated list of excludes (hostnames or filenames) - additive")
         # major
         parser.add_argument("-w", "--window", type=int, default=0,
                             help="specify how many connections can run simultaneously; default is no limit")
@@ -116,13 +150,20 @@ class Apssh:
                             help="use date-based directory to store results")
         parser.add_argument("-r", "--raw-output", default=None, action='store_true',
                             help="produce raw result")
+        parser.add_argument("-s", "--stamp", default=False, action='store_true',
+                            help="""
+                            available with the -d and -o options only
+                            if specified, then for all nodes there will be a stamp created
+                            in the output subdir, named either 0ok/<hostname> for successful nodes,
+                            or 1failed/<hostname> for the other ones.
+                            The stamp will contain a single line with the returned code, or 'None'
+                            if the node was not reachable at all""")
         
         # turn on debugging
         parser.add_argument("-D", "--debug", action='store_true', default=False)
 
         # the commands to run
-        parser.add_argument("commands", nargs='+', type=str,
-                            help="command to run remotely")
+        parser.add_argument("commands", nargs='+', type=str, help="command to run remotely")
 
         args = self.parsed_args = parser.parse_args()
         proxies = self.create_proxies()
@@ -133,17 +174,48 @@ class Apssh:
         loop = asyncio.get_event_loop()
         window = self.parsed_args.window
         if not window:
-            if self.parsed_args.debug: print("No window limit")
+            if self.parsed_args.debug:
+                print("No window limit")
             results = loop.run_until_complete(asyncio.gather(*tasks))
         else:
-            if self.parsed_args.debug: print("Window limit={}".format(window))
-            results = loop.run_until_complete(gather_window(*tasks, window=window))
+            if self.parsed_args.debug:
+                print("Window limit={}".format(window))
+            results = loop.run_until_complete(gather_window(*tasks, window=window,
+                                                            debug=args.debug))
 
+        ### print on stdout the name of the output directory
+        # useful mostly with -d : 
+        subdir = self.get_formatter().run_name \
+                 if isinstance(self.get_formatter(), SubdirFormatter) \
+                    else None
+        if subdir:
+            print(subdir)
+        ### details on the individual retcods
+        # raw
         if self.parsed_args.debug:
             for p, s in zip(proxies, results):
-                print("{} -> {}".format(p.hostname, s))
-        # xxx how can we return something more useful
-        return 0
+                print("PROXY {} -> {}".format(p.hostname, s))
+        # stamps
+        names = { 0 : '0ok', None : '1failed'}
+        if subdir and self.parsed_args.stamp:
+            # do we need to create the subdirs
+            need_ok = [s for s in results if s==0]
+            if need_ok:
+                os.makedirs("{}/{}".format(subdir, names[0]), exist_ok=True)
+            need_fail = [s for s in results if s!=0]
+            if need_fail:
+                os.makedirs("{}/{}".format(subdir, names[None]), exist_ok=True)
+                                          
+            for p, s in zip(proxies, results):
+                prefix = names[0] if s == 0 else names[None]
+                with open(os.path.join(subdir,"{}/{}".format(prefix, p.hostname)), "w") as stamp:
+                    stamp.write("{}\n".format(s))
+
+        # return 0 only if all hosts have returned 0
+        # otherwise, return 1
+        failures = [ r for r in results if r != 0 ]
+        overall = 0 if len(failures) == 0 else 1
+        return overall
 
 if __name__ == '__main__':
     exit(Apssh().main())

@@ -1,10 +1,6 @@
 import asyncio
 
-# xxx todo : connect this debug flag to -D as passed to main
-debug = False
-#debug = True
-
-async def gather_window(*futures, window=1, loop=None, **kwds):
+async def gather_window(*futures, window=1, loop=None, debug=False, **kwds):
     """
     Performs like asyncio.gather but with a maximum of 
     <window> tasks active at any given time

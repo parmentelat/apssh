@@ -4,6 +4,8 @@ import asyncio
 import asyncssh
 import socket
 
+from util import print_stderr
+
 class BufferedSession(asyncssh.SSHClientSession):
     """
     a session that records all outputs in its buffer internal attribute
@@ -24,8 +26,9 @@ class BufferedSession(asyncssh.SSHClientSession):
     def data_received(self, data, datatype):
         self._buffer += data
         # not adding a \n since it's already in there
-        if self.proxy.debug: print('BS {} DR: -> {} [[of type {}]]'.
-                                   format(self.proxy, data, datatype))
+        if self.proxy.debug:
+            print_stderr('BS {} DR: -> {} [[of type {}]]'.
+                         format(self.proxy, data, datatype))
         chunks = [ x for x in data.split("\n") ]
         # len(chunks) cannot be 0
         assert len(chunks) > 0, "unexpected data received"
@@ -37,28 +40,33 @@ class BufferedSession(asyncssh.SSHClientSession):
             self._line = chunk
 
     def connection_made(self, conn):
-        if self.proxy.debug: print('BS {} CM: {}'.format(self.proxy, conn))
+        if self.proxy.debug:
+            print_stderr('BS {} CM: {}'.format(self.proxy, conn))
         pass
 
     def connection_lost(self, exc):
-        if self.proxy.debug: print('BS {} CL: exc={}'.format(self.proxy, exc))
+        if self.proxy.debug:
+            print_stderr('BS {} CL: exc={}'.format(self.proxy, exc))
         pass
 
     def eof_received(self):
-        if self.proxy.debug: print('BS {} EOF'.format(self.proxy))
+        if self.proxy.debug:
+            print_stderr('BS {} EOF'.format(self.proxy))
         if self._line:
             self.flush_line()
         if self.proxy.formatter:
             self.proxy.formatter.session_stop(self.proxy.hostname)
 
     def exit_status_received(self, status):
-        if self.proxy.debug: print("BS {} ESR {}".format(self.proxy, status))
+        if self.proxy.debug:
+            print_stderr("BS {} ESR {}".format(self.proxy, status))
         self._status = status
 
 class VerboseClient(asyncssh.SSHClient):
     def connection_made(self, conn):
         self.ip = conn.get_extra_info('peername')[0]
-        if self.proxy.debug: print('VC Connection made to {}'.format(self.ip))
+        if self.proxy.debug:
+            print_stderr('VC Connection made to {}'.format(self.ip))
 
     # xxx we don't get this; at least, not always
     # the issue seems to be that we use close() on the asyncssh connection
@@ -66,10 +74,12 @@ class VerboseClient(asyncssh.SSHClient):
     # for what other future I should await instead/afterwards
     # this actually triggers though occasionnally esp. with several targets
     def connection_lost(self, exc):
-        if self.proxy.debug: print('VC Connection lost to {} (exc={})'.format(self.ip, exc))
+        if self.proxy.debug:
+            print_stderr('VC Connection lost to {} (exc={})'.format(self.ip, exc))
 
     def auth_completed(self):
-        if self.proxy.debug: print('VC Authentication successful on {}.'.format(self.ip))
+        if self.proxy.debug:
+            print_stderr('VC Authentication successful on {}.'.format(self.ip))
 
 ####################
 class SshProxy:
@@ -99,7 +109,8 @@ class SshProxy:
     
     async def connect(self):
         try:
-            if self.debug: print("{} connecting".format(self))
+            if self.debug:
+                print_stderr("{} CONNECTING".format(self))
             class client_closure(VerboseClient):
                 def __init__(client_self, *args, **kwds):
                     client_self.proxy = self
@@ -114,14 +125,15 @@ class SshProxy:
                     timeout = self.timeout)
             if self.formatter:
                 self.formatter.connection_start(self.hostname)
-            if self.debug: print("{} connected".format(self))
+            if self.debug:
+                print_stderr("{} CONNECTED".format(self))
             return True
         except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
             self.formatter.connection_failed(self.hostname, self.username, self.port, e)
             self.conn, self.client = None, None
             return False
         except Exception as e:
-            print("Unexpected exception in create_connection {}".format(e))
+            print_stderr("Unexpected exception in create_connection {}".format(e))
             self.formatter.connection_failed(self.hostname, self.username, self.port, ("UNHANDLED", e))
             self.conn, self.client = None, None
             return False
@@ -139,7 +151,8 @@ class SshProxy:
                 super().__init__(*args, **kwds)
 
         try:
-            if self.debug: print("{}: sending command {}".format(self, command))
+            if self.debug:
+                print_stderr("{}: sending command {}".format(self, command))
             chan, session = \
                 await asyncio.wait_for(
                     self.conn.create_session(session_closure, command),

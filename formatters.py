@@ -1,5 +1,8 @@
+import sys
 import os, os.path
 import asyncio
+
+from util import print_stderr
 
 # asyncio.TimeoutError() has a meaningful repr() but an empty str()
 def ensure_visible(exc):
@@ -25,11 +28,11 @@ class Formatter:
     # this seems like a reasonable default
     def connection_failed(self, hostname, username, port, exc):
         exc = ensure_visible(exc)
-        print("{}@{}:{} - Connection failed {}".format(hostname, username, port, exc))
+        print_stderr("{}@{}[{}]:Connection failed:{}".format(username, hostname, port, exc))
 
     def session_failed(self, hostname, command, exc):
         exc = ensure_visible(exc)
-        print("{} - Session failed {}".format(hostname, e))
+        print_stderr("{} - Session failed {}".format(hostname, exc))
 
     # events
     def connection_start(self, hostname):
@@ -46,9 +49,9 @@ class Formatter:
     
     # the bulk of the matter
     def line(self, hostname, line):
-        print("WARNING: class Formatter is intended as a pure abstract class")
-        print("Received line {} from hostname {}".format(line, hostname))
-        print("WARNING: class Formatter is intended as a pure abstract class")
+        print_stderr("WARNING: class Formatter is intended as a pure abstract class")
+        print_stderr("Received line {} from hostname {}".format(line, hostname))
+        print_stderr("WARNING: class Formatter is intended as a pure abstract class")
 
         
 class RawFormatter(Formatter):
@@ -59,22 +62,22 @@ class RawFormatter(Formatter):
     def __init__(self, debug):
         self.debug = debug
     def connection_start(self, hostname):
-        if self.debug: print("RF CA: Connected to {}".format(hostname))
+        if self.debug: print_stderr("RF CA: Connected to {}".format(hostname))
     def connection_stop(self, hostname):
-        if self.debug: print("RF CO: Disconnected from {}".format(hostname))
+        if self.debug: print_stderr("RF CO: Disconnected from {}".format(hostname))
     def session_start(self, hostname, command):
-        if self.debug: print("RF SA: Session on {} started for command {}".format(hostname, command))
+        if self.debug: print_stderr("RF SA: Session on {} started for command {}".format(hostname, command))
     def session_stop(self, hostname):
-        if self.debug: print("RF SO: Session ended on {}".format(hostname))
+        if self.debug: print_stderr("RF SO: Session ended on {}".format(hostname))
     def line(self, hostname, line):
-        print(line, end="")
+        print_stderr(line, end="")
 
 class ColonFormatter(Formatter):
     """
     Display each line prepended with the hostname and a ':'
     """
     def line(self, hostname, line):
-        print("{}:{}".format(hostname, line), end="")
+        print_stderr("{}:{}".format(hostname, line), end="")
 
 class SubdirFormatter(Formatter):
 
@@ -99,10 +102,10 @@ class SubdirFormatter(Formatter):
             with open(self.out(hostname), 'w') as out:
                 pass
         except OSError as e:
-            print("File permission problem {}".format(e))
+            print_stderr("File permission problem {}".format(e))
             exit(1)
         except Exception as e:
-            print("Unexpected error {}".format(e))
+            print_stderr("Unexpected error {}".format(e))
             exit(1)
 
     def line(self, hostname, line):

@@ -7,7 +7,7 @@ a simple tool for testing gather_window
 import asyncio
 from argparse import ArgumentParser
 
-from apssh.window import gather_window
+from .window import gather_window
 
 async def tick(id, n):
     for i in range(n):

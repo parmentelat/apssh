@@ -2,7 +2,7 @@ import sys
 import os, os.path
 import asyncio
 
-from apssh.util import print_stderr
+from .util import print_stderr
 
 # asyncio.TimeoutError() has a meaningful repr() but an empty str()
 def ensure_visible(exc):

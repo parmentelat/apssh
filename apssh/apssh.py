@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-# using the develop branch of asyncssh
+
+# for using the develop branch of asyncssh
 #import sys
 #sys.path.insert(0, "../../asyncssh/")
 
@@ -9,9 +10,10 @@ import time
 from argparse import ArgumentParser
 import asyncio
 
-from apssh.sshproxy import SshProxy
-from apssh.formatters import RawFormatter, ColonFormatter, SubdirFormatter
-from apssh.window import gather_window
+from .sshproxy import SshProxy
+from .formatters import RawFormatter, ColonFormatter, SubdirFormatter
+from .window import gather_window
+from .util import print_stderr
 
 default_username = os.getlogin()
 default_timeout = 30
@@ -51,8 +53,7 @@ class Apssh:
         except FileNotFoundError as e:
             return False, None
         except Exception as e:
-            print("Unexpected exception when parsing file {}, {}".format(filename, e),
-                  file=sys.stderr)
+            print_stderr("Unexpected exception when parsing file {}, {}".format(filename, e))
             if debug:
                 import traceback
                 traceback.print_exc()
@@ -217,5 +218,3 @@ class Apssh:
         overall = 0 if len(failures) == 0 else 1
         return overall
 
-if __name__ == '__main__':
-    exit(Apssh().main())

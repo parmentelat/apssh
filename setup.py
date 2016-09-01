@@ -32,7 +32,7 @@ required_modules = [
 setup(
     name             = "apssh",
     version          = apssh_version,
-    description      = "Testbed Management Framework for R2Lab",
+    description      = "Asynchroneous Parallel ssh",
     long_description = long_description,
     license          = license,
     author           = "Thierry Parmentelat",

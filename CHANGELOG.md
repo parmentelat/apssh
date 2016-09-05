@@ -1,3 +1,7 @@
+# 0.0.5 - 2016 Sep 5
+
+* added support for --target "fit01 fit02" for smoother integration with $NODES on faraday
+
 # 0.0.4 - 2016 Sep 1
 
 * MANIFEST.in was missing

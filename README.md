@@ -1,6 +1,6 @@
 # Purpose
 
-This tool aims at running commands remotely using ssh on a large number of target nodes at once. It it thus comparable to [parallel-ssh](https://code.google.com/p/parallel-ssh/) except that it is written on top of `asyncio` and `asyncssh`.
+`apssh` is a tool that aims at running commands remotely using `ssh` on a large number of target nodes at once. It it thus comparable to [parallel-ssh](https://code.google.com/p/parallel-ssh/) except that it is written on top of `asyncio` and `asyncssh`.
 
 # Features
 

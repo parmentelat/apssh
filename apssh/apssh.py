@@ -48,7 +48,7 @@ class Apssh:
                         continue
                     line = line.split()
                     for token in line:
-                        names += token.split(',')
+                        names += token.split()
             return True, names
         except FileNotFoundError as e:
             return False, None
@@ -68,7 +68,7 @@ class Apssh:
                 for name in names:
                     excludes.add(name)
             else:
-                cli_excludes = exclude.split(' ')
+                cli_excludes = exclude.split()
                 excludes.add(cli_excludes)
         if self.parsed_args.debug:
             print("Excludes = {}".format(excludes))
@@ -83,7 +83,7 @@ class Apssh:
                     if name not in excludes:
                         hostnames.append(name)
             else:
-                cli_targets = target.split(' ')
+                cli_targets = target.split()
                 for target in cli_targets:
                     if target not in excludes:
                         hostnames.append(target)

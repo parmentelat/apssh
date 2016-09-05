@@ -68,7 +68,8 @@ class Apssh:
                 for name in names:
                     excludes.add(name)
             else:
-                excludes.add(exclude)
+                cli_excludes = exclude.split(' ')
+                excludes.add(cli_excludes)
         if self.parsed_args.debug:
             print("Excludes = {}".format(excludes))
 
@@ -82,8 +83,10 @@ class Apssh:
                     if name not in excludes:
                         hostnames.append(name)
             else:
-                if target not in excludes:
-                    hostnames.append(target)
+                cli_targets = target.split(' ')
+                for target in cli_targets:
+                    if target not in excludes:
+                        hostnames.append(target)
         if not hostnames:
             self.parser.print_help()
             exit(1)

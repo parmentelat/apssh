@@ -273,11 +273,16 @@ class SshProxy:
     async def mkdir(self, remotedir):
         if not await self.sftp_connect_lazy():
             return False
-        exists = self.sftp_client.isdir(remotedir)
+        exists = await self.sftp_client.isdir(remotedir)
         if exists:
+            if self.debug:
+                print_stderr("{} mkdir: {} already exists".format(self, remotedir))
             return True
+            exit(0)
         try:
-            retcod = self.sftp_client.mkdir(remotedir)
+            if self.debug:
+                print_stderr("{} mkdir: actual creation of {}".format(self, remotedir))
+            retcod = await self.sftp_client.mkdir(remotedir)
             return True
         except asyncssh.sftp.SFTPError as e:
             if self.debug:

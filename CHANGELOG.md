@@ -1,3 +1,10 @@
+# 0.0.6 - 2016 Sep 6
+
+* added support for --script mylocalscript.sh arg1 arg2
+* this will take care of copying over a local script in ~/.apssh
+* before executing it remotely
+* it is thus easier to handle composite shell commands, or any other python-like scripts
+
 # 0.0.5 - 2016 Sep 5
 
 * added support for --target "fit01 fit02" for smoother integration with $NODES on faraday

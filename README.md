@@ -4,6 +4,37 @@
 
 # Features
 
+# usual mode
+
+* The usual way to run a command that is already present on the remote systems, is to do e.g. this (we'll see the `-t` option right away)
+
+```
+apssh -t host1 -t host2 hostname
+```
+
+# script mode : using a local script that gets copied over
+
+* Now if you need to run a more convoluted command, you can of course quote meta characters as `;` and the like, and struggle you way using the same technique.
+*  There is however an other way to achieve this, by writing a local file - say a shell script, but that can be any file that can run on the target nodes - in association with the `-s` a.k.a. `--script` option, like e.g.
+
+```
+apssh -t host1 -t host2 --script mymacros.sh one two
+```
+
+This will have the effect to perform the following on each target node :
+
+* create if needed a directory named `~/.apssh` 
+* copy the local file `mymacros.sh` into that remote working dir
+* run `./mymacros.sh one two` remotely in this directory
+
+Note that in this mode:
+
+* the first argument of the commands part (here `mymacros.sh`) must denote a file that exists locally
+* it does not have to sit in the local directory but will be installed right under `~/.apssh`
+* the local file must be executable as `apssh` will preserve its permissions
+* the actual command executed remotely is going to be `cd .apssh; ./mymacros.sh`
+
+
 ## Scope selection
 
 ### Adding names : the `-t` or `--target` option
@@ -95,7 +126,7 @@ $ $ grep . 2016-09-01\@15\:05/*
 2016-09-01@15:05/planetlab1.virtues.fi:Fedora release 14 (Laughlin) 
 ```
 
-* When an output subdir is selected, the `-s` or `--stamp` option can be used to request details on the retcod from individual nodes. The way this is exposed in is the filesystem under *<subdir>* as follows
+* When an output subdir is selected, the `-m` or `--mark` option can be used to request details on the retcod from individual nodes. The way this is exposed in is the filesystem under *<subdir>* as follows
 
   * *subdir*/`0ok`/*hostname* will contain 0 for all nodes that could run the command successfully
   * *subdir*/`1failed`/*hostname* will contain the actual retcod, for all nodes that were reached but could not successfully run the command, or `None` for the ones that were not reached at all.
@@ -104,7 +135,7 @@ In the example below, we try to talk to two nodes, one of which is not reachable
 
 
 ```
-$ subdir=$(./apssh.py --stamp -d -u root -t planetlab2.tlm.unavarra.es -t uoepl2.essex.ac.uk cat /etc/fedora-release)
+$ subdir=$(./apssh.py --mark -d -u root -t planetlab2.tlm.unavarra.es -t uoepl2.essex.ac.uk cat /etc/fedora-release)
 root@uoepl2.essex.ac.uk[22]:Connection failed:[Errno 8] nodename nor servname provided, or not known
 
 $ echo $subdir
@@ -127,5 +158,7 @@ Fedora release 18 (Spherical Cow)
     
 # TODO
 
+* ONGOING: specify a local script that gets copied over and executed
+* extend -x so that one could pass a directory like e.g. `2016-09-06@16:49/1failed/` since these typically contain filenames that are likely to be excluded in further runs
 * some kind of tests
 * add matching on hostnames

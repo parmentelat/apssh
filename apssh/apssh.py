@@ -127,9 +127,9 @@ class Apssh:
         self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
         parser.add_argument("-t", "--target", dest='targets', action='append', default=[],
-                            help="comma-separated list of targets (hostnames or filenames) - additive")
+                            help="space-separated list of targets (hostnames or filenames) - additive")
         parser.add_argument("-x", "--exclude", dest='excludes', action='append', default=[],
-                            help="comma-separated list of excludes (hostnames or filenames) - additive")
+                            help="space-separated list of excludes (hostnames or filenames) - additive")
         # global settings
         parser.add_argument("-w", "--window", type=int, default=0,
                             help="specify how many connections can run simultaneously; default is no limit")
@@ -151,19 +151,21 @@ class Apssh:
                             help="use date-based directory to store results")
         parser.add_argument("-r", "--raw-output", default=None, action='store_true',
                             help="produce raw result")
-        parser.add_argument("-s", "--stamp", default=False, action='store_true',
+        parser.add_argument("-m", "--mark", default=False, action='store_true',
                             help="""
                             available with the -d and -o options only.
 
-                            When specified, then for all nodes there will be a stamp created
+                            When specified, then for all nodes there will be a file created
                             in the output subdir, named either 0ok/<hostname> for successful nodes,
                             or 1failed/<hostname> for the other ones.
-                            The stamp will contain a single line with the returned code, or 'None'
+                            This mark file will contain a single line with the returned code, or 'None'
                             if the node was not reachable at all""")
-        parser.add_argument("-f", "--file", default=None,
-                            help="""The name of a local script that will be run remotely.
-                            It should be executable. On the remote boxes it will be installed and run in
-                            the {} directory
+        parser.add_argument("-s", "--script", action='store_true', default=False,
+                            help="""If this flag is present, the first element of the remote command 
+                            is assumed to be the name of a local script, that will be copied over
+                            before being executed remotely.
+                            In this case it should be executable.
+                            On the remote boxes it will be installed and run in the {} directory.
                             """.format(default_remote_workdir))
 
         
@@ -174,39 +176,39 @@ class Apssh:
         parser.add_argument("commands", nargs=argparse.REMAINDER, type=str,
                             help="""
                             command to run remotely. If that command itself contains options,
-                            it is a recommended good practice to
-                            insert `--` before the actual command.  If
-                            the -f option is provided, it replaces the
-                            commands to be executed, so these should be omitted""")
+                            it is a good practice to insert `--`
+                            before the actual command.  
+
+                            If the -s or --script option is provided, the first
+                            argument here should denote a (typically script) file
+                            **that must exist** on the local filesystem. This script is then copied
+                            over remotely and serves as the command for the remote execution""")
 
         args = self.parsed_args = parser.parse_args()
 
-        ### manual check for mutual exclusion of --file / positionals
-        if not args.commands and not args.file:
-            print("You must provide either a command or a file containing the script to be run")
+        ### manual check for REMAINDER
+        if not args.commands:
+            print("You must provide a command to be run remotely")
             parser.print_help()
             exit(1)
-        if args.commands and args.file:
-            # XXX : probably we should allow this form to pass arguments to the script...
-            print("You may provide a command to run **OR** a file containing a script, not both")
-            parser.print_help()
-            exit(1)
-        
+
         proxies = self.create_proxies()
 
-        if args.commands:
+        if not args.script:
             command = " ".join(args.commands)
             tasks = [ proxy.connect_and_run(command) for proxy in proxies ]
         else:
             ### an executable is provided on the command line
-            if not os.path.exists(args.file):
-                print("File not found {}".format(args.file))
+            script, args = args.commands[0], args.commands[1:]
+            if not os.path.exists(script):
+                print("File not found {}".format(script))
                 parser.print_help()
                 exit(1)
             # xxx could also check it's executable
             
             # in this case a first pass is required to push the code
-            tasks = [ proxy.connect_put_and_run(args.file) for proxy in proxies ]
+            print("in proxy, ARGS = ", args)
+            tasks = [ proxy.connect_put_and_run(script, *args) for proxy in proxies ]
 
 
         loop = asyncio.get_event_loop()
@@ -233,9 +235,9 @@ class Apssh:
         if self.parsed_args.debug:
             for p, s in zip(proxies, results):
                 print("PROXY {} -> {}".format(p.hostname, s))
-        # stamps
+        # marks
         names = { 0 : '0ok', None : '1failed'}
-        if subdir and self.parsed_args.stamp:
+        if subdir and self.parsed_args.mark:
             # do we need to create the subdirs
             need_ok = [s for s in results if s==0]
             if need_ok:
@@ -246,8 +248,8 @@ class Apssh:
                                           
             for p, s in zip(proxies, results):
                 prefix = names[0] if s == 0 else names[None]
-                with open(os.path.join(subdir,"{}/{}".format(prefix, p.hostname)), "w") as stamp:
-                    stamp.write("{}\n".format(s))
+                with open(os.path.join(subdir,"{}/{}".format(prefix, p.hostname)), "w") as mark:
+                    mark.write("{}\n".format(s))
 
         # return 0 only if all hosts have returned 0
         # otherwise, return 1

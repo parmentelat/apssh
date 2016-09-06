@@ -289,7 +289,7 @@ class SshProxy:
                 print_stderr("Could not create {} on {}".format(default_remote_workdir, self))
             return False
 
-    async def connect_put_and_run(self, localfile, disconnect=True, *args):
+    async def connect_put_and_run(self, localfile, *args, disconnect=True):
         """
         This helper function does everything needed to push a script remotely
         and run it; which involves
@@ -301,6 +301,7 @@ class SshProxy:
         * a retcod (0 for success, other wait code otherwise) if the command can be run
         * None otherwise (host not reachable, or other serious failure)
         """
+        print(" ARGS = ", args)
         connected = await self.sftp_connect_lazy()
         if not connected:
             return None
@@ -313,6 +314,6 @@ class SshProxy:
         # run it
         basename = os.path.basename(localfile)
         extras = " ".join(args)
-        command = "cd {}; {} {}".format(default_remote_workdir, basename, extras)
+        command = "cd {}; ./{} {}".format(default_remote_workdir, basename, extras)
         result = await self.run(command)
         return result

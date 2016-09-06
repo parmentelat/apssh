@@ -15,6 +15,7 @@ from .sshproxy import SshProxy
 from .formatters import RawFormatter, ColonFormatter, SubdirFormatter
 from .window import gather_window
 from .util import print_stderr
+from .version import version as apssh_version
 
 class Apssh:
     """
@@ -171,6 +172,7 @@ class Apssh:
         
         # turn on debugging
         parser.add_argument("-D", "--debug", action='store_true', default=False)
+        parser.add_argument("-V", "--version", action='store_true', default=False)
 
         # the commands to run
         parser.add_argument("commands", nargs=argparse.REMAINDER, type=str,
@@ -185,6 +187,11 @@ class Apssh:
                             over remotely and serves as the command for the remote execution""")
 
         args = self.parsed_args = parser.parse_args()
+
+        ### helpers
+        if args.version:
+            print("apssh version {}".format(apssh_version))
+            exit(1)
 
         ### manual check for REMAINDER
         if not args.commands:

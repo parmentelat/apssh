@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 
+import os.path
 import asyncio
 import asyncssh
 import socket
 
 from .util import print_stderr
+from .config import default_remote_workdir
 
 class BufferedSession(asyncssh.SSHClientSession):
     """
@@ -99,14 +101,23 @@ class SshProxy:
         self.debug = debug
         self.timeout = timeout
         #
-        self.conn, self.client = None, None
+        self.conn, self.client, self.sftp_client = None, None, None
 
     def __repr__(self):
         text = "{}@{}".format(self.username, self.hostname) if self.username else "@"+self.hostname
         if self.formatter:
             text += " [{}]".format(type(self.formatter).__name__)
+        if self.conn:
+            text += "<-SSH->"
+        if self.sftp_client:
+            text += "<-SFTP->"
         return "<SshProxy {}>".format(text)
     
+    async def connect_lazy(self):
+        if self.conn is None:
+            await self.connect()
+        return self.conn
+            
     async def connect(self):
         try:
             if self.debug:
@@ -138,10 +149,47 @@ class SshProxy:
             self.conn, self.client = None, None
             return False
 
+    async def sftp_connect_lazy(self):
+        if self.sftp_client is None:
+            await self.sftp_connect()
+        return self.sftp_client
+            
+    async def sftp_connect(self):
+        """
+        Performs connection if needed, and initializes SFTP connection
+        Returns True if sftp client is ready to be used, False otherwise
+        """
+        connected = await self.connect_lazy()
+        if not connected:
+            return False
+        try:
+            self.sftp_client = await self.conn.start_sftp_client()
+        except asyncssh.sftp.SFTPError:
+            if self.debug:
+                print_stderr("FAILED to start_sftp_client")
+            self.sftp_client = None
+        if self.debug:
+            print_stderr("AFTER start_sftp_client -> {}".format(self.sftp_client))
+        return self.sftp_client is not None
+
+    async def sftp_close(self):
+        if self.sftp_client is not None:
+            # xxx use return code ?
+            await self.sftp_client.wait_closed()
+            self.sftp_client = None
+
+    async def close(self):
+        await self.sftp_close()
+        if self.conn is not None:
+            self.conn.close()
+            await self.conn.wait_closed()
+            self.conn, self.client = None, None
+
+    ##############################
     async def run(self, command):
         """
         Run a command, outputs it on the fly according to self.formatter
-        and returns the whole output
+        and returns remote status - or None if nothing could be run at all
         """
         # this closure is a BufferedSession with a .proxy attribute that points back here
         class session_closure(BufferedSession):
@@ -171,16 +219,95 @@ class SshProxy:
             self.formatter.session_failed(self.hostname, command, ("UNHANDLED", e))
             return
 
-    async def close(self):
-        if self.conn is not None:
-            self.conn.close()
-            await self.conn.wait_closed()
-            self.conn, self.client = None, None
+    async def install_script(self, localpath, remotepath,
+                             follow_symlinks=False, preserve=True, disconnect=False):
+        """
+        opens a connection if needed
+        opens a SFTP connection if needed
+        install a local file as a remote (remote is set as executable if source is)
+        * preserve: if True, copy will preserve access, modtimes and permissions
+        * follow_symlinks: if False, symlinks get created on the remote end
+        * disconnect: tear down connections (ssh and sftp) if True
 
-    async def connect_and_run(self, command):
-        connected = await self.connect()
+        returns True if all went well, False otherwise
+        """
+        # half full glass; only one branch that leads to success
+        retcod = False
+        sftp_connected = await self.sftp_connect_lazy()
+        if sftp_connected:
+            try:
+                if self.debug:
+                    print_stderr("{} : Running SFTP put with {} -> {}"
+                                 .format(self, localpath, remotepath))
+                put_result = await self.sftp_client.put(localpath, remotepath, preserve=preserve,
+                                                        follow_symlinks=follow_symlinks)
+                if self.debug:
+                    print_stderr("put returned {}".format(put_result))
+                retcod = True
+            except OSError as e:
+                print("OSError", e)
+            except asyncssh.sftp.SFTPError as e:
+                print("SFTPError", e)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+            if disconnect:
+                await self.close()
+        return retcod
+
+    # hight level helpers for direct use in apssh
+    async def connect_and_run(self, command, disconnect=True):
+        """
+        This helper function will connect if needed, run a command
+        also disconnect (close connection) if requested - default is on
+        returns 
+        """
+        connected = await self.connect_lazy()
         if connected:
             # xxx protect here with timeout / wait_for
             data = await self.run(command)
-            await self.close()
+            if disconnect:
+                await self.close()
             return data
+
+    async def mkdir(self, remotedir):
+        if not await self.sftp_connect_lazy():
+            return False
+        exists = self.sftp_client.isdir(remotedir)
+        if exists:
+            return True
+        try:
+            retcod = self.sftp_client.mkdir(remotedir)
+            return True
+        except asyncssh.sftp.SFTPError as e:
+            if self.debug:
+                print_stderr("Could not create {} on {}".format(default_remote_workdir, self))
+            return False
+
+    async def connect_put_and_run(self, localfile, disconnect=True, *args):
+        """
+        This helper function does everything needed to push a script remotely
+        and run it; which involves
+        * creating a remote subdir {}
+        * pushing local file in there
+        * remote run in this same directory the command with 
+          cd {}; ./basename
+        returns either
+        * a retcod (0 for success, other wait code otherwise) if the command can be run
+        * None otherwise (host not reachable, or other serious failure)
+        """
+        connected = await self.sftp_connect_lazy()
+        if not connected:
+            return None
+        # create .apssh remotely
+        if not await self.mkdir(default_remote_workdir):
+            return None
+        # install local file remotely
+        if not await self.install_script(localfile, default_remote_workdir):
+            return None
+        # run it
+        basename = os.path.basename(localfile)
+        extras = " ".join(args)
+        command = "cd {}; {} {}".format(default_remote_workdir, basename, extras)
+        result = await self.run(command)
+        return result

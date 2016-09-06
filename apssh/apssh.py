@@ -7,17 +7,14 @@
 
 import os, os.path
 import time
-from argparse import ArgumentParser
+import argparse
 import asyncio
 
+from .config import default_time_name, default_timeout, default_username, default_private_key, default_remote_workdir
 from .sshproxy import SshProxy
 from .formatters import RawFormatter, ColonFormatter, SubdirFormatter
 from .window import gather_window
 from .util import print_stderr
-
-default_username = os.getlogin()
-default_timeout = 30
-default_private_key = os.path.expanduser("~/.ssh/id_rsa")
 
 class Apssh:
     """
@@ -118,8 +115,8 @@ class Apssh:
             if self.parsed_args.raw_output:
                 self.formatter = RawFormatter(debug = self.parsed_args.debug)
             elif self.parsed_args.date_time:
-                default_run_name = time.strftime("%Y-%m-%d@%H:%M")
-                self.formatter = SubdirFormatter(default_run_name)
+                run_name = default_time_name
+                self.formatter = SubdirFormatter(run_name)
             elif self.parsed_args.out_dir:
                 self.formatter = SubdirFormatter(self.parsed_args.out_dir)
             else:
@@ -127,13 +124,13 @@ class Apssh:
         return self.formatter
     
     def main(self):
-        self.parser = parser = ArgumentParser()
+        self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
         parser.add_argument("-t", "--target", dest='targets', action='append', default=[],
                             help="comma-separated list of targets (hostnames or filenames) - additive")
         parser.add_argument("-x", "--exclude", dest='excludes', action='append', default=[],
                             help="comma-separated list of excludes (hostnames or filenames) - additive")
-        # major
+        # global settings
         parser.add_argument("-w", "--window", type=int, default=0,
                             help="specify how many connections can run simultaneously; default is no limit")
         parser.add_argument("-c", "--connect-timeout", dest='timeout',
@@ -156,24 +153,61 @@ class Apssh:
                             help="produce raw result")
         parser.add_argument("-s", "--stamp", default=False, action='store_true',
                             help="""
-                            available with the -d and -o options only
-                            if specified, then for all nodes there will be a stamp created
+                            available with the -d and -o options only.
+
+                            When specified, then for all nodes there will be a stamp created
                             in the output subdir, named either 0ok/<hostname> for successful nodes,
                             or 1failed/<hostname> for the other ones.
                             The stamp will contain a single line with the returned code, or 'None'
                             if the node was not reachable at all""")
+        parser.add_argument("-f", "--file", default=None,
+                            help="""The name of a local script that will be run remotely.
+                            It should be executable. On the remote boxes it will be installed and run in
+                            the {} directory
+                            """.format(default_remote_workdir))
+
         
         # turn on debugging
         parser.add_argument("-D", "--debug", action='store_true', default=False)
 
         # the commands to run
-        parser.add_argument("commands", nargs='+', type=str, help="command to run remotely")
+        parser.add_argument("commands", nargs=argparse.REMAINDER, type=str,
+                            help="""
+                            command to run remotely. If that command itself contains options,
+                            it is a recommended good practice to
+                            insert `--` before the actual command.  If
+                            the -f option is provided, it replaces the
+                            commands to be executed, so these should be omitted""")
 
         args = self.parsed_args = parser.parse_args()
+
+        ### manual check for mutual exclusion of --file / positionals
+        if not args.commands and not args.file:
+            print("You must provide either a command or a file containing the script to be run")
+            parser.print_help()
+            exit(1)
+        if args.commands and args.file:
+            # XXX : probably we should allow this form to pass arguments to the script...
+            print("You may provide a command to run **OR** a file containing a script, not both")
+            parser.print_help()
+            exit(1)
+        
         proxies = self.create_proxies()
-#        print(self)
-        command = " ".join(args.commands)
-        tasks = [ proxy.connect_and_run(command) for proxy in proxies ]
+
+        if args.commands:
+            command = " ".join(args.commands)
+            tasks = [ proxy.connect_and_run(command) for proxy in proxies ]
+        else:
+            ### an executable is provided on the command line
+            if not os.path.exists(args.file):
+                print("File not found {}".format(args.file))
+                parser.print_help()
+                exit(1)
+            # xxx could also check it's executable
+            
+            # in this case a first pass is required to push the code
+            tasks = [ proxy.connect_put_and_run(args.file) for proxy in proxies ]
+
 
         loop = asyncio.get_event_loop()
         window = self.parsed_args.window

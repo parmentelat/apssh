@@ -104,7 +104,9 @@ class SshProxy:
         self.conn, self.client, self.sftp_client = None, None, None
 
     def __repr__(self):
-        text = "{}@{}".format(self.username, self.hostname) if self.username else "@"+self.hostname
+        text = "{}@{}".format(self.username, self.hostname) \
+               if self.username \
+                  else "@" + self.hostname
         if self.formatter:
             text += " [{}]".format(type(self.formatter).__name__)
         if self.conn:
@@ -295,8 +297,8 @@ class SshProxy:
         and run it; which involves
         * creating a remote subdir {}
         * pushing local file in there
-        * remote run in this same directory the command with 
-          cd {}; ./basename
+        * remote run in the home directory the command with 
+          .apssh/basename
         returns either
         * a retcod (0 for success, other wait code otherwise) if the command can be run
         * None otherwise (host not reachable, or other serious failure)
@@ -313,6 +315,6 @@ class SshProxy:
         # run it
         basename = os.path.basename(localfile)
         extras = " ".join(args)
-        command = "cd {}; ./{} {}".format(default_remote_workdir, basename, extras)
+        command = "{}/{} {}".format(default_remote_workdir, basename, extras)
         result = await self.run(command)
         return result

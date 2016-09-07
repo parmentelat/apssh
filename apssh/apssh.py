@@ -29,68 +29,91 @@ class Apssh:
     def __repr__(self):
         return "".join([str(p) for p in self.proxies])
 
-    def read_targets_file(self, filename, debug=False):
+    def analyze_target(self, target, debug=False):
         """
-        Returns a tuple success, names
-        If the provided filename exists and could be parsed, returned object will be
-           True, [ name1, ...]
-        Otherwise, return code is
-           False, None
+        A target can be specified as either
+        * a filename
+          If the provided filename exists and could be parsed, returned object will be
+            True, [ hostname1, ...]
+        * a directory name
+          This is for use together with the --mark option, so that one can easily select reachable nodes only, 
+          or just as easily exclude failing nodes
+          all the simple files that are found immediately under the specified directory are taken as hostnames
+          XXX it would make sense to check there is at least one dot in their name, but I'm not sure about that yet
+          Here again if things work out we return
+            True, [ hostname1, ...]
+        * otherwise
+          the target is then expected a string passed to -t on the command line,
+          so it is simply split according to white spaces before being returned as
+            True, [ hostname1, ...]
+        * If anything goes wrong, return code is 
+            False, []
+          e.g. the file exists but cannot be parsed
+          not sure this truly is useful
         """
         names = []
-        try:
-            with open(filename) as input:
-                for line in input:
-                    line = line.strip()
-                    if line.startswith('#'):
-                        continue
-                    line = line.split()
-                    for token in line:
-                        names += token.split()
-            return True, names
-        except FileNotFoundError as e:
-            return False, None
-        except Exception as e:
-            print_stderr("Unexpected exception when parsing file {}, {}".format(filename, e))
-            if debug:
-                import traceback
-                traceback.print_exc()
-            return False, None
+        if os.path.exists(target):
+            if os.path.isdir(target):
+    # directory
+                onlyfiles = [ f for f in os.listdir(target)
+                              if os.path.isfile(os.path.join(target, f))]
+                return True, onlyfiles
+            else:
+    # file
+                try:
+                    with open(target) as input:
+                        for line in input:
+                            line = line.strip()
+                            if line.startswith('#'):
+                                continue
+                            line = line.split()
+                            for token in line:
+                                names += token.split()
+                    return True, names
+                except FileNotFoundError as e:
+                    return False, None
+                except Exception as e:
+                    print_stderr("Unexpected exception when parsing file {}, {}".format(target, e))
+                    if debug:
+                        import traceback
+                        traceback.print_exc()
+                    return False, None
+        else:
+            # string
+            return True, target.split()
 
     def create_proxies(self):
         # start with parsing excludes if any
         excludes = set()
         for exclude in self.parsed_args.excludes:
-            parsed, names = self.read_targets_file(exclude)
-            if parsed:
-                for name in names:
-                    excludes.add(name)
-            else:
-                cli_excludes = exclude.split()
-                excludes.add(cli_excludes)
-        if self.parsed_args.debug:
-            print("Excludes = {}".format(excludes))
+            parsed, cli_excludes = self.analyze_target(exclude)
+            excludes.update(cli_excludes)
+        if self.parsed_args.dry_run:
+            print("========== {} excludes found:".format(len(excludes)))
+            for exclude in excludes:
+                  print(exclude)
 
         # gather targets as mentioned in -t -x args
         hostnames = []
+        actually_excluded = 0
         # read input file(s)
         for target in self.parsed_args.targets:
-            parsed, names = self.read_targets_file(target)
-            if parsed:
-                for name in names:
-                    if name not in excludes:
-                        hostnames.append(name)
-            else:
-                cli_targets = target.split()
-                for target in cli_targets:
-                    if target not in excludes:
-                        hostnames.append(target)
+            parsed, cli_targets = self.analyze_target(target)
+            for target in cli_targets:
+                if target not in excludes:
+                    hostnames.append(target)
+                else:
+                    actually_excluded += 1
         if not hostnames:
             self.parser.print_help()
             exit(1)
 
-        if self.parsed_args.debug:
-            print("Selected {} targets".format(len(hostnames)))
+        if self.parsed_args.dry_run:
+            print("========== {} hostnames selected ({} excluded):"
+                  .format(len(hostnames), actually_excluded))
+            for hostname in hostnames:
+                print(hostname)
+            exit(0)
 
         # create tuples username, hostname
         # use the username if already present in the target,
@@ -128,9 +151,20 @@ class Apssh:
         self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
         parser.add_argument("-t", "--target", dest='targets', action='append', default=[],
-                            help="space-separated list of targets (hostnames or filenames) - additive")
+                            help="""
+                            specify targets (additive); each target can be either 
+                              * a space-separated list of hostnames
+                              * the name of a file containing hostnames
+                              * the name of a directory containing files named after hostnames; 
+                                see e.g. the --mark option
+                            """)
         parser.add_argument("-x", "--exclude", dest='excludes', action='append', default=[],
-                            help="space-separated list of excludes (hostnames or filenames) - additive")
+                            help="""
+                            like --target, but for specifying exclusions; 
+                            for now there no wildcard mechanism is supported here;
+                            also the order in which --target and --exclude options are mentioned does not matter;
+                            use --dry-run to only check for the list of applicable hosts
+                            """)
         # global settings
         parser.add_argument("-w", "--window", type=int, default=0,
                             help="specify how many connections can run simultaneously; default is no limit")
@@ -172,6 +206,8 @@ class Apssh:
         
         # turn on debugging
         parser.add_argument("-D", "--debug", action='store_true', default=False)
+        parser.add_argument("-n", "--dry-run", default=False, action='store_true',
+                            help="Only show details on selected hostnames")
         parser.add_argument("-V", "--version", action='store_true', default=False)
 
         # the commands to run

@@ -1,3 +1,18 @@
+# 0.0.7 - 2016 Sep 7
+
+* `--target` and `--exclude` can be used with a directory
+
+  This is useful in combination with `--mark`, so that the second run can easily focus on successful nodes
+  
+```
+# first pass to determine nodes that are responding
+apssh -o pass1 --mark -t MYNODES hostname
+# second pass: focus on successful nodes
+apssh -o pass2 -t pass1/0ok/ -f elaborate-script.sh
+```
+  
+* added the `--dry-run`/`-n` option to just see the selected nodes
+
 # 0.0.6 - 2016 Sep 6
 
 * added support for --script mylocalscript.sh arg1 arg2

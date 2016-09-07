@@ -1,3 +1,7 @@
+# 0.0.8 - 2016 Sep 8
+
+* script mode still runs in remote home directory, does not cd in .apssh 
+
 # 0.0.7 - 2016 Sep 7
 
 * `--target` and `--exclude` can be used with a directory

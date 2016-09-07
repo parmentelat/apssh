@@ -250,7 +250,6 @@ class Apssh:
             # xxx could also check it's executable
             
             # in this case a first pass is required to push the code
-            print("in proxy, ARGS = ", args)
             tasks = [ proxy.connect_put_and_run(script, *args) for proxy in proxies ]
 
 

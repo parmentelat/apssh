@@ -301,7 +301,6 @@ class SshProxy:
         * a retcod (0 for success, other wait code otherwise) if the command can be run
         * None otherwise (host not reachable, or other serious failure)
         """
-        print(" ARGS = ", args)
         connected = await self.sftp_connect_lazy()
         if not connected:
             return None

@@ -15,7 +15,7 @@ class Engine:
 
     Running an Action means executing its corun() method, which must be a coroutine
 
-    In of this rough/early implementation: 
+    As of this rough/early implementation: 
     (*) the result of `corun` is not yet taken into account to implement some
         logic about how the overall job should behave
 
@@ -46,6 +46,13 @@ class Engine:
         """
         for action in self.actions:
             action._mark = None
+
+    def _reset_tasks(self):
+        """
+        In case one tries to run the same engine twice
+        """
+        for action in self.actions:
+            action._task = None
 
     def _backlinks(self):
         """
@@ -110,12 +117,15 @@ class Engine:
         action._task = task
         return task
 
-    def orchestrate(self, loop):
+    def orchestrate(self, loop=None):
         """
         main entry point, that's what Engine is all about
         """
+        if loop is None:
+            loop = asyncio.get_event_loop()
         # initialize
         self._backlinks()
+        self._reset_tasks()
         # count how many actions have completed
         count_done = 0
         nb_actions = len(self.actions)
@@ -174,12 +184,12 @@ class Engine:
 ####################
 if __name__ == '__main__':
 
-    from action import Action
-    from testactions import SleepAction as SL
+    from action import Action as A
+    from testactions import sl
 
     def test_ko():
         """a simple loop"""
-        actions = SL(1.1), SL(1.2), SL(1.3), SL(1.4), SL(1.5), SL(1.6), SL(1.7)
+        actions = A(sl(1.1)), A(sl(1.2)), A(sl(1.3)), A(sl(1.4)), A(sl(1.5)), A(sl(1.6)), A(sl(1.7))
         a1, a2, a3, a4, a5, a6, a7 = actions
         a1.requires(a2)
         a2.requires(a3)
@@ -194,8 +204,10 @@ if __name__ == '__main__':
     except Exception as e:
         print("failed", e)
 
+    from testactions import SleepAction as SLA
+
     def test_ok():
-        actions = SL(0.1), SL(0.2), SL(0.3), SL(0.4), SL(0.5), SL(0.6), SL(0.7)
+        actions = SLA(0.1), SLA(0.2), SLA(0.3), SLA(0.4), SLA(0.5), A(sl(0.6)), A(sl(0.7))
         a1, a2, a3, a4, a5, a6, a7 = actions
         a4.requires(a1, a2, a3)
         a5.requires(a4)

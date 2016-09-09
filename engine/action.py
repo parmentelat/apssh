@@ -17,9 +17,9 @@ debug = True
 # Engine == graph
 # Action == node
 
-class Action:
+class AbstractAction:
     """
-    Action is a virtual class:
+    AbstractAction is a virtual class:
 
     (*) it offers some very basic graph-related features to model requirements
         a la makefile
@@ -29,7 +29,9 @@ class Action:
     It's mostly a companion class to the Engine class, that does the heavy lifting
     """
 
-    def __init__(self, label="[undefined_label]"):
+    def __init__(self, label=None):
+        if label is None:
+            label = "NO_LABEL"
         self.label = label 
         # list of Action objects that need to be completed before we can start this one
         self.required = []
@@ -44,16 +46,16 @@ class Action:
 
     def __repr__(self):
         info = "<Action `{}'".format(self.label)
-        if self.required:
-            info += " - [requires " + " ".join(["[{}]".format(a.label) for a in self.required]) + "]"
         if not self._task:
             info += " IDLE"
         else:
             info += " {}".format(self._task._state.lower())
         if self.is_done():
             info += " -> {}".format(self._task._result)
+        if self.required:
+            info += " - [requires " + " ".join(["[{}]".format(a.label) for a in self.required]) + "]"
         if self._successors:
-            info += " {} successor(s)".format(len(self._successors))
+            info += " - [allows " + " ".join(["[{}]".format(a.label) for a in self._successors]) + "]"
         info += ">"
         return info
     
@@ -68,8 +70,40 @@ class Action:
     def just_started(self, task):
         self._task = task
 
+    def result(self):
+        if not self.is_done():
+            raise ValueError("action not finished")
+        return self._task._result
+
     async def corun(self):
+        """
+        abstract virtual - needs to be implemented
+        """
         print("Action.corun() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
 
+    def standalone_run(self):
+        """
+        Just run this one action on its own - useful for debugging
+        the internals of that action, e.g. for checking for gross mistakes
+        and other exceptions
+        """
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.corun())
+
+
+####################
+class Action(AbstractAction):
+
+    """
+    Most mundane form is to provide a coroutine yourself
+    """
+    
+    def __init__(self, coro, label=None):
+        self.coro = coro
+        AbstractAction.__init__(self, label)
+
+    async def corun(self):
+        result = await self.coro
+        return result

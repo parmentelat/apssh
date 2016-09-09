@@ -51,11 +51,11 @@ def sl(n): return _sl(n, middle=False, emergency=False)
 def slm(n): return _sl(n, middle=True, emergency=False)
 
 ##############################
-from action import Action
+from action import AbstractAction
 
-class SleepAction(Action):
+class SleepAction(AbstractAction):
     def __init__(self, timeout, middle=False):
-        Action.__init__(self, "sleep for {}s".format(timeout))
+        AbstractAction.__init__(self, "sleep for {}s".format(timeout))
         self.timeout = timeout
         self.middle = middle
 

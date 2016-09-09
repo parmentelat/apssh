@@ -2,12 +2,15 @@
 
 `apssh` is a tool that aims at running commands remotely using `ssh` on a large number of target nodes at once. It is thus comparable to [parallel-ssh](https://code.google.com/p/parallel-ssh/), except that it is written on top of `asyncio` and `asyncssh`.
 
-# Installation
+# How to get it
 
+## Requirement
+`apssh` requires python-3.5, as it uses the latest syntax constructions `async def` and `await` instead of the former `@asyncio.coroutine` and `yield from` idioms.
+
+## Installation
 ```
 [sudo] pip3 install apssh
 ```
-
 
 # Features
 

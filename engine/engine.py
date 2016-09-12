@@ -18,11 +18,11 @@ class Engine:
 
     As of this rough/early implementation: 
     (*) the result of `corun` is not yet taken into account to implement some
-        logic about how the overall job should behave
+        logic about how the overall job should behave. Instead the results of individual
+        jobs can be retrieved individually when thei state is finished
 
-    (*) exceptions are probably not well handled so it's not clear what should happen
-        if corun raises an exception
-    
+    (*) exceptions are still in the work and probably not too well handled
+        it's not clear yet what should happen if corun raises an exception
     """
 
     def __init__(self, *jobs):
@@ -149,6 +149,22 @@ class Engine:
         else:
             return self.expiration - time.time()
 
+    def _tidy_tasks(self, loop, pending):
+        """
+        Once orchestrate is done with its job, in order to tidy up the underlying 
+        Task objects that have not completed, it is necessary to cancel them and wait for them
+        according to the context, this can be with forever tasks, or because a timeout has occured
+        """
+        if pending:
+            for task in pending:
+                task.cancel()
+            # wait for the forever tasks for a clean exit
+            # don't bother to set a timeout, as this is expected to be immediate
+            # since all tasks are canceled
+            done, pending \
+                = loop.run_until_complete(asyncio.wait(pending))                    
+        
+
     def orchestrate(self, timeout=None, loop=None):
         """
         the primary entry point for running an ordered set of jobs
@@ -193,13 +209,7 @@ class Engine:
                 if debug:
                     print("orchestrate: timeout occurred")
                 # clean up
-                for task in pending:
-                    task.cancel()
-                # epilogue : wait for the forever tasks for a clean exit
-                # don't bother to timeout as this is expected to be immediate
-                # since all tasks are canceled
-                done, pending \
-                    = loop.run_until_complete(asyncio.wait(pending))                    
+                self._tidy_tasks(loop, pending)
                 return False
             done_job = list(done)[0]._job
             if debug:
@@ -211,14 +221,7 @@ class Engine:
                 if debug: print("orchestrate: {} CLEANING UP at iteration {} / {}"
                                 .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
-                if pending:
-                    for task in pending:
-                        task.cancel()
-                    # epilogue : wait for the forever tasks for a clean exit
-                    # don't bother to timeout as this is expected to be immediate
-                    # since all tasks are canceled
-                    done, pending \
-                        = loop.run_until_complete(asyncio.wait(pending))                    
+                self._tidy_tasks(loop, pending)
                 return True
 
             # go on : find out the jobs that can be added to the mix

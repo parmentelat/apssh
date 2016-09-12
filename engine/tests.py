@@ -96,7 +96,7 @@ if __name__ == '__main__':
 #        e.list()
 
     try:
-#        test_cycle()
+        test_cycle()
         pass
     except Exception as e:
         print("failed", e)
@@ -120,10 +120,10 @@ if __name__ == '__main__':
         
         e = Engine(*jobs)
         e.order()
-        print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
+        print("orchestrate->", e.orchestrate(loop=asyncio.get_event_loop()))
         e.list()
         
-#    test_simple()
+    test_simple()
 
     ####################
     from tests import TickJob as TA
@@ -134,10 +134,10 @@ if __name__ == '__main__':
         a2.requires(a1)
         e = Engine(a1, a2, t1)
         e.list()
-        print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
+        print("orchestrate->", e.orchestrate(loop=asyncio.get_event_loop()))
         e.list()
 
-#    test_forever()
+    test_forever()
         
 
     ####################

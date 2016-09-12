@@ -80,7 +80,8 @@ from engine import Engine
 engine.debug = True
 
 ####################
-if __name__ == '__main__':
+# xxx todo : use unittest
+def tests():
 
     ####################
     def test_cycle():
@@ -96,7 +97,7 @@ if __name__ == '__main__':
 #        e.list()
 
     try:
-        test_cycle()
+#        test_cycle()
         pass
     except Exception as e:
         print("failed", e)
@@ -166,3 +167,7 @@ if __name__ == '__main__':
         e.list()
 
     test_exc()
+
+if __name__ == '__main__':
+    tests()
+

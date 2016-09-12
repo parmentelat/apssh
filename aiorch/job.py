@@ -62,9 +62,12 @@ class AbstractJob:
             info += " UNSCHED"
         else:
             info += " {}".format(self._task._state.lower())
-        ### if it has returned, show result
+            ### if it has returned, show result
         if self.is_done():
-            info += " -> {}".format(self._task._result)
+            info += " -> {}".format(self.result())
+        exception = self.raised_exception()
+        if exception:
+            info += " !!{}:{}!!".format(type(exception).__name__, exception)
         ### show dependencies in both directions
         if self.required:
             info += " - [requires " + " ".join(["[{}]".format(a.label) for a in self.required]) + "]"
@@ -80,9 +83,10 @@ class AbstractJob:
     def is_started(self):
         return self._task is not None
     def is_done(self):
-        return self._task and self._task._state == asyncio.futures._FINISHED
-    def just_started(self, task):
-        self._task = task
+        return self._task is not None and self._task._state == asyncio.futures._FINISHED
+    def raised_exception(self):
+        """returns an exception if applicable, or None"""
+        return self._task is not None and self._task._exception
 
     def result(self):
         if not self.is_done():

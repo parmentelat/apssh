@@ -161,8 +161,19 @@ class Engine:
             # wait for the forever tasks for a clean exit
             # don't bother to set a timeout, as this is expected to be immediate
             # since all tasks are canceled
-            done, pending \
-                = loop.run_until_complete(asyncio.wait(pending))                    
+            loop.run_until_complete(asyncio.wait(pending))
+        
+    def _clear_tasks_exception(self, loop, tasks):
+        """
+        Similar but in order to clear the exception, we need to run gather() instead
+        """
+        if tasks:
+            for task in tasks:
+                task.cancel()
+            # wait for the forever tasks for a clean exit
+            # don't bother to set a timeout, as this is expected to be immediate
+            # since all tasks are canceled
+            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
         
 
     def orchestrate(self, timeout=None, loop=None):
@@ -199,21 +210,22 @@ class Engine:
                                                        timeout = self.remaining_timeout(),
                                                        return_when = asyncio.FIRST_COMPLETED))
 
-            if debug: print("orchestrate: {} iteration {} / {} - {} done and {} pending"
-                            .format(4*'-', nb_jobs_done, nb_jobs_finite,
-                                    len(done), len(pending)))
+            if debug:
+                print("orchestrate: {} iteration {} / {} - {} done and {} pending"
+                      .format(4*'-', nb_jobs_done, nb_jobs_finite,
+                              len(done), len(pending)))
             # nominally we have exactly one item in done
             # it looks like the only condition where we have nothing in done is
             # because a timeout occurred
             if not done or len(done) != 1:
                 if debug:
-                    print("orchestrate: timeout occurred")
+                    print("orchestrate: TIMEOUT occurred")
                 # clean up
                 self._tidy_tasks(loop, pending)
                 return False
             done_job = list(done)[0]._job
             if debug:
-                print("JOB DONE = {}".format(done_job.label))
+                print("JOB DONE = {}".format(done_job))
 
             # are we done ?
             nb_jobs_done += len(done)
@@ -223,6 +235,13 @@ class Engine:
                 assert len(pending) == nb_jobs_forever
                 self._tidy_tasks(loop, pending)
                 return True
+
+            # exceptions need to be cleaned up 
+            if done_job.raised_exception():
+                if debug:
+                    print("orchestrate: EXCEPTION occurred")
+                # clear the exception
+                self._clear_tasks_exception(loop, done)
 
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind the job that just finished

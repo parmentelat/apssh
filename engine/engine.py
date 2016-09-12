@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import time
 import asyncio
 
 debug = False
@@ -37,8 +38,8 @@ class Engine:
         print internal jobs as sorted in self.jobs
         mostly useful after .order()
         """
-        for job in self.jobs:
-            print(job)
+        for i, job in enumerate(self.jobs):
+            print(i, job)
         
     def _reset_marks(self):
         """
@@ -128,7 +129,27 @@ class Engine:
         job._task = task
         return task
 
-    def orchestrate(self, loop=None):
+    def mark_beginning(self, timeout):
+        """
+        Called once at the beginning of orchestrate, this method computes the absolute
+        expiration date when a timeout is defined. 
+        """
+        if timeout is None:
+            self.expiration = None
+        else:
+            self.expiration = time.time() + timeout
+
+    def remaining_timeout(self):
+        """
+        Called each time orchestrate is about to call asyncio.wait(), this method
+        computes the timeout argument for wait - or None if orchestrate had no timeout
+        """
+        if self.expiration is None:
+            return None
+        else:
+            return self.expiration - time.time()
+
+    def orchestrate(self, timeout=None, loop=None):
         """
         the primary entry point for running an ordered set of jobs
         """
@@ -138,8 +159,11 @@ class Engine:
         self._backlinks()
         self._reset_tasks()
 
+        self.mark_beginning(timeout)
+
         # how many jobs do we expect to complete: the ones that don't run forever
         nb_jobs_finite = len([j for j in self.jobs if not j.forever])
+        # the other ones
         nb_jobs_forever = len(self.jobs) - nb_jobs_finite
         # count how many jobs have completed
         nb_jobs_done = 0
@@ -154,15 +178,28 @@ class Engine:
                     for job in entry_jobs ]
         
         while True:
-            if debug: print("orchestrate: {} iteration {} / {}"
-                            .format(4*'-', nb_jobs_done, nb_jobs_finite))
             done, pending \
                 = loop.run_until_complete(asyncio.wait(pending,
+                                                       timeout = self.remaining_timeout(),
                                                        return_when = asyncio.FIRST_COMPLETED))
 
+            if debug: print("orchestrate: {} iteration {} / {} - {} done and {} pending"
+                            .format(4*'-', nb_jobs_done, nb_jobs_finite,
+                                    len(done), len(pending)))
             # nominally we have exactly one item in done
+            # it looks like the only condition where we have nothing in done is
+            # because a timeout occurred
             if not done or len(done) != 1:
-                print("NOT GOOD - we're stalled ...")
+                if debug:
+                    print("orchestrate: timeout occurred")
+                # clean up
+                for task in pending:
+                    task.cancel()
+                # epilogue : wait for the forever tasks for a clean exit
+                # don't bother to timeout as this is expected to be immediate
+                # since all tasks are canceled
+                done, pending \
+                    = loop.run_until_complete(asyncio.wait(pending))                    
                 return False
             done_job = list(done)[0]._job
             if debug:
@@ -178,10 +215,10 @@ class Engine:
                     for task in pending:
                         task.cancel()
                     # epilogue : wait for the forever tasks for a clean exit
+                    # don't bother to timeout as this is expected to be immediate
+                    # since all tasks are canceled
                     done, pending \
-                        = loop.run_until_complete(asyncio.wait(pending,
-                                                               return_when = asyncio.FIRST_COMPLETED))
-                    
+                        = loop.run_until_complete(asyncio.wait(pending))                    
                 return True
 
             # go on : find out the jobs that can be added to the mix

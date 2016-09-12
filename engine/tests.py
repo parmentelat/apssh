@@ -53,7 +53,7 @@ from job import AbstractJob
 
 class SleepJob(AbstractJob):
     def __init__(self, timeout, middle=False):
-        AbstractJob.__init__(self, label="sleep for {}s".format(timeout))
+        AbstractJob.__init__(self, forever=False, label="sleep for {}s".format(timeout))
         self.timeout = timeout
         self.middle = middle
 
@@ -74,11 +74,13 @@ class TickJob(AbstractJob):
             counter += 1
             await asyncio.sleep(self.cycle)
 
+from job import Job as A
+import engine
+from engine import Engine
+engine.debug = True
+
 ####################
 if __name__ == '__main__':
-
-    from job import Job as A
-    from engine import Engine
 
     ####################
     def test_cycle():
@@ -94,7 +96,8 @@ if __name__ == '__main__':
 #        e.list()
 
     try:
-        test_cycle()
+#        test_cycle()
+        pass
     except Exception as e:
         print("failed", e)
 
@@ -120,7 +123,7 @@ if __name__ == '__main__':
         print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
         e.list()
         
-    test_simple()
+#    test_simple()
 
     ####################
     from tests import TickJob as TA
@@ -134,6 +137,32 @@ if __name__ == '__main__':
         print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
         e.list()
 
-    test_forever()
+#    test_forever()
         
+
+    ####################
+    def test_timeout():
+        print(20*'-', 'test_timeout')
+        a1, a2, a3 = [SLA(x) for x in (0.5, 0.6, 0.7)]
+        a2.requires(a1)
+        a3.requires(a2)
+        e = Engine(a1, a2, a3)
+        # should timeout in the middle of stage 2
+        e.orchestrate(timeout=1)
+        e.list()
+
+    test_timeout()
+
+    ####################
+    async def coro_exc(n):
+        await asyncio.sleep(n)
+        raise ValueError(10**6*n)
     
+    def test_exc():
+        print(20*'-', 'test_exc')
+        a1, a2 = SLA(1), A(coro_exc(0.5), label='boom')
+        e = Engine(a1, a2)
+        e.orchestrate()
+        e.list()
+
+    test_exc()

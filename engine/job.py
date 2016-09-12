@@ -59,7 +59,7 @@ class AbstractJob:
             info += "[∞]"
         ### show info - IDLE means not started at all
         if not self._task:
-            info += " IDLE"
+            info += " UNSCHED"
         else:
             info += " {}".format(self._task._state.lower())
         ### if it has returned, show result

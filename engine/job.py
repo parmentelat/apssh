@@ -1,6 +1,7 @@
 import asyncio
 
-debug = True
+debug = False
+#debug = True
 
 # my first inclination had been to specialize asyncio.Task
 # it does not work well though, because you want to model
@@ -26,13 +27,20 @@ class AbstractJob:
     (*) its subclasses are expected to implement a `corun()` method 
         that specifies the actual behaviour as a coroutine
 
+    Can be created with 
+    (*) boolean flag 'forever', if set, means the job is not returning at all and runs forever
+        in this case Engine.orchestrate will not wait for that job, and will terminate it once all
+        the regular i.e. not-forever jobs are done
+    (*) an optional label - for convenience only
+
     It's mostly a companion class to the Engine class, that does the heavy lifting
     """
 
-    def __init__(self, label=None):
+    def __init__(self, forever, label):
         if label is None:
-            label = "NO_LABEL"
-        self.label = label 
+            label = "NOLABEL"
+        self.label = label
+        self.forever = forever
         # list of Job objects that need to be completed before we can start this one
         self.required = []
         # once submitted in the asyncio loop/scheduler, the `corun()` gets embedded in a 
@@ -46,12 +54,18 @@ class AbstractJob:
 
     def __repr__(self):
         info = "<Job `{}'".format(self.label)
+        ### outline forever jobs
+        if self.forever:
+            info += "[∞]"
+        ### show info - IDLE means not started at all
         if not self._task:
             info += " IDLE"
         else:
             info += " {}".format(self._task._state.lower())
+        ### if it has returned, show result
         if self.is_done():
             info += " -> {}".format(self._task._result)
+        ### show dependencies in both directions
         if self.required:
             info += " - [requires " + " ".join(["[{}]".format(a.label) for a in self.required]) + "]"
         if self._successors:
@@ -100,9 +114,9 @@ class Job(AbstractJob):
     Most mundane form is to provide a coroutine yourself
     """
     
-    def __init__(self, coro, label=None):
+    def __init__(self, coro, forever=False, label=None):
         self.coro = coro
-        AbstractJob.__init__(self, label)
+        AbstractJob.__init__(self, forever=forever, label=label)
 
     async def corun(self):
         result = await self.coro

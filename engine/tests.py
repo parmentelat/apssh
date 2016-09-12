@@ -53,7 +53,7 @@ from job import AbstractJob
 
 class SleepJob(AbstractJob):
     def __init__(self, timeout, middle=False):
-        AbstractJob.__init__(self, "sleep for {}s".format(timeout))
+        AbstractJob.__init__(self, label="sleep for {}s".format(timeout))
         self.timeout = timeout
         self.middle = middle
 
@@ -63,16 +63,16 @@ class SleepJob(AbstractJob):
         
 
 class TickJob(AbstractJob):
-    def __init__(self, cycle, *args, **kwds):
-        AbstractJob.__init__(self, "Cyclic tick every {}s".format(cycle), *args, **kwds)
+    def __init__(self, cycle):
+        AbstractJob.__init__(self, forever=True, label="Cyclic tick every {}s".format(cycle))
         self.cycle = cycle
 
-    def corun(self):
+    async def corun(self):
         counter = 1
         while True:
             print("{} -- Tick {} from {}".format(ts(), counter, self.label))
             counter += 1
-            asyncio.sleep(self.cycle)
+            await asyncio.sleep(self.cycle)
 
 ####################
 if __name__ == '__main__':
@@ -81,20 +81,20 @@ if __name__ == '__main__':
     from engine import Engine
 
     ####################
-    def test_ko():
+    def test_cycle():
         """a simple loop with 3 jobs - cannot handle that"""
-        print(20*'-', 'test_ko')
+        print(20*'-', 'test_cycle')
         a1, a2, a3 = A(sl(1.1)), A(sl(1.2)), A(sl(1.3))
         a1.requires(a2)
         a2.requires(a3)
         a3.requires(a1)
 
         e = Engine(a1, a2, a3)
-        e.order()
+#        e.order()
 #        e.list()
 
     try:
-        test_ko()
+        test_cycle()
     except Exception as e:
         print("failed", e)
 
@@ -104,9 +104,9 @@ if __name__ == '__main__':
     # or
     # SleepJob(0.4)
     # are almost equivalent forms to do the same thing
-    def test_ok():
+    def test_simple():
         """a simple topology, that should work"""
-        print(20*'-', 'test_ok')
+        print(20*'-', 'test_simple')
         jobs = SLA(0.1), SLA(0.2), SLA(0.3), SLA(0.4), SLA(0.5), A(sl(0.6)), A(sl(0.7))
         a1, a2, a3, a4, a5, a6, a7 = jobs
         a4.requires(a1, a2, a3)
@@ -120,19 +120,20 @@ if __name__ == '__main__':
         print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
         e.list()
         
-    test_ok()
+    test_simple()
 
     ####################
     from tests import TickJob as TA
 
-    def test_infinite():
-        print(20*'-', 'test_infinite')
-        a1, a2, t1 = SLA(1), SLA(1.5), TA(0.4)
+    def test_forever():
+        print(20*'-', 'test_forever')
+        a1, a2, t1 = SLA(1), SLA(1.5), TA(.6)
         a2.requires(a1)
         e = Engine(a1, a2, t1)
+        e.list()
         print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
         e.list()
 
-    #test_infinite()
+    test_forever()
         
     

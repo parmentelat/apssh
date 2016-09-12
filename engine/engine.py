@@ -67,9 +67,19 @@ class Engine:
 
     def order(self):
         """
+        performs minimum sanity check -- raise ValueError if the topology cannot be handled
+
+        NOTE: the purpose of this is primarily to check for cycles
+        it's not embedded in orchestrate because it's not strictly necessary
+        but it's safer to do so before calling orchestrate if one wants 
+        to type-check the jobs dependency graph early on
+
+        SIDE EFFECT: 
         re-order self.jobs so that the free jobs a.k.a. entry points
         i.e. jobs with no requirements, show up first
-        performs minimum sanity check -- raise ValueError if the topology cannot be handled
+
+        RETURN:
+        None, or an exception gets fired
         """
         # clear marks
         self._reset_marks()
@@ -112,24 +122,27 @@ class Engine:
         this is the hook that lets us make sure the created Task object have a 
         backlink pointer to its correponding job
         """
-        print("scheduling job {}".format(job.label))
         task = asyncio.ensure_future(job.corun(), loop=loop)
+        if debug: print("scheduling job {}".format(job.label))
         task._job = job
         job._task = task
         return task
 
     def orchestrate(self, loop=None):
         """
-        main entry point, that's what Engine is all about
+        the primary entry point for running an ordered set of jobs
         """
         if loop is None:
             loop = asyncio.get_event_loop()
         # initialize
         self._backlinks()
         self._reset_tasks()
+
+        # how many jobs do we expect to complete: the ones that don't run forever
+        nb_jobs_finite = len([j for j in self.jobs if not j.forever])
+        nb_jobs_forever = len(self.jobs) - nb_jobs_finite
         # count how many jobs have completed
         nb_jobs_done = 0
-        nb_jobs = len(self.jobs)
 
         # start with the free jobs
         entry_jobs = [ job for job in self.jobs if not job.required ]
@@ -142,19 +155,36 @@ class Engine:
         
         while True:
             if debug: print("orchestrate: {} iteration {} / {}"
-                            .format(10*'-', nb_jobs_done, nb_jobs))
+                            .format(4*'-', nb_jobs_done, nb_jobs_finite))
             done, pending \
                 = loop.run_until_complete(asyncio.wait(pending,
                                                        return_when = asyncio.FIRST_COMPLETED))
+
             # nominally we have exactly one item in done
             if not done or len(done) != 1:
                 print("NOT GOOD - we're stalled ...")
                 return False
             done_job = list(done)[0]._job
+            if debug:
+                print("JOB DONE = {}".format(done_job.label))
 
-            nb_jobs_done += 1
-            if nb_jobs_done == nb_jobs:
+            # are we done ?
+            nb_jobs_done += len(done)
+            if nb_jobs_done == nb_jobs_finite:
+                if debug: print("orchestrate: {} CLEANING UP at iteration {} / {}"
+                                .format(4*'-', nb_jobs_done, nb_jobs_finite))
+                assert len(pending) == nb_jobs_forever
+                if pending:
+                    for task in pending:
+                        task.cancel()
+                    # epilogue : wait for the forever tasks for a clean exit
+                    done, pending \
+                        = loop.run_until_complete(asyncio.wait(pending,
+                                                               return_when = asyncio.FIRST_COMPLETED))
+                    
                 return True
+
+            # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind the job that just finished
             possible_next_jobs = done_job._successors
             if debug:
@@ -180,5 +210,4 @@ class Engine:
             #if not added:
             #    # should not happen
             #    raise ValueError("Internal Error")
-
 

@@ -112,6 +112,7 @@ class Engine:
         this is the hook that lets us make sure the created Task object have a 
         backlink pointer to its correponding action
         """
+        print("sceduling action {}".format(action.label))
         task = asyncio.ensure_future(action.corun(), loop=loop)
         task._action = action
         action._task = task
@@ -181,45 +182,3 @@ class Engine:
             #    raise ValueError("Internal Error")
 
 
-####################
-if __name__ == '__main__':
-
-    from action import Action as A
-    from testactions import sl
-
-    def test_ko():
-        """a simple loop"""
-        actions = A(sl(1.1)), A(sl(1.2)), A(sl(1.3)), A(sl(1.4)), A(sl(1.5)), A(sl(1.6)), A(sl(1.7))
-        a1, a2, a3, a4, a5, a6, a7 = actions
-        a1.requires(a2)
-        a2.requires(a3)
-        a3.requires(a1)
-
-        e = Engine(a1, a2, a3)
-        e.order()
-        e.list()
-
-    try:
-        test_ko()
-    except Exception as e:
-        print("failed", e)
-
-    from testactions import SleepAction as SLA
-
-    def test_ok():
-        actions = SLA(0.1), SLA(0.2), SLA(0.3), SLA(0.4), SLA(0.5), A(sl(0.6)), A(sl(0.7))
-        a1, a2, a3, a4, a5, a6, a7 = actions
-        a4.requires(a1, a2, a3)
-        a5.requires(a4)
-        a6.requires(a4)
-        a7.requires(a5)
-        a7.requires(a6)
-        
-        e = Engine(*actions)
-        e.order()
-        e.list()
-        print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
-        e.list()
-        
-
-    test_ok()

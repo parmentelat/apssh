@@ -7,13 +7,13 @@ debug = False
 
 class Engine:
     """
-    An Engine instance works on a set of Action
-    objects
+    An Engine instance works on a set of Job objects
+
     It will orchestrate them until they are all complete,
     starting with the ones that have no requirements, 
     and then starting the othe ones as their requirements are satisfied
 
-    Running an Action means executing its corun() method, which must be a coroutine
+    Running a Job means executing its corun() method, which must be a coroutine
 
     As of this rough/early implementation: 
     (*) the result of `corun` is not yet taken into account to implement some
@@ -24,98 +24,98 @@ class Engine:
     
     """
 
-    def __init__(self, *actions):
-        self.actions = actions
-        self.actions = list(set(self.actions))
+    def __init__(self, *jobs):
+        self.jobs = jobs
+        self.jobs = list(set(self.jobs))
 
-    def add(self, actions):
-        self.actions += actions
-        self.actions = list(set(self.actions))
+    def add(self, jobs):
+        self.jobs += jobs
+        self.jobs = list(set(self.jobs))
 
     def list(self):
         """
-        print internal actions as sorted in self.actions
+        print internal jobs as sorted in self.jobs
         mostly useful after .order()
         """
-        for action in self.actions:
-            print(action)
+        for job in self.jobs:
+            print(job)
         
     def _reset_marks(self):
         """
-        reset Action._mark on all actions/nodes
+        reset Job._mark on all jobs
         """
-        for action in self.actions:
-            action._mark = None
+        for job in self.jobs:
+            job._mark = None
 
     def _reset_tasks(self):
         """
         In case one tries to run the same engine twice
         """
-        for action in self.actions:
-            action._task = None
+        for job in self.jobs:
+            job._task = None
 
     def _backlinks(self):
         """
-        initialize Action._successors on all actions/nodes
-        as the reverse of Action.required
+        initialize Job._successors on all jobs
+        as the reverse of Job.required
         """
-        for action in self.actions:
-            action._successors = []
-        for action in self.actions:
-            for req in action.required:
-                req._successors.append(action)
+        for job in self.jobs:
+            job._successors = []
+        for job in self.jobs:
+            for req in job.required:
+                req._successors.append(job)
 
     def order(self):
         """
-        re-order self.actions so that the free actions a.k.a. entry points
-        i.e. actions with no requirements, show up first
+        re-order self.jobs so that the free jobs a.k.a. entry points
+        i.e. jobs with no requirements, show up first
         performs minimum sanity check -- raise ValueError if the topology cannot be handled
         """
         # clear marks
         self._reset_marks()
-        # reset self.actions, but of course set aside
-        save = self.actions
-        self.actions = []
+        # reset self.jobs, but of course set aside
+        saved_jobs = self.jobs
+        self.jobs = []
         # mainloop
         while True:
             # detect a fixed point 
             changed = False
             # loop on unfinished business
-            for action in save:
+            for job in saved_jobs:
                 # if there's no requirement (first pass),
                 # or later on if all requirements have already been marked,
                 # then we can mark this one
                 has_unmarked_requirements = False
-                for req in action.required:
-                    if req._mark is None:
+                for required_job in job.required:
+                    if required_job._mark is None:
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    if debug: print("order: marking {}".format(action.label))
-                    action._mark = True
-                    self.actions.append(action)
-                    save.remove(action)
+                    if debug: print("order: marking {}".format(job.label))
+                    job._mark = True
+                    self.jobs.append(job)
+                    saved_jobs.remove(job)
                     changed = True
-            if not save:
+            if not saved_jobs:
                 # we're done
                 break
             if not changed:
                 if debug: print("order: loop makes no progress - we have a problem")
                 raise ValueError("only acyclic graphs are supported")
-        # if we still have actions here it's not quite good either
-        if save:
-            print("order: we have {} actions still in the pool and can't reach them from free actions")
+        # if we still have jobs here it's not quite good either
+        if saved_jobs:
+            print("order: we have {} jobs still in the pool and can't reach them from free jobs")
             raise ValueError("cyclic graph")
 
     @staticmethod
-    def ensure_future(action, loop):
+    def ensure_future(job, loop):
         """
         this is the hook that lets us make sure the created Task object have a 
-        backlink pointer to its correponding action
+        backlink pointer to its correponding job
         """
-        print("sceduling action {}".format(action.label))
-        task = asyncio.ensure_future(action.corun(), loop=loop)
-        task._action = action
-        action._task = task
+        print("scheduling job {}".format(job.label))
+        task = asyncio.ensure_future(job.corun(), loop=loop)
+        task._job = job
+        job._task = task
         return task
 
     def orchestrate(self, loop=None):
@@ -127,22 +127,22 @@ class Engine:
         # initialize
         self._backlinks()
         self._reset_tasks()
-        # count how many actions have completed
-        count_done = 0
-        nb_actions = len(self.actions)
+        # count how many jobs have completed
+        nb_jobs_done = 0
+        nb_jobs = len(self.jobs)
 
-        # start with the free actions
-        entry_actions = [ action for action in self.actions if not action.required ]
+        # start with the free jobs
+        entry_jobs = [ job for job in self.jobs if not job.required ]
 
-        if not entry_actions:
+        if not entry_jobs:
             raise ValueError("No entry points found - cannot orchestrate")
         
-        pending = [ Engine.ensure_future(action, loop=loop)
-                    for action in entry_actions ]
+        pending = [ Engine.ensure_future(job, loop=loop)
+                    for job in entry_jobs ]
         
         while True:
             if debug: print("orchestrate: {} iteration {} / {}"
-                            .format(10*'-', count_done,nb_actions))
+                            .format(10*'-', nb_jobs_done, nb_jobs))
             done, pending \
                 = loop.run_until_complete(asyncio.wait(pending,
                                                        return_when = asyncio.FIRST_COMPLETED))
@@ -150,21 +150,21 @@ class Engine:
             if not done or len(done) != 1:
                 print("NOT GOOD - we're stalled ...")
                 return False
-            done_action = list(done)[0]._action
+            done_job = list(done)[0]._job
 
-            count_done += 1
-            if count_done == nb_actions:
+            nb_jobs_done += 1
+            if nb_jobs_done == nb_jobs:
                 return True
-            # only consider the ones that are right behind the action that just finished
-            possible_next_actions = done_action._successors
+            # only consider the ones that are right behind the job that just finished
+            possible_next_jobs = done_job._successors
             if debug:
-                print("possible ->", len(possible_next_actions))
-                for a in possible_next_actions:
+                print("possible ->", len(possible_next_jobs))
+                for a in possible_next_jobs:
                     print(a)
             # find out which ones really can be added
             added = 0
-            for candidate_next in possible_next_actions:
-                # do not add an action twice
+            for candidate_next in possible_next_jobs:
+                # do not add an job twice
                 if candidate_next.is_started():
                     continue
                 # we can start only if all requirements are satisfied

@@ -8,18 +8,18 @@ debug = True
 # but in asyncio, creating a Task object implies scheduling that for execution
 
 # so, let's have it the other way around
-# what we need is a way to attach our own Action instances to the Task (and back)
+# what we need is a way to attach our own Job instances to the Task (and back)
 # classes right after Task creation, so that
-# (*) once asyncio.wait is done, we can easily find out wich Actions are done or pending
-# (*) from one Action, easily know what its status is by lloing into its Task obj
+# (*) once asyncio.wait is done, we can easily find out wich Jobs are done or pending
+# (*) from one Job, easily know what its status is by lloing into its Task obj
 #     (if already started)
 
 # Engine == graph
-# Action == node
+# Job == node
 
-class AbstractAction:
+class AbstractJob:
     """
-    AbstractAction is a virtual class:
+    AbstractJob is a virtual class:
 
     (*) it offers some very basic graph-related features to model requirements
         a la makefile
@@ -33,7 +33,7 @@ class AbstractAction:
         if label is None:
             label = "NO_LABEL"
         self.label = label 
-        # list of Action objects that need to be completed before we can start this one
+        # list of Job objects that need to be completed before we can start this one
         self.required = []
         # once submitted in the asyncio loop/scheduler, the `corun()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
@@ -45,7 +45,7 @@ class AbstractAction:
         self._successors = []
 
     def __repr__(self):
-        info = "<Action `{}'".format(self.label)
+        info = "<Job `{}'".format(self.label)
         if not self._task:
             info += " IDLE"
         else:
@@ -59,8 +59,8 @@ class AbstractAction:
         info += ">"
         return info
     
-    def requires(self, *actions):
-        self.required += actions
+    def requires(self, *jobs):
+        self.required += jobs
         self.required = list(set(self.required))
 
     def is_started(self):
@@ -72,21 +72,21 @@ class AbstractAction:
 
     def result(self):
         if not self.is_done():
-            raise ValueError("action not finished")
+            raise ValueError("job not finished")
         return self._task._result
 
     async def corun(self):
         """
         abstract virtual - needs to be implemented
         """
-        print("Action.corun() needs to be implemented on class {}"
+        print("Job.corun() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
 
     def standalone_run(self):
         """
-        Just run this one action on its own - useful for debugging
-        the internals of that action, e.g. for checking for gross mistakes
+        Just run this one job on its own - useful for debugging
+        the internals of that job, e.g. for checking for gross mistakes
         and other exceptions
         """
         loop = asyncio.get_event_loop()
@@ -94,7 +94,7 @@ class AbstractAction:
 
 
 ####################
-class Action(AbstractAction):
+class Job(AbstractJob):
 
     """
     Most mundane form is to provide a coroutine yourself
@@ -102,7 +102,7 @@ class Action(AbstractAction):
     
     def __init__(self, coro, label=None):
         self.coro = coro
-        AbstractAction.__init__(self, label)
+        AbstractJob.__init__(self, label)
 
     async def corun(self):
         result = await self.coro

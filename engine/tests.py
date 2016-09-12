@@ -1,5 +1,5 @@
 """
-A simple tool to define ad-hoc 'actions' 
+A simple tool to define ad-hoc 'jobs' 
 """
 
 import time
@@ -18,13 +18,13 @@ def ts():
 ##############################
 async def _sl(n, middle, emergency):
     """
-_sl(timeout, middle=False) returns a future that specifies an action like this:
+_sl(timeout, middle=False) returns a future that specifies an job like this:
 * print incoming `->`
 * wait for the time out
 * print outgoing `<-` 
 * return the timeout
 
-_sl(timeout, middle=True) returns a future that specifies an action like this:
+_sl(timeout, middle=True) returns a future that specifies an job like this:
 * print incoming `->`
 * wait for half the time out
 * print inside `==` - and optionnally raise an exception there if `emergency` is set
@@ -49,11 +49,11 @@ def sl(n): return _sl(n, middle=False, emergency=False)
 def slm(n): return _sl(n, middle=True, emergency=False)
 
 ##############################
-from action import AbstractAction
+from job import AbstractJob
 
-class SleepAction(AbstractAction):
+class SleepJob(AbstractJob):
     def __init__(self, timeout, middle=False):
-        AbstractAction.__init__(self, "sleep for {}s".format(timeout))
+        AbstractJob.__init__(self, "sleep for {}s".format(timeout))
         self.timeout = timeout
         self.middle = middle
 
@@ -62,9 +62,9 @@ class SleepAction(AbstractAction):
         return result
         
 
-class TickAction(AbstractAction):
+class TickJob(AbstractJob):
     def __init__(self, cycle, *args, **kwds):
-        AbstractAction.__init__(self, "Cyclic tick every {}s".format(cycle), *args, **kwds)
+        AbstractJob.__init__(self, "Cyclic tick every {}s".format(cycle), *args, **kwds)
         self.cycle = cycle
 
     def corun(self):
@@ -77,12 +77,12 @@ class TickAction(AbstractAction):
 ####################
 if __name__ == '__main__':
 
-    from action import Action as A
+    from job import Job as A
     from engine import Engine
 
     ####################
     def test_ko():
-        """a simple loop with 3 actions - cannot handle that"""
+        """a simple loop with 3 jobs - cannot handle that"""
         print(20*'-', 'test_ko')
         a1, a2, a3 = A(sl(1.1)), A(sl(1.2)), A(sl(1.3))
         a1.requires(a2)
@@ -99,23 +99,23 @@ if __name__ == '__main__':
         print("failed", e)
 
     ####################
-    from testactions import SleepAction as SLA
-    # Action(asyncio.sleep(0.4))
+    from tests import SleepJob as SLA
+    # Job(asyncio.sleep(0.4))
     # or
-    # SleepAction(0.4)
+    # SleepJob(0.4)
     # are almost equivalent forms to do the same thing
     def test_ok():
         """a simple topology, that should work"""
         print(20*'-', 'test_ok')
-        actions = SLA(0.1), SLA(0.2), SLA(0.3), SLA(0.4), SLA(0.5), A(sl(0.6)), A(sl(0.7))
-        a1, a2, a3, a4, a5, a6, a7 = actions
+        jobs = SLA(0.1), SLA(0.2), SLA(0.3), SLA(0.4), SLA(0.5), A(sl(0.6)), A(sl(0.7))
+        a1, a2, a3, a4, a5, a6, a7 = jobs
         a4.requires(a1, a2, a3)
         a5.requires(a4)
         a6.requires(a4)
         a7.requires(a5)
         a7.requires(a6)
         
-        e = Engine(*actions)
+        e = Engine(*jobs)
         e.order()
         print("orchestrate->", e.orchestrate(asyncio.get_event_loop()))
         e.list()
@@ -123,7 +123,7 @@ if __name__ == '__main__':
     test_ok()
 
     ####################
-    from testactions import TickAction as TA
+    from tests import TickJob as TA
 
     def test_infinite():
         print(20*'-', 'test_infinite')

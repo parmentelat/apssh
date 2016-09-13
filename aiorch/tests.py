@@ -74,44 +74,45 @@ class TickJob(AbstractJob):
             counter += 1
             await asyncio.sleep(self.cycle)
 
-from job import Job as A
-import engine
+####################            
+from job import Job as J
 from engine import Engine
-engine.debug = True
 
-####################
-# xxx todo : use unittest
-def tests():
+# shortcuts
+SLJ = SleepJob
+TJ  = TickJob
+
+import unittest
+
+class Tests(unittest.TestCase):
 
     ####################
-    def test_cycle():
+    def test_cycle(self):
         """a simple loop with 3 jobs - cannot handle that"""
         print(20*'-', 'test_cycle')
-        a1, a2, a3 = A(sl(1.1)), A(sl(1.2)), A(sl(1.3))
+        a1, a2, a3 = J(sl(1.1)), J(sl(1.2)), J(sl(1.3))
         a1.requires(a2)
         a2.requires(a3)
         a3.requires(a1)
 
         e = Engine(a1, a2, a3)
-#        e.order()
-#        e.list()
-
-    try:
-#        test_cycle()
-        pass
-    except Exception as e:
-        print("failed", e)
+        try:
+            # these lines seem to trigger a nasty message about a coro not being waited
+            print("BEFORE"); e.list()
+            e.order()
+        except Exception as exc:
+            print("OK: this is expected:", exc)
+            print("AFTER"); e.list()
 
     ####################
-    from tests import SleepJob as SLA
     # Job(asyncio.sleep(0.4))
     # or
     # SleepJob(0.4)
     # are almost equivalent forms to do the same thing
-    def test_simple():
+    def test_simple(self):
         """a simple topology, that should work"""
         print(20*'-', 'test_simple')
-        jobs = SLA(0.1), SLA(0.2), SLA(0.3), SLA(0.4), SLA(0.5), A(sl(0.6)), A(sl(0.7))
+        jobs = SLJ(0.1), SLJ(0.2), SLJ(0.3), SLJ(0.4), SLJ(0.5), J(sl(0.6)), J(sl(0.7))
         a1, a2, a3, a4, a5, a6, a7 = jobs
         a4.requires(a1, a2, a3)
         a5.requires(a4)
@@ -124,27 +125,20 @@ def tests():
         print("orchestrate->", e.orchestrate(loop=asyncio.get_event_loop()))
         e.list()
         
-    test_simple()
-
     ####################
-    from tests import TickJob as TA
-
-    def test_forever():
+    def test_forever(self):
         print(20*'-', 'test_forever')
-        a1, a2, t1 = SLA(1), SLA(1.5), TA(.6)
+        a1, a2, t1 = SLJ(1), SLJ(1.5), TJ(.6)
         a2.requires(a1)
         e = Engine(a1, a2, t1)
         e.list()
         print("orchestrate->", e.orchestrate(loop=asyncio.get_event_loop()))
         e.list()
 
-    test_forever()
-        
-
     ####################
-    def test_timeout():
+    def test_timeout(self):
         print(20*'-', 'test_timeout')
-        a1, a2, a3 = [SLA(x) for x in (0.5, 0.6, 0.7)]
+        a1, a2, a3 = [SLJ(x) for x in (0.5, 0.6, 0.7)]
         a2.requires(a1)
         a3.requires(a2)
         e = Engine(a1, a2, a3)
@@ -152,22 +146,24 @@ def tests():
         e.orchestrate(timeout=1)
         e.list()
 
-    test_timeout()
-
     ####################
-    async def coro_exc(n):
-        await asyncio.sleep(n)
-        raise ValueError(10**6*n)
+    def test_exc(self):
+
+        async def coro_exc(n):
+            await asyncio.sleep(n)
+            raise ValueError(10**6*n)
     
-    def test_exc():
         print(20*'-', 'test_exc')
-        a1, a2 = SLA(1), A(coro_exc(0.5), label='boom')
+        a1, a2 = SLJ(1), J(coro_exc(0.5), label='boom')
         e = Engine(a1, a2)
         e.orchestrate()
         e.list()
 
-    test_exc()
-
 if __name__ == '__main__':
-    tests()
+    import sys
+    if '-v' in sys.argv:
+        import engine
+        engine.debug = True
+        sys.argv.remove('-v')
+    unittest.main()
 

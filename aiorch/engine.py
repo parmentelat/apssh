@@ -152,7 +152,7 @@ class Engine:
         else:
             return self.expiration - time.time()
 
-    def _tidy_tasks(self, loop, pending):
+    async def _tidy_tasks(self, loop, pending):
         """
         Once orchestrate is done with its job, in order to tidy up the underlying 
         Task objects that have not completed, it is necessary to cancel them and wait for them
@@ -164,9 +164,9 @@ class Engine:
             # wait for the forever tasks for a clean exit
             # don't bother to set a timeout, as this is expected to be immediate
             # since all tasks are canceled
-            loop.run_until_complete(asyncio.wait(pending))
+            await asyncio.wait(pending)
         
-    def _clear_tasks_exception(self, loop, tasks):
+    async def _tidy_tasks_exception(self, loop, tasks):
         """
         Similar but in order to clear the exception, we need to run gather() instead
         """
@@ -176,10 +176,14 @@ class Engine:
             # wait for the forever tasks for a clean exit
             # don't bother to set a timeout, as this is expected to be immediate
             # since all tasks are canceled
-            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+            await asyncio.gather(*tasks, return_exceptions=True)
         
+    def orchestrate(self, loop=None, *args, **kwds):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
 
-    def orchestrate(self, timeout=None, loop=None):
+    async def co_orchestrate(self, loop=None, timeout=None):
         """
         the primary entry point for running an ordered set of jobs
         """
@@ -209,9 +213,9 @@ class Engine:
         
         while True:
             done, pending \
-                = loop.run_until_complete(asyncio.wait(pending,
-                                                       timeout = self.remaining_timeout(),
-                                                       return_when = asyncio.FIRST_COMPLETED))
+                = await asyncio.wait(pending,
+                                     timeout = self.remaining_timeout(),
+                                     return_when = asyncio.FIRST_COMPLETED)
 
             if debug:
                 print("orchestrate: {} iteration {} / {} - {} done and {} pending"
@@ -236,7 +240,7 @@ class Engine:
                 if debug: print("orchestrate: {} CLEANING UP at iteration {} / {}"
                                 .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
-                self._tidy_tasks(loop, pending)
+                await self._tidy_tasks(loop, pending)
                 return True
 
             # exceptions need to be cleaned up 
@@ -244,7 +248,7 @@ class Engine:
                 if debug:
                     print("orchestrate: EXCEPTION occurred")
                 # clear the exception
-                self._clear_tasks_exception(loop, done)
+                await self._tidy_tasks_exception(loop, done)
 
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind the job that just finished

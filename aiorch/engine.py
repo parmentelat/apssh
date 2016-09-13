@@ -41,7 +41,7 @@ class Engine:
     def list(self):
         """
         print internal jobs as sorted in self.jobs
-        mostly useful after .order()
+        mostly useful after .rain_check()
         """
         for i, job in enumerate(self.jobs):
             print(i, job)
@@ -74,21 +74,22 @@ class Engine:
             for req in job.required:
                 req._successors.append(job)
 
-    def order(self):
+    def rain_check(self):
         """
-        performs minimum sanity check -- raise ValueError if the topology cannot be handled
+        performs minimum sanity check
 
         NOTE: the purpose of this is primarily to check for cycles
         it's not embedded in orchestrate because it's not strictly necessary
-        but it's safer to do so before calling orchestrate if one wants 
+        but it's safer to run this before calling orchestrate if one wants 
         to type-check the jobs dependency graph early on
 
-        SIDE EFFECT: 
+        SIDE EFFECT:
         re-order self.jobs so that the free jobs a.k.a. entry points
         i.e. jobs with no requirements, show up first
+        more generally, if a requires b, a will show up before b in self.jobs
 
         RETURN:
-        None, or an exception gets fired
+        a boolean that is True if the topology looks clear 
         """
         # clear marks
         self._reset_marks()
@@ -110,7 +111,7 @@ class Engine:
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
                     if debug:
-                        print("order: marking {}".format(job))
+                        print("rain_check: marking {}".format(job))
                     job._mark = True
                     self.jobs.append(job)
                     saved_jobs.remove(job)
@@ -120,13 +121,17 @@ class Engine:
                 break
             if not changed:
                 if debug:
-                    print("order: loop makes no progress - we have a problem")
+                    print("rain_check: loop makes no progress - we have a problem")
+                # restore list of jobs
                 self.jobs += saved_jobs
-                raise ValueError("only acyclic graphs are supported")
+                # this is wrong
+                return False
         # if we still have jobs here it's not quite good either
         if saved_jobs:
-            print("order: we have {} jobs still in the pool and can't reach them from free jobs")
-            raise ValueError("cyclic graph")
+            if debug:
+                print("rain_check: we have {} jobs still in the pool and can't reach them from free jobs")
+            return False
+        return True
 
     @staticmethod
     def ensure_future(job, loop):

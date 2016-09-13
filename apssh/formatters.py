@@ -59,7 +59,7 @@ class RawFormatter(Formatter):
     Display raw lines as they come
     mostly useless, but useful for development
     """
-    def __init__(self, debug):
+    def __init__(self, debug=False):
         self.debug = debug
     def connection_start(self, hostname):
         if self.debug: print_stderr("RF CA: Connected to {}".format(hostname))

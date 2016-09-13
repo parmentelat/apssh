@@ -3,9 +3,6 @@
 import time
 import asyncio
 
-debug = False
-#debug = True
-
 class Engine:
     """
     An Engine instance works on a set of Job objects
@@ -33,6 +30,7 @@ class Engine:
         if critical is None:
             critical = self.default_critical
         self.critical = critical
+        self.debug = False
 
     def add(self, jobs):
         self.jobs += jobs
@@ -110,7 +108,7 @@ class Engine:
                     if required_job._mark is None:
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    if debug:
+                    if self.debug:
                         print("rain_check: marking {}".format(job))
                     job._mark = True
                     self.jobs.append(job)
@@ -120,7 +118,7 @@ class Engine:
                 # we're done
                 break
             if not changed:
-                if debug:
+                if self.debug:
                     print("rain_check: loop makes no progress - we have a problem")
                 # restore list of jobs
                 self.jobs += saved_jobs
@@ -128,19 +126,20 @@ class Engine:
                 return False
         # if we still have jobs here it's not quite good either
         if saved_jobs:
-            if debug:
+            if self.debug:
                 print("rain_check: we have {} jobs still in the pool and can't reach them from free jobs")
             return False
         return True
 
-    @staticmethod
-    def ensure_future(job, loop):
+    def ensure_future(self, job, loop):
         """
         this is the hook that lets us make sure the created Task object have a 
         backlink pointer to its correponding job
         """
         task = asyncio.ensure_future(job.co_run(), loop=loop)
-        if debug: print("scheduling job {}".format(job.label))
+        if self.debug:
+            print("scheduling job {}".format(job.label))
+        # create references back and forth between Job and asyncio.Task
         task._job = job
         job._task = task
         return task
@@ -222,7 +221,7 @@ class Engine:
         if not entry_jobs:
             raise ValueError("No entry points found - cannot orchestrate")
         
-        pending = [ Engine.ensure_future(job, loop=loop)
+        pending = [ self.ensure_future(job, loop=loop)
                     for job in entry_jobs ]
         
         while True:
@@ -231,28 +230,29 @@ class Engine:
                                      timeout = self.remaining_timeout(),
                                      return_when = asyncio.FIRST_COMPLETED)
 
-            if debug:
+            if self.debug:
                 print("orchestrate: {} iteration {} / {} - {} done and {} pending"
                       .format(4*'-', nb_jobs_done, nb_jobs_finite,
                               len(done), len(pending)))
             # nominally we have exactly one item in done
             # it looks like the only condition where we have nothing in done is
             # because a timeout occurred
-            if not done or len(done) != 1:
-                if debug:
+            if not done or len(done) == 0:
+                if self.debug:
                     print("orchestrate: TIMEOUT occurred")
                 # clean up
                 await self._tidy_tasks(pending)
                 return False
             done_job = list(done)[0]._job
-            if debug:
+            if self.debug:
                 print("JOB DONE = {}".format(done_job))
 
             # are we done ?
             nb_jobs_done += len(done)
             if nb_jobs_done == nb_jobs_finite:
-                if debug: print("orchestrate: {} CLEANING UP at iteration {} / {}"
-                                .format(4*'-', nb_jobs_done, nb_jobs_finite))
+                if self.debug:
+                    print("orchestrate: {} CLEANING UP at iteration {} / {}"
+                          .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
                 await self._tidy_tasks(pending)
                 return True
@@ -260,7 +260,7 @@ class Engine:
             # exceptions need to be cleaned up 
             if done_job.raised_exception():
                 critical = done_job.is_critical(self)
-                if debug:
+                if self.debug:
                     print("orchestrate: EXCEPTION occurred - critical = {}".format(critical))
                 # clear the exception
                 await self._tidy_tasks_exception(done)
@@ -271,7 +271,7 @@ class Engine:
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind the job that just finished
             possible_next_jobs = done_job._successors
-            if debug:
+            if self.debug:
                 print("possible ->", len(possible_next_jobs))
                 for a in possible_next_jobs:
                     print(a)
@@ -289,7 +289,7 @@ class Engine:
                     if not req.is_done():
                         requirements_ok = False
                 if requirements_ok:
-                    pending.add(Engine.ensure_future(candidate_next, loop=loop))
+                    pending.add(self.ensure_future(candidate_next, loop=loop))
                     added += 1
             #if not added:
             #    # should not happen

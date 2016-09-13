@@ -178,17 +178,14 @@ class Engine:
             # since all tasks are canceled
             await asyncio.wait(pending)
         
-    async def _tidy_tasks_exception(self, tasks):
+    async def _tidy_task_exception(self, task):
         """
         Similar but in order to clear the exception, we need to run gather() instead
         """
-        if tasks:
-            for task in tasks:
-                task.cancel()
-            # wait for the forever tasks for a clean exit
-            # don't bother to set a timeout, as this is expected to be immediate
-            # since all tasks are canceled
-            await asyncio.gather(*tasks, return_exceptions=True)
+        task.cancel()
+        # don't bother to set a timeout, as this is expected to be immediate
+        # since all tasks are canceled
+        await asyncio.gather(task, return_exceptions=True)
         
     def orchestrate(self, loop=None, *args, **kwds):
         if loop is None:
@@ -243,9 +240,10 @@ class Engine:
                 # clean up
                 await self._tidy_tasks(pending)
                 return False
-            done_job = list(done)[0]._job
+            # surprisingly I can see cases where done has more than one entry
+            # typically when 2 jobs have very similar durations
             if self.debug:
-                print("JOB DONE = {}".format(done_job))
+                print("JOBS DONE = {}".format(done))
 
             # are we done ?
             nb_jobs_done += len(done)
@@ -258,23 +256,32 @@ class Engine:
                 return True
 
             # exceptions need to be cleaned up 
-            if done_job.raised_exception():
-                critical = done_job.is_critical(self)
-                if self.debug:
-                    print("orchestrate: EXCEPTION occurred - critical = {}".format(critical))
-                # clear the exception
-                await self._tidy_tasks_exception(done)
+            for done_task in done:
+                done_job = done_task._job
+                # do we have at least one critical job with an exception ?
+                critical = False
+                if done_job.raised_exception():
+                    critical = critical or done_job.is_critical(self)
+                    if self.debug:
+                        print("orchestrate: EXCEPTION occurred - critical = {}".format(critical))
+                    # clear the exception
+                    await self._tidy_task_exception(done_task)
                 if critical:
                     await self._tidy_tasks(pending)
                     return False
 
             # go on : find out the jobs that can be added to the mix
-            # only consider the ones that are right behind the job that just finished
-            possible_next_jobs = done_job._successors
+            # only consider the ones that are right behind any of the the jobs that just finished
+            possible_next_jobs = []
+            for done_task in done:
+                possible_next_jobs += done_task._job._successors
+            # remove duplicates
+            possible_next_jobs = list(set(possible_next_jobs))
             if self.debug:
                 print("possible ->", len(possible_next_jobs))
                 for a in possible_next_jobs:
                     print(a)
+
             # find out which ones really can be added
             added = 0
             for candidate_next in possible_next_jobs:
@@ -291,7 +298,4 @@ class Engine:
                 if requirements_ok:
                     pending.add(self.ensure_future(candidate_next, loop=loop))
                     added += 1
-            #if not added:
-            #    # should not happen
-            #    raise ValueError("Internal Error")
 

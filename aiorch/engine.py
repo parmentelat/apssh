@@ -25,9 +25,14 @@ class Engine:
         it's not clear yet what should happen if co_run raises an exception
     """
 
-    def __init__(self, *jobs):
+    default_critical = False
+
+    def __init__(self,  *jobs, critical=None):
         self.jobs = jobs
         self.jobs = list(set(self.jobs))
+        if critical is None:
+            critical = self.default_critical
+        self.critical = critical
 
     def add(self, jobs):
         self.jobs += jobs
@@ -41,6 +46,9 @@ class Engine:
         for i, job in enumerate(self.jobs):
             print(i, job)
         
+    def is_critical(self):
+        return self.critical
+
     def _reset_marks(self):
         """
         reset Job._mark on all jobs
@@ -152,7 +160,7 @@ class Engine:
         else:
             return self.expiration - time.time()
 
-    async def _tidy_tasks(self, loop, pending):
+    async def _tidy_tasks(self, pending):
         """
         Once orchestrate is done with its job, in order to tidy up the underlying 
         Task objects that have not completed, it is necessary to cancel them and wait for them
@@ -166,7 +174,7 @@ class Engine:
             # since all tasks are canceled
             await asyncio.wait(pending)
         
-    async def _tidy_tasks_exception(self, loop, tasks):
+    async def _tidy_tasks_exception(self, tasks):
         """
         Similar but in order to clear the exception, we need to run gather() instead
         """
@@ -189,8 +197,9 @@ class Engine:
         """
         if loop is None:
             loop = asyncio.get_event_loop()
-        # initialize
+        # initialize backlinks - i.e. _successors is the reverse of required
         self._backlinks()
+        # clear any Task instance
         self._reset_tasks()
 
         self.mark_beginning(timeout)
@@ -228,7 +237,7 @@ class Engine:
                 if debug:
                     print("orchestrate: TIMEOUT occurred")
                 # clean up
-                self._tidy_tasks(loop, pending)
+                await self._tidy_tasks(pending)
                 return False
             done_job = list(done)[0]._job
             if debug:
@@ -240,15 +249,19 @@ class Engine:
                 if debug: print("orchestrate: {} CLEANING UP at iteration {} / {}"
                                 .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
-                await self._tidy_tasks(loop, pending)
+                await self._tidy_tasks(pending)
                 return True
 
             # exceptions need to be cleaned up 
             if done_job.raised_exception():
+                critical = done_job.is_critical(self)
                 if debug:
-                    print("orchestrate: EXCEPTION occurred")
+                    print("orchestrate: EXCEPTION occurred - critical = {}".format(critical))
                 # clear the exception
-                await self._tidy_tasks_exception(loop, done)
+                await self._tidy_tasks_exception(done)
+                if critical:
+                    await self._tidy_tasks(pending)
+                    return False
 
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind the job that just finished

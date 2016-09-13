@@ -36,11 +36,12 @@ class AbstractJob:
     It's mostly a companion class to the Engine class, that does the heavy lifting
     """
 
-    def __init__(self, forever, label):
+    def __init__(self, forever, label, critical=None):
         if label is None:
             label = "NOLABEL"
         self.label = label
         self.forever = forever
+        self.critical = critical
         # list of Job objects that need to be completed before we can start this one
         self.required = []
         # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
@@ -88,6 +89,15 @@ class AbstractJob:
         """returns an exception if applicable, or None"""
         return self._task is not None and self._task._exception
 
+    def is_critical(self, engine):
+        """
+        If critical is set locally, use that
+        otherwise the engine tells the default
+        """
+        if self.critical is not None:
+            return self.critical
+        return engine.is_critical()
+
     def result(self):
         if not self.is_done():
             raise ValueError("job not finished")
@@ -118,9 +128,9 @@ class Job(AbstractJob):
     Most mundane form is to provide a coroutine yourself
     """
     
-    def __init__(self, coro, forever=False, label=None):
+    def __init__(self, coro, forever=False, label=None, *args, **kwds):
         self.coro = coro
-        AbstractJob.__init__(self, forever=forever, label=label)
+        AbstractJob.__init__(self, forever=forever, label=label, *args, **kwds)
 
     async def co_run(self):
         result = await self.coro

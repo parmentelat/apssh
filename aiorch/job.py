@@ -24,7 +24,7 @@ class AbstractJob:
 
     (*) it offers some very basic graph-related features to model requirements
         a la makefile
-    (*) its subclasses are expected to implement a `corun()` method 
+    (*) its subclasses are expected to implement a `co_run()` method 
         that specifies the actual behaviour as a coroutine
 
     Can be created with 
@@ -43,7 +43,7 @@ class AbstractJob:
         self.forever = forever
         # list of Job objects that need to be completed before we can start this one
         self.required = []
-        # once submitted in the asyncio loop/scheduler, the `corun()` gets embedded in a 
+        # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None
         # ==== fields for our friend Engine 
@@ -93,11 +93,11 @@ class AbstractJob:
             raise ValueError("job not finished")
         return self._task._result
 
-    async def corun(self):
+    async def co_run(self):
         """
         abstract virtual - needs to be implemented
         """
-        print("Job.corun() needs to be implemented on class {}"
+        print("Job.co_run() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
 
@@ -108,7 +108,7 @@ class AbstractJob:
         and other exceptions
         """
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.corun())
+        loop.run_until_complete(self.co_run())
 
 
 ####################
@@ -122,6 +122,6 @@ class Job(AbstractJob):
         self.coro = coro
         AbstractJob.__init__(self, forever=forever, label=label)
 
-    async def corun(self):
+    async def co_run(self):
         result = await self.coro
         return result

@@ -14,15 +14,15 @@ class Engine:
     starting with the ones that have no requirements, 
     and then starting the othe ones as their requirements are satisfied
 
-    Running a Job means executing its corun() method, which must be a coroutine
+    Running a Job means executing its co_run() method, which must be a coroutine
 
     As of this rough/early implementation: 
-    (*) the result of `corun` is not yet taken into account to implement some
+    (*) the result of `co_run` is not yet taken into account to implement some
         logic about how the overall job should behave. Instead the results of individual
         jobs can be retrieved individually when thei state is finished
 
     (*) exceptions are still in the work and probably not too well handled
-        it's not clear yet what should happen if corun raises an exception
+        it's not clear yet what should happen if co_run raises an exception
     """
 
     def __init__(self, *jobs):
@@ -101,7 +101,8 @@ class Engine:
                     if required_job._mark is None:
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    if debug: print("order: marking {}".format(job.label))
+                    if debug:
+                        print("order: marking {}".format(job))
                     job._mark = True
                     self.jobs.append(job)
                     saved_jobs.remove(job)
@@ -110,7 +111,9 @@ class Engine:
                 # we're done
                 break
             if not changed:
-                if debug: print("order: loop makes no progress - we have a problem")
+                if debug:
+                    print("order: loop makes no progress - we have a problem")
+                self.jobs += saved_jobs
                 raise ValueError("only acyclic graphs are supported")
         # if we still have jobs here it's not quite good either
         if saved_jobs:
@@ -123,7 +126,7 @@ class Engine:
         this is the hook that lets us make sure the created Task object have a 
         backlink pointer to its correponding job
         """
-        task = asyncio.ensure_future(job.corun(), loop=loop)
+        task = asyncio.ensure_future(job.co_run(), loop=loop)
         if debug: print("scheduling job {}".format(job.label))
         task._job = job
         job._task = task

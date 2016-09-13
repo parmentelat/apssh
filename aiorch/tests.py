@@ -57,7 +57,7 @@ class SleepJob(AbstractJob):
         self.timeout = timeout
         self.middle = middle
 
-    async def corun(self):
+    async def co_run(self):
         result = await _sl(self.timeout, middle=self.middle, emergency=False)
         return result
         
@@ -67,7 +67,7 @@ class TickJob(AbstractJob):
         AbstractJob.__init__(self, forever=True, label="Cyclic tick every {}s".format(cycle))
         self.cycle = cycle
 
-    async def corun(self):
+    async def co_run(self):
         counter = 1
         while True:
             print("{} -- Tick {} from {}".format(ts(), counter, self.label))

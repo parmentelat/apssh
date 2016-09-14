@@ -171,18 +171,22 @@ class SshProxy:
                 print_stderr("FAILED to start_sftp_client")
             self.sftp_client = None
         if self.debug:
-            print_stderr("AFTER start_sftp_client -> {}".format(self.sftp_client))
+            print_stderr("{} SFTP CONNECTED".format(self))
         return self.sftp_client is not None
 
     async def sftp_close(self):
         if self.sftp_client is not None:
-            # xxx use return code ?
+            if self.debug:
+                print_stderr("{} SFTP DISCONNECTING".format(self))
             await self.sftp_client.wait_closed()
             self.sftp_client = None
 
     async def close(self):
+        print("SshProxy.async close")
         await self.sftp_close()
         if self.conn is not None:
+            if self.debug:
+                print_stderr("{} DISCONNECTING".format(self))
             self.conn.close()
             await self.conn.wait_closed()
             self.conn, self.client = None, None

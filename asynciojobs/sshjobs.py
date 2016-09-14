@@ -17,6 +17,9 @@ class SshJob(AbstractJob):
     async def co_run(self):
         return await self.proxy.connect_and_run(self.command, disconnect=False)
         
+    async def co_shutdown(self):
+        await self.proxy.close()
+
 class SshJobScript(AbstractJob):
 
     # here the first item in command must be a local filename
@@ -31,4 +34,7 @@ class SshJobScript(AbstractJob):
                                                     *self.script_args,
                                                     disconnect=False)
         
+    async def co_shutdown(self):
+        await self.proxy.close()
+
         

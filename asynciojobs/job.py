@@ -107,9 +107,15 @@ class AbstractJob:
         """
         abstract virtual - needs to be implemented
         """
-        print("Job.co_run() needs to be implemented on class {}"
+        print("AbstractJob.co_run() needs to be implemented on class {}"
               .format(self.__class__.__name__))
 
+    async def co_shutdown(self):
+        """
+        abstract virtual - needs to be implemented
+        """
+        print("AbstractJob.co_shutdown() needs to be implemented on class {}"
+              .format(self.__class__.__name__))
 
     def standalone_run(self):
         """
@@ -135,3 +141,6 @@ class Job(AbstractJob):
     async def co_run(self):
         result = await self.coro
         return result
+
+    async def co_shutdown(self):
+        pass

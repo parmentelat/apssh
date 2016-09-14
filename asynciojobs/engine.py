@@ -14,12 +14,10 @@ class Engine:
     Running a Job means executing its co_run() method, which must be a coroutine
 
     As of this rough/early implementation: 
-    (*) the result of `co_run` is not yet taken into account to implement some
-        logic about how the overall job should behave. Instead the results of individual
-        jobs can be retrieved individually when thei state is finished
+    (*) the result of `co_run` is NOT taken into account to implement some
+        logic about how the overall job should behave. Instead the result and/or exception
+        of each individual job can be retrieved individually once the orchestration is complete
 
-    (*) exceptions are still in the work and probably not too well handled
-        it's not clear yet what should happen if co_run raises an exception
     """
 
     default_critical = False
@@ -32,9 +30,12 @@ class Engine:
         self.critical = critical
         self.debug = debug
 
-    def add(self, jobs):
-        self.jobs += jobs
+    def update(self, jobs):
+        self.jobs += list(jobs)
         self.jobs = list(set(self.jobs))
+
+    def add(self, job):
+        self.update([job])
 
     def list(self):
         """
@@ -44,6 +45,11 @@ class Engine:
         for i, job in enumerate(self.jobs):
             print(i, job)
         
+    def orchestrate(self, loop=None, *args, **kwds):
+        if loop is None:
+            loop = asyncio.get_event_loop()
+        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
+
     def is_critical(self):
         return self.critical
 
@@ -72,6 +78,7 @@ class Engine:
             for req in job.required:
                 req._successors.append(job)
 
+    ####################
     def rain_check(self):
         """
         performs minimum sanity check
@@ -131,6 +138,7 @@ class Engine:
             return False
         return True
 
+    ####################
     def ensure_future(self, job, loop):
         """
         this is the hook that lets us make sure the created Task object have a 
@@ -187,10 +195,17 @@ class Engine:
         # since all tasks are canceled
         await asyncio.gather(task, return_exceptions=True)
         
-    def orchestrate(self, loop=None, *args, **kwds):
-        if loop is None:
-            loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.co_orchestrate(loop=loop, *args, **kwds))
+    async def co_shutdown(self):
+        """
+        The idea here is to send a message to all the jobs once the orchestration is over
+        Typically for example, several jobs sharing the same ssh connection will arrange for 
+        that connection to be kept alive across an engine, but there is a need to tear these 
+        connections down eventually
+        """
+        # xxx this for now is not working
+        #for job in self.jobs:
+        #    await job.co_shutdown()
+        pass
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """
@@ -239,6 +254,7 @@ class Engine:
                     print("orchestrate: TIMEOUT occurred")
                 # clean up
                 await self._tidy_tasks(pending)
+                await self.co_shutdown()
                 return False
             # surprisingly I can see cases where done has more than one entry
             # typically when 2 jobs have very similar durations
@@ -253,6 +269,7 @@ class Engine:
                           .format(4*'-', nb_jobs_done, nb_jobs_finite))
                 assert len(pending) == nb_jobs_forever
                 await self._tidy_tasks(pending)
+                await self.co_shutdown()
                 return True
 
             # exceptions need to be cleaned up 
@@ -268,6 +285,7 @@ class Engine:
                     await self._tidy_task_exception(done_task)
                 if critical:
                     await self._tidy_tasks(pending)
+                    await self.co_shutdown()
                     return False
 
             # go on : find out the jobs that can be added to the mix

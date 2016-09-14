@@ -291,7 +291,7 @@ class SshProxy:
                 print_stderr("Could not create {} on {}".format(default_remote_workdir, self))
             return False
 
-    async def connect_put_and_run(self, localfile, *args, disconnect=True):
+    async def connect_put_and_run(self, localfile, *script_args, disconnect=True):
         """
         This helper function does everything needed to push a script remotely
         and run it; which involves
@@ -314,7 +314,7 @@ class SshProxy:
             return None
         # run it
         basename = os.path.basename(localfile)
-        extras = " ".join(args)
+        extras = " ".join(script_args)
         command = "{}/{} {}".format(default_remote_workdir, basename, extras)
         result = await self.run(command)
         return result

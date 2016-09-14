@@ -91,7 +91,7 @@ class Engine:
             job._successors &= self.jobs
             after = len(job.required)
             if verbose and before != after:
-                print("WARNING: job {} has had {} requirements removed"
+                print(20*'*', "WARNING: job {} has had {} requirements removed"
                       .format(job, before - after))
 
     def rain_check(self, allow_garbage=True):
@@ -221,10 +221,13 @@ class Engine:
         that connection to be kept alive across an engine, but there is a need to tear these 
         connections down eventually
         """
-        # xxx this for now is not working
-        #for job in self.jobs:
-        #    await job.co_shutdown()
-        pass
+        if self.debug:
+            print("engine is shutting down...")
+        tasks = [ asyncio.ensure_future(job.co_shutdown()) for job in self.jobs ]
+        done, pending = await asyncio.wait(tasks, timeout = self.remaining_timeout())
+        if len(pending) != 0:
+            print("WARNING: {}/{} co_shutdown() methods have not returned within timeout"
+                  .format(len(pending), len(self.jobs)))
 
     async def co_orchestrate(self, loop=None, timeout=None):
         """

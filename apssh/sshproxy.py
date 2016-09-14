@@ -175,21 +175,40 @@ class SshProxy:
         return self.sftp_client is not None
 
     async def sftp_close(self):
+        """
+        close the SFTP client if relevant
+        """
         if self.sftp_client is not None:
             if self.debug:
                 print_stderr("{} SFTP DISCONNECTING".format(self))
-            await self.sftp_client.wait_closed()
+            # set self.sftp_client to None *before* awaiting
+            # to avoid duplicate attempts
+            preserve = self.sftp_client
             self.sftp_client = None
+            preserve.exit()
+            await preserve.wait_closed()
 
-    async def close(self):
-        print("SshProxy.async close")
-        await self.sftp_close()
+    async def ssh_close(self):
+        """
+        clse the SSH connection if relevant
+        """
         if self.conn is not None:
             if self.debug:
                 print_stderr("{} DISCONNECTING".format(self))
-            self.conn.close()
-            await self.conn.wait_closed()
+            preserve = self.conn
             self.conn, self.client = None, None
+            preserve.close()
+            await preserve.wait_closed()
+
+    async def close(self):
+        """
+        close everything open
+        """
+        # beware that when used with asynciojobs, we often have several jobs
+        # sharing the same proxy, and so there might be several calls to
+        # close() sent to the same object at the same time...
+        await self.sftp_close()
+        await self.ssh_close()
 
     ##############################
     async def run(self, command):

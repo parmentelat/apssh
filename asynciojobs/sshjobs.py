@@ -11,7 +11,7 @@ class SshJob(AbstractJob):
 
     def __init__(self, proxy, command, label=None, critical=True):
         self.proxy = proxy
-        self.command = command
+        self.command = " ".join(command)
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)
 
     async def co_run(self):
@@ -19,12 +19,16 @@ class SshJob(AbstractJob):
         
 class SshJobScript(AbstractJob):
 
-    def __init__(self, proxy, local_script, label=None, critical=True):
+    # here the first item in command must be a local filename
+    def __init__(self, proxy, command, script_args=None, label=None, critical=True):
         self.proxy = proxy
-        self.local_script = local_script
+        self.local_script = command[0]
+        self.script_args = command[1:]
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)
 
     async def co_run(self):
-        return await self.proxy.connect_put_and_run(self.local_script, disconnect=False)
+        return await self.proxy.connect_put_and_run(self.local_script,
+                                                    *self.script_args,
+                                                    disconnect=False)
         
         

@@ -7,9 +7,12 @@ from apssh.formatters import ColonFormatter
 async def aprint(*args, **kwds):
     print(*args, **kwds)
 
-bash_script = "sshtests1.sh"
-with open(bash_script) as f:
+# first script does not take args as it it passed directly as a command
+with open("sshtests1.sh") as f:
     bash_oneliner = f.read()
+
+# this one accepts one message argument
+bash_script = "sshtests2.sh"
 
 ####################
 def two_passes(synchro, debug=False):
@@ -32,18 +35,19 @@ def two_passes(synchro, debug=False):
                 for node in nodes ]
 
     print(40*'*', msg)
-    command = "/bin/bash -c '{}'".format(bash_oneliner)
     jobs1 = [ SshJob(proxy=proxy,
-                     command=command,
-                     label="{} - pass1 on {}".format(msg, node))
+                     command = [ "/bin/bash -c '{}'".format(bash_oneliner)],
+                     label="{} - pass1 on {}".format(msg, node),
+    )
               for (proxy, node) in zip(proxies, nodes)]
     
 
     middle = Job(aprint( 20*'=' + 'middle'), label='middle')
 
     jobs2 = [ SshJobScript(proxy=proxy,
-                           local_script=bash_script,
-                           label="{} - pass2 on {}".format(msg, node))
+                           command = [bash_script, 'pass2'],
+                           label="{} - pass2 on {}".format(msg, node),
+                       )
               for (proxy, node) in zip(proxies, nodes)]
     
     for j1 in jobs1:

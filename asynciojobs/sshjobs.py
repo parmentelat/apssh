@@ -5,7 +5,8 @@
 # but well, right now I'm in a rush and would want to see stuff running...
 
 from apssh.sshproxy import SshProxy
-from job import AbstractJob
+
+from .job import AbstractJob
 
 class SshJob(AbstractJob):
 
@@ -36,5 +37,3 @@ class SshJobScript(AbstractJob):
         
     async def co_shutdown(self):
         await self.proxy.close()
-
-        

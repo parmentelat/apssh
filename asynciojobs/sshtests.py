@@ -15,7 +15,7 @@ with open("sshtests1.sh") as f:
 bash_script = "sshtests2.sh"
 
 ####################
-def two_passes(synchro, debug=False):
+def two_passes(synchro, debug=False, skip1=False, skip2=False):
 
     """
     synchro = True : wait for pass1 to complete on all nodes before triggering pass2
@@ -39,7 +39,7 @@ def two_passes(synchro, debug=False):
                      command = [ "/bin/bash -c '{}'".format(bash_oneliner)],
                      label="{} - pass1 on {}".format(msg, node),
     )
-              for (proxy, node) in zip(proxies, nodes)]
+              for (proxy, node) in zip(proxies, nodes) ]
     
 
     middle = Job(aprint( 20*'=' + 'middle'), label='middle')
@@ -60,7 +60,17 @@ def two_passes(synchro, debug=False):
         for j2 in jobs2:
             j2.requires(middle)
 
-    e = Engine(*(jobs1+[middle]+jobs2), debug=debug)
+    e = Engine(debug=debug)
+    if not skip1:
+        e.update(jobs1)
+    e.add(middle)
+    if not skip2:
+        e.update(jobs2)
+    print("========== sanitize")
+    e.sanitize()
+    print("========== rain check")
+    e.rain_check()
+    print("========== orchestrating")
     orch = e.orchestrate()
     print('********** orchestrate ->', orch)
     e.list()
@@ -71,16 +81,20 @@ if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("-d", "--debug", action='store_true')
+    parser.add_argument("--skip1", action='store_true')
+    parser.add_argument("--skip2", action='store_true')
     # -1 : first test
     # -2 : second test
     # -3 : both
     parser.add_argument("-p", "--passes", type=int, default=3)
     args = parser.parse_args()
     debug = args.debug
+    skip1 = args.skip1
+    skip2 = args.skip2
     passes = args.passes
 
     if passes & 1:
-        two_passes(True, debug)
+        two_passes(True, debug, skip1, skip2)
     if passes & 2:
-        two_passes(False, debug)
+        two_passes(False, debug, skip1, skip2)
     

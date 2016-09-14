@@ -43,7 +43,7 @@ class AbstractJob:
         self.forever = forever
         self.critical = critical
         # list of Job objects that need to be completed before we can start this one
-        self.required = []
+        self.required = set()
         # once submitted in the asyncio loop/scheduler, the `co_run()` gets embedded in a 
         # Task object, that is our handle when talking to asyncio.wait
         self._task = None
@@ -51,7 +51,7 @@ class AbstractJob:
         # this is for graph browsing algos
         self._mark = None
         # the reverse of required
-        self._successors = []
+        self._successors = set()
 
     def __repr__(self):
         info = "<Job `{}'".format(self.label)
@@ -71,15 +71,14 @@ class AbstractJob:
             info += " !!{}:{}!!".format(type(exception).__name__, exception)
         ### show dependencies in both directions
         if self.required:
-            info += " - [requires " + " ".join(["[{}]".format(a.label) for a in self.required]) + "]"
+            info += " - requires:{" + " ".join(["[{}]".format(a.label) for a in self.required]) + "}"
         if self._successors:
-            info += " - [allows " + " ".join(["[{}]".format(a.label) for a in self._successors]) + "]"
+            info += " - allows: {" + " ".join(["[{}]".format(a.label) for a in self._successors]) + "}"
         info += ">"
         return info
     
     def requires(self, *jobs):
-        self.required += jobs
-        self.required = list(set(self.required))
+        self.required.update(jobs)
 
     def is_started(self):
         return self._task is not None

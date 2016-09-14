@@ -23,19 +23,17 @@ class Engine:
     default_critical = False
 
     def __init__(self,  *jobs, critical=None, debug=False):
-        self.jobs = jobs
-        self.jobs = list(set(self.jobs))
+        self.jobs = set(jobs)
         if critical is None:
             critical = self.default_critical
         self.critical = critical
         self.debug = debug
 
     def update(self, jobs):
-        self.jobs += list(jobs)
-        self.jobs = list(set(self.jobs))
+        self.jobs.update(jobs)
 
     def add(self, job):
-        self.update([job])
+        self.jobs.add(job)
 
     def list(self):
         """
@@ -73,13 +71,30 @@ class Engine:
         as the reverse of Job.required
         """
         for job in self.jobs:
-            job._successors = []
+            job._successors = set()
         for job in self.jobs:
             for req in job.required:
-                req._successors.append(job)
+                req._successors.add(job)
 
     ####################
-    def rain_check(self):
+    def sanitize(self, verbose=True):
+        """
+        Removes requirements that are not part of the engine
+        This is mostly convenient in many test scenarios
+        but in any case it is crucial that this property holds
+        for orchestrate to perform properly
+        """
+
+        for job in self.jobs:
+            before = len(job.required)
+            job.required &= self.jobs
+            job._successors &= self.jobs
+            after = len(job.required)
+            if verbose and before != after:
+                print("WARNING: job {} has had {} requirements removed"
+                      .format(job, before - after))
+
+    def rain_check(self, allow_garbage=True):
         """
         performs minimum sanity check
 
@@ -88,25 +103,26 @@ class Engine:
         but it's safer to run this before calling orchestrate if one wants 
         to type-check the jobs dependency graph early on
 
-        SIDE EFFECT:
-        re-order self.jobs so that the free jobs a.k.a. entry points
-        i.e. jobs with no requirements, show up first
-        more generally, if a requires b, a will show up before b in self.jobs
+        it might also help to have a sanitized engine, 
+        but here again this is up to the caller
 
         RETURN:
         a boolean that is True if the topology looks clear 
         """
-        # clear marks
+        # since nothing is running yet, we cannot rely on the underlying Task objs
+        # we use job marks for that purpose, that thus need to be cleared
         self._reset_marks()
-        # reset self.jobs, but of course set aside
-        saved_jobs = self.jobs
-        self.jobs = []
-        # mainloop
+        nb_marked = 0
+        target_marked = len(self.jobs)
+        
         while True:
             # detect a fixed point 
             changed = False
             # loop on unfinished business
-            for job in saved_jobs:
+            for job in self.jobs:
+                # ignore jobs already marked
+                if job._mark:
+                    continue
                 # if there's no requirement (first pass),
                 # or later on if all requirements have already been marked,
                 # then we can mark this one
@@ -115,28 +131,31 @@ class Engine:
                     if required_job._mark is None:
                         has_unmarked_requirements = True
                 if not has_unmarked_requirements:
-                    if self.debug:
-                        print("rain_check: marking {}".format(job))
                     job._mark = True
-                    self.jobs.append(job)
-                    saved_jobs.remove(job)
+                    nb_marked += 1
                     changed = True
-            if not saved_jobs:
+                    if self.debug:
+                        print("rain_check: {}/{}, new={}"
+                              .format(nb_marked, target_marked, job))
+            # >= is for extra safety but it should be an exact match
+            if nb_marked >= target_marked:
                 # we're done
                 break
             if not changed:
                 if self.debug:
                     print("rain_check: loop makes no progress - we have a problem")
-                # restore list of jobs
-                self.jobs += saved_jobs
                 # this is wrong
                 return False
-        # if we still have jobs here it's not quite good either
-        if saved_jobs:
+        # if we still have jobs here it's not good either, although it should not happen
+        # on a sanitized engine
+        if nb_marked != target_marked:
             if self.debug:
-                print("rain_check: we have {} jobs still in the pool and can't reach them from free jobs")
+                print("rain_check: we have browsed {} jobs out of {}.\n"
+                      "            looks like {} jobs are not reachable from free jobs"
+                      .format(nb_marked, target_marked, target_marked - nb_marked))
             return False
-        return True
+        else:
+            return True
 
     ####################
     def ensure_future(self, job, loop):
@@ -290,11 +309,9 @@ class Engine:
 
             # go on : find out the jobs that can be added to the mix
             # only consider the ones that are right behind any of the the jobs that just finished
-            possible_next_jobs = []
+            possible_next_jobs = set()
             for done_task in done:
-                possible_next_jobs += done_task._job._successors
-            # remove duplicates
-            possible_next_jobs = list(set(possible_next_jobs))
+                possible_next_jobs.update(done_task._job._successors)
             if self.debug:
                 print("possible ->", len(possible_next_jobs))
                 for a in possible_next_jobs:

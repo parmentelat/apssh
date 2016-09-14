@@ -24,13 +24,13 @@ class Engine:
 
     default_critical = False
 
-    def __init__(self,  *jobs, critical=None):
+    def __init__(self,  *jobs, critical=None, debug=False):
         self.jobs = jobs
         self.jobs = list(set(self.jobs))
         if critical is None:
             critical = self.default_critical
         self.critical = critical
-        self.debug = False
+        self.debug = debug
 
     def add(self, jobs):
         self.jobs += jobs

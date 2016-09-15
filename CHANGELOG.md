@@ -1,3 +1,7 @@
+# 0.1.1 - 2016 Sep 15
+
+* add missing apssh.jobs to pypi packaging
+
 # 0.1.0 - 2016 Sep 15
 
 * fixes issue #1

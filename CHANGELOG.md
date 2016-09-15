@@ -1,4 +1,4 @@
-# 0.1.0 - 1026 Sep 15
+# 0.1.0 - 2016 Sep 15
 
 * fixes issue #1
 * fixes SFTP closing

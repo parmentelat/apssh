@@ -11,8 +11,8 @@ from apssh.version import version as apssh_version
 # check python version
 from sys import version_info
 major, minor= version_info[0:2]
-if not (major == 3 and minor >= 4):
-    print("python 3.4 or higher is required")
+if not (major == 3 and minor >= 5):
+    print("python 3.5 or higher is required")
     exit(1)
 
 # read licence info

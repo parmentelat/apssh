@@ -1,3 +1,9 @@
+# 0.1.0 - 1026 Sep 15
+
+* fixes issue #1
+* fixes SFTP closing
+* addition of SshJobs to be used with asynciojobs
+
 # 0.0.8 - 2016 Sep 8
 
 * script mode still runs in remote home directory, does not cd in .apssh 

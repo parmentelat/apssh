@@ -28,10 +28,10 @@ pypi:
 	@echo "You are about to release $(VERSION) - OK (Ctrl-c if not) ? " ; read _
 	git tag $(VERSIONTAG)
 	$(call upload_pypi,pypi)
-	@if [ ssh $(PYPI_TARBALL_HOST) ls $(PYPI_TARBALL_TOPDIR)/$(VERSIONTAR) ] ;\
+	@if ssh $(PYPI_TARBALL_HOST) ls $(PYPI_TARBALL_TOPDIR)/$(VERSIONTAR) ;\
 	  then echo "$(VERSIONTAR) already present on $(PYPI_TARBALL_HOST) - ignored" ;\
 	  else rsync -av dist/$(VERSIONTAR) $(PYPI_TARBALL_HOST):$(PYPI_TARBALL_TOPDIR)/ ;\
-	  fi
+	fi
 
 # it can be convenient to define a test entry, say testpypi, in your .pypirc
 # that points at the testpypi public site

@@ -7,6 +7,7 @@ import socket
 
 from .util import print_stderr
 from .config import default_remote_workdir
+from .formatters import ColonFormatter
 
 class BufferedSession(asyncssh.SSHClientSession):
     """
@@ -97,7 +98,7 @@ class SshProxy:
         self.known_hosts = known_hosts
         self.client_keys = client_keys if client_keys is not None else []
         self.port = int(port)
-        self.formatter = formatter
+        self.formatter = formatter or ColonFormatter()
         self.debug = debug
         self.timeout = timeout
         #
@@ -337,7 +338,8 @@ class SshProxy:
             return None
         # run it
         basename = os.path.basename(localfile)
-        extras = " ".join(script_args)
+        # accept integers and the like
+        extras = " ".join(str(arg) for arg in script_args)
         command = "{}/{} {}".format(default_remote_workdir, basename, extras)
         result = await self.run(command)
         return result

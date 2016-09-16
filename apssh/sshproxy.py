@@ -9,38 +9,68 @@ from .util import print_stderr
 from .config import default_remote_workdir
 from .formatters import ColonFormatter
 
-class BufferedSession(asyncssh.SSHClientSession):
+class LineBasedSession(asyncssh.SSHClientSession):
     """
-    a session that records all outputs in its buffer internal attribute
+    a session that records both outputs (out and err) in its internal attributes
+    it also may have an associated formatter (through its proxy reference)
+    and in that case the formatter receives a line() call each time a line is received
     """
+
+    ##########
+    class Channel:
+        """
+        typically a session will have one Channel for stdout and one for stderr
+
+        aggregates text as it comes in
+        .buffer: gathers the full contents 
+        .line: the current line
+        """
+        def __init__(self, name, proxy):
+            self.name = name
+            self.hostname = proxy.hostname
+            self.formatter = proxy.formatter
+            self.debug = proxy.debug
+            self.buffer = ""
+            self.line = ""
+            
+        def data_received(self, data):
+            # preserve it before any postprocessing occurs
+            self.buffer += data
+            # not adding a \n since it's already in there
+            if self.debug:
+                print_stderr('BS {} DR: -> {} [[of type {}]]'.
+                             format(self.hostname, data, self.name))
+            chunks = [ x for x in data.split("\n") ]
+            # len(chunks) cannot be 0
+            assert len(chunks) > 0, "unexpected data received"
+            # what goes in the current line, if any
+            current_line = chunks.pop(0)
+            self.line += current_line
+            for chunk in chunks:
+                self.flush_line()
+                self.line = chunk
+
+        def flush_line(self):
+            if self.formatter:
+                # a little hacky indeed
+                if self.name == 'stderr':
+                    self.line += "[stderr]"
+                self.line += "\n"
+                self.formatter.line(self.hostname, self.line)
+                self.line = ""
+
+    ##########
     def __init__(self, *args, **kwds):
-        self._buffer = ""
-        self._line = ""
+        # self.proxy is expected to be set already by the closure/subclass
+        self.stdout = self.Channel("stdout", self.proxy)
+        self.stderr = self.Channel("stderr", self.proxy)
         self._status = None
         super().__init__(*args, **kwds)
 
-    def flush_line(self):
-        if self.proxy.formatter:
-            self._line += "\n"
-            self.proxy.formatter.line(self.proxy.hostname, self._line)
-            self._line = ""
-
     # this seems right only for text streams...
     def data_received(self, data, datatype):
-        self._buffer += data
-        # not adding a \n since it's already in there
-        if self.proxy.debug:
-            print_stderr('BS {} DR: -> {} [[of type {}]]'.
-                         format(self.proxy, data, datatype))
-        chunks = [ x for x in data.split("\n") ]
-        # len(chunks) cannot be 0
-        assert len(chunks) > 0, "unexpected data received"
-        # no newline in received data
-        same_line = chunks.pop(0)
-        self._line += same_line
-        for chunk in chunks:
-            self.flush_line()
-            self._line = chunk
+        channel = self.stderr if datatype == asyncssh.EXTENDED_DATA_STDERR else self.stdout
+        channel.data_received(data)
 
     def connection_made(self, conn):
         if self.proxy.debug:
@@ -141,16 +171,16 @@ class SshProxy:
                 self.formatter.connection_start(self.hostname)
             if self.debug:
                 print_stderr("{} CONNECTED".format(self))
-            return True
         except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
             self.formatter.connection_failed(self.hostname, self.username, self.port, e)
             self.conn, self.client = None, None
-            return False
         except Exception as e:
-            print_stderr("Unexpected exception in create_connection {}".format(e))
-            self.formatter.connection_failed(self.hostname, self.username, self.port, ("UNHANDLED", e))
+            print_stderr("Unexpected exception in create_connection")
+            import traceback
+            traceback.print_exc()
+            self.formatter.connection_failed(self.hostname, self.username, self.port, ("UNHANDLED in create_connection", e))
             self.conn, self.client = None, None
-            return False
+        return self.conn is not None
 
     async def sftp_connect_lazy(self):
         if self.sftp_client is None:
@@ -167,12 +197,15 @@ class SshProxy:
             return False
         try:
             self.sftp_client = await self.conn.start_sftp_client()
-        except asyncssh.sftp.SFTPError:
-            if self.debug:
-                print_stderr("FAILED to start_sftp_client")
+        except (asyncssh.sftp.SFTPError, asyncio.TimeoutError) as e:
+            self.formatter.connection_failed(self.hostname, self.username, self.port, e)
             self.sftp_client = None
-        if self.debug:
-            print_stderr("{} SFTP CONNECTED".format(self))
+        except Exception as e:
+            print_stderr("Unexpected exception in start_sftp_client")
+            import traceback
+            traceback.print_exc()
+            self.formatter.connection_failed(self.hostname, self.username, self.port, ("UNHANDLED in start_sftp_client", e))
+            self.sftp_client = None
         return self.sftp_client is not None
 
     async def sftp_close(self):
@@ -217,8 +250,8 @@ class SshProxy:
         Run a command, outputs it on the fly according to self.formatter
         and returns remote status - or None if nothing could be run at all
         """
-        # this closure is a BufferedSession with a .proxy attribute that points back here
-        class session_closure(BufferedSession):
+        # this closure is a LineBasedSession with a .proxy attribute that points back here
+        class session_closure(LineBasedSession):
             # not using 'self' because 'self' is the SshProxy instance already
             def __init__(session_self, *args, **kwds):
                 session_self.proxy = self

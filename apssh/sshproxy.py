@@ -33,7 +33,7 @@ class LineBasedSession(asyncssh.SSHClientSession):
             self.buffer = ""
             self.line = ""
             
-        def data_received(self, data):
+        def data_received(self, data, datatype):
             # preserve it before any postprocessing occurs
             self.buffer += data
             # not adding a \n since it's already in there
@@ -47,16 +47,14 @@ class LineBasedSession(asyncssh.SSHClientSession):
             current_line = chunks.pop(0)
             self.line += current_line
             for chunk in chunks:
-                self.flush_line()
+                self.flush_line(datatype)
                 self.line = chunk
 
-        def flush_line(self):
+        def flush_line(self, datatype):
             if self.formatter:
                 # a little hacky indeed
-                if self.name == 'stderr':
-                    self.line += "[stderr]"
                 self.line += "\n"
-                self.formatter.line(self.hostname, self.line)
+                self.formatter.line(self.line, datatype, self.hostname)
                 self.line = ""
 
     ##########
@@ -70,7 +68,7 @@ class LineBasedSession(asyncssh.SSHClientSession):
     # this seems right only for text streams...
     def data_received(self, data, datatype):
         channel = self.stderr if datatype == asyncssh.EXTENDED_DATA_STDERR else self.stdout
-        channel.data_received(data)
+        channel.data_received(data, datatype)
 
     def connection_made(self, conn):
         if self.proxy.debug:

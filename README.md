@@ -186,6 +186,9 @@ Fedora release 18 (Spherical Cow)
     
 # TODO
 
-* some kind of tests
+* current output system - from just recently - properly separates stdout and stderr; **BUT** this for now will work well only on text-based output, which can be a wrong assumption.
+* allow jump node in the middle
+* check for password-protected keys; and related (?), fetching keys at the ssh-agent
+* automated tests !?!
 * add matching on hostnames 
 * probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*

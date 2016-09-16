@@ -1,6 +1,7 @@
 import sys
 import os, os.path
 import asyncio
+import asyncssh
 
 from .util import print_stderr
 
@@ -48,7 +49,7 @@ class Formatter:
         pass    
     
     # the bulk of the matter
-    def line(self, hostname, line):
+    def line(self, line, datatype, hostname):
         print_stderr("WARNING: class Formatter is intended as a pure abstract class")
         print_stderr("Received line {} from hostname {}".format(line, hostname))
         print_stderr("WARNING: class Formatter is intended as a pure abstract class")
@@ -69,15 +70,17 @@ class RawFormatter(Formatter):
         if self.debug: print_stderr("RF SA: Session on {} started for command {}".format(hostname, command))
     def session_stop(self, hostname):
         if self.debug: print_stderr("RF SO: Session ended on {}".format(hostname))
-    def line(self, hostname, line):
-        print_stderr(line, end="")
+    def line(self, line, datatype, hostname):
+        extra = "[stderr]" if datatype == asyncssh.EXTENDED_DATA_STDERR else ""
+        print("{}{}".format(extra, line), end="")
 
 class ColonFormatter(Formatter):
     """
     Display each line prepended with the hostname and a ':'
     """
-    def line(self, hostname, line):
-        print_stderr("{}:{}".format(hostname, line), end="")
+    def line(self, line, datatype, hostname):
+        extra = "[stderr]" if datatype == asyncssh.EXTENDED_DATA_STDERR else ""
+        print("{}:{}{}".format(hostname, extra, line), end="")
 
 class SubdirFormatter(Formatter):
 
@@ -87,6 +90,8 @@ class SubdirFormatter(Formatter):
 
     def out(self, hostname):
         return os.path.join(self.run_name, hostname)
+    def err(self, hostname):
+        return os.path.join(self.run_name, "{}.err".format(hostname))
 
     def check_dir(self):
         # create directory if needed
@@ -108,6 +113,7 @@ class SubdirFormatter(Formatter):
             print_stderr("Unexpected error {}".format(e))
             exit(1)
 
-    def line(self, hostname, line):
-        with open(self.out(hostname), 'a') as out:
+    def line(self, line, datatype, hostname):
+        filename = self.err(hostname) if datatype == asyncssh.EXTENDED_DATA_STDERR else self.out(hostname)
+        with open(filename, 'a') as out:
             out.write(line)

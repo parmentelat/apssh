@@ -8,6 +8,15 @@ from apssh.sshproxy import SshProxy
 
 from asynciojobs.job import AbstractJob
 
+# mostly expose a more meaningful name in this context
+# probably need a dedicated formatter at some point
+class SshNode(SshProxy):
+    """
+    essentially SshProxy
+    """ 
+    def __init__(self, *args, **kwds):
+        SshProxy.__init__(self, *args, **kwds)
+
 class SshJob(AbstractJob):
 
     def __init__(self, proxy, command, label=None, critical=True):
@@ -24,7 +33,7 @@ class SshJob(AbstractJob):
 class SshJobScript(AbstractJob):
 
     # here the first item in command must be a local filename
-    def __init__(self, proxy, command, script_args=None, label=None, critical=True):
+    def __init__(self, proxy, command, label=None, critical=True):
         self.proxy = proxy
         self.local_script = command[0]
         self.script_args = command[1:]

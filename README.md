@@ -84,15 +84,30 @@ $ apssh -u root -x PLE.dns-unknown -t PLE.nodes cat /etc/fedora-release
 
 ## Remote command and user
 
-### Good practice : use `--` before your command
+### Good practices
 
-First off, it's a good idea to separate the remote command after `--` so that python knows which options are intended for `apssh` and which are meant for the remote command. 
-
-In the example below, the `-aq` option is meant for the remote `rpm` command, so we insert a `--` before the command to avoid confusion
+* First off, `apssh` will stop interpreting options on your command line as soon at the beginning of the remote command. That is to say, in the following example
 
 ```
-$ apssh -t host1 -t file1 -t host2 -- rpm -aq \| grep libvirt
+$ apssh -t host1 -t file1 -t host2 rpm -aq \| grep libvirt
 ```
+
+the `-aq` option is meant for the remote `rpm` command, and that's fine because after the `rpm` token, `apssh` stops taking options, and passes them to the remote command instead.
+
+* Also note in the example above that you can pass shell specials, like `|`, `<`, `>`, `;` and the like, by backslashing them, like this:
+
+```
+$ apssh -u root -t faraday.inria.fr -t r2lab.inria.fr uname -a \; cat /etc/fedora-release /etc/lsb-release 2\> /dev/null
+r2lab.inria.fr:Linux r2lab.pl.sophia.inria.fr 4.6.4-201.fc23.x86_64 #1 SMP Tue Jul 12 11:43:59 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+r2lab.inria.fr:Fedora release 24 (Twenty Four)
+faraday.inria.fr:Linux faraday 4.4.0-36-generic #55-Ubuntu SMP Thu Aug 11 18:01:55 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+faraday.inria.fr:DISTRIB_ID=Ubuntu
+faraday.inria.fr:DISTRIB_RELEASE=16.04
+faraday.inria.fr:DISTRIB_CODENAME=xenial
+faraday.inria.fr:DISTRIB_DESCRIPTION="Ubuntu 16.04.1 LTS"
+```
+
+    $ apssh -t alive uname -a \;
 
 ### Running under a different user       
 use ` --user` to specify a specific username globally; or give a specific user on a given hostname with `@`
@@ -117,7 +132,7 @@ $ apssh -w 50 -t tons-of-nodes -- true
 ## Output formats
 
 ### Default : on the fly, annotated with hostname
-Default is to output every line as they come back, prefixed with associated hostname; this goes on stdout, with errors on stderr.
+Default is to output every line as they come back, prefixed with associated hostname. As you might expect, stdout goes to stdout and stderr to stderr. Additionally, error messages issued by apssh itself, like e.g. when a host cannot be reached, also goes on stderr.
 
 ```
 $ apssh -u root -t alive -- grep VERSION_ID /etc/os-release
@@ -144,17 +159,18 @@ Alternatively, the `-o` or `-d` options allow to select a specific subdir and to
 
 
 ```
-$ apssh -d -u root -t alive -- cat /etc/fedora-release
-2016-09-01@15:05
-$ $ grep . 2016-09-01\@15\:05/*
-2016-09-01@15:05/mars.planetlab.haw-hamburg.de:Fedora release 14 (Laughlin)
-2016-09-01@15:05/merkur.planetlab.haw-hamburg.de:Fedora release 14 (Laughlin)
-2016-09-01@15:05/planetlab-2.research.netlab.hut.fi:Fedora release 22 (Twenty Two)
-2016-09-01@15:05/planetlab1.tlm.unavarra.es:Fedora release 22 (Twenty Two)
-2016-09-01@15:05/planetlab1.virtues.fi:Fedora release 14 (Laughlin) 
+$ rm -rf alive.results/
+$ apssh -o alive.results -u root -t alive cat /etc/fedora-release
+alive.results
+$ grep . alive.results/*
+alive.results/mars.planetlab.haw-hamburg.de:Fedora release 14 (Laughlin)
+alive.results/merkur.planetlab.haw-hamburg.de:Fedora release 14 (Laughlin)
+alive.results/planetlab-2.research.netlab.hut.fi:Fedora release 22 (Twenty Two)
+alive.results/planetlab1.tlm.unavarra.es:Fedora release 22 (Twenty Two)
+alive.results/planetlab1.virtues.fi:Fedora release 14 (Laughlin)
 ```
 
-* When an output subdir is selected with either `-d` or `-o`, the `-m` or `--mark` option can be used to request details on the retcod from individual nodes. The way this is exposed in is the filesystem under *<subdir>* as follows
+* When an output subdir is selected with either `-d` or `-o`, the `-m` or `--mark` option can be used to request details on the retcod from individual nodes. The way this is exposed in the filesystem under *<subdir>* is as follows
 
   * *subdir*/`0ok`/*hostname* will contain 0 for all nodes that could run the command successfully
   * *subdir*/`1failed`/*hostname* will contain the actual retcod, for all nodes that were reached but could not successfully run the command, or `None` for the nodes that were not reached at all.

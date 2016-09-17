@@ -47,13 +47,19 @@ class LineBasedSession(asyncssh.SSHClientSession):
             current_line = chunks.pop(0)
             self.line += current_line
             for chunk in chunks:
-                self.flush_line(datatype)
+                # restore the \n that we removed by calling split
+                self.flush(datatype, newline=True)
                 self.line = chunk
 
-        def flush_line(self, datatype):
-            if self.formatter:
-                # a little hacky indeed
+        def flush(self, datatype, newline):
+            if not self.formatter:
+                return
+            # add newline to current line f requested
+            if newline:
                 self.line += "\n"
+            # actually write line, if there's anything to write
+            # (EOF calls flush too)
+            if self.line:
                 self.formatter.line(self.line, datatype, self.hostname)
                 self.line = ""
 
@@ -83,8 +89,8 @@ class LineBasedSession(asyncssh.SSHClientSession):
     def eof_received(self):
         if self.proxy.debug:
             print_stderr('BS {} EOF'.format(self.proxy))
-        if self._line:
-            self.flush_line()
+        self.stdout.flush(None, newline=False)
+        self.stderr.flush(asyncssh.EXTENDED_DATA_STDERR, newline=False)
         if self.proxy.formatter:
             self.proxy.formatter.session_stop(self.proxy.hostname)
 

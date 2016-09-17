@@ -1,7 +1,7 @@
 import sys
 import os, os.path
 import asyncio
-import asyncssh
+from asyncssh import EXTENDED_DATA_STDERR
 
 from .util import print_stderr
 
@@ -63,24 +63,28 @@ class RawFormatter(Formatter):
     def __init__(self, debug=False):
         self.debug = debug
     def connection_start(self, hostname):
-        if self.debug: print_stderr("RF CA: Connected to {}".format(hostname))
+        if self.debug:
+            print_stderr("RF CA: Connected to {}".format(hostname))
     def connection_stop(self, hostname):
-        if self.debug: print_stderr("RF CO: Disconnected from {}".format(hostname))
+        if self.debug:
+            print_stderr("RF CO: Disconnected from {}".format(hostname))
     def session_start(self, hostname, command):
-        if self.debug: print_stderr("RF SA: Session on {} started for command {}".format(hostname, command))
+        if self.debug:
+            print_stderr("RF SA: Session on {} started for command {}".format(hostname, command))
     def session_stop(self, hostname):
-        if self.debug: print_stderr("RF SO: Session ended on {}".format(hostname))
+        if self.debug:
+            print_stderr("RF SO: Session ended on {}".format(hostname))
     def line(self, line, datatype, hostname):
-        extra = "[stderr]" if datatype == asyncssh.EXTENDED_DATA_STDERR else ""
-        print("{}{}".format(extra, line), end="")
+        print_function = print_stderr if datatype == EXTENDED_DATA_STDERR else print
+        print_function(line, end="")
 
 class ColonFormatter(Formatter):
     """
     Display each line prepended with the hostname and a ':'
     """
     def line(self, line, datatype, hostname):
-        extra = "[stderr]" if datatype == asyncssh.EXTENDED_DATA_STDERR else ""
-        print("{}:{}{}".format(hostname, extra, line), end="")
+        print_function = print_stderr if datatype == EXTENDED_DATA_STDERR else print
+        print_function("{}:{}".format(hostname, line), end="")
 
 class SubdirFormatter(Formatter):
 
@@ -114,6 +118,6 @@ class SubdirFormatter(Formatter):
             exit(1)
 
     def line(self, line, datatype, hostname):
-        filename = self.err(hostname) if datatype == asyncssh.EXTENDED_DATA_STDERR else self.out(hostname)
+        filename = self.err(hostname) if datatype == EXTENDED_DATA_STDERR else self.out(hostname)
         with open(filename, 'a') as out:
             out.write(line)

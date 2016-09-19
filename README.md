@@ -242,7 +242,7 @@ faraday.inria.fr:DISTRIB_DESCRIPTION="Ubuntu 16.04.1 LTS"
 # TODO
 
 * password-protected keys / load keys from agent
+* tunnelled runs apparently fail to share the 1st hop connection in actuality 
 * current output system - from just recently - properly separates stdout and stderr; **BUT** this for now will work well only on text-based output, which can be a wrong assumption.
 * automated tests !?!
-* add matching on hostnames 
 * probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*

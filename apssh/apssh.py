@@ -10,11 +10,12 @@ import time
 import argparse
 import asyncio
 
-from .config import default_time_name, default_timeout, default_username, default_private_key, default_remote_workdir
+from .util import print_stderr
+from .config import default_time_name, default_timeout, default_username, default_private_keys, default_remote_workdir
 from .sshproxy import SshProxy
 from .formatters import RawFormatter, ColonFormatter, SubdirFormatter
 from .window import gather_window
-from .util import print_stderr
+from .keys import import_private_key, load_agent_keys
 from .version import version as apssh_version
 
 class Apssh:
@@ -29,7 +30,7 @@ class Apssh:
     def __repr__(self):
         return "".join([str(p) for p in self.proxies])
 
-    def analyze_target(self, target, debug=False):
+    def analyze_target(self, target):
         """
         A target can be specified as either
         * a filename
@@ -74,7 +75,7 @@ class Apssh:
                     return False, None
                 except Exception as e:
                     print_stderr("Unexpected exception when parsing file {}, {}".format(target, e))
-                    if debug:
+                    if self.parsed_args.debug:
                         import traceback
                         traceback.print_exc()
                     return False, None
@@ -127,7 +128,7 @@ class Apssh:
 
         # create proxies
         self.proxies = [ SshProxy(hostname, username=username,
-                                  client_keys=self.parsed_args.private_keys,
+                                  client_keys=self.loaded_private_keys,
                                   gateway = gateway,
                                   formatter = self.get_formatter(),
                                   timeout = self.parsed_args.timeout,
@@ -148,6 +149,34 @@ class Apssh:
                 self.formatter = ColonFormatter()
         return self.formatter
     
+    def load_private_keys(self):
+        """
+        Here's how `apssh` locates private keys:
+
+        ### If no keys are specified using the `-i` command line option 
+
+        * (A) if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable,
+          and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent
+          (**NOTE:** use `ssh-add` for managing the keys known to the agent)
+        * (B) otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
+
+        ### If keys are specified on the command line
+
+        * (C) That exact list is used for loading private keys
+        """
+        filenames = []
+        if self.parsed_args.private_keys is None:
+            keys = load_agent_keys()
+            # agent has stuff : let's use it
+            if keys:
+                self.loaded_private_keys = keys
+                return
+            filenames = default_private_keys
+        else:
+            filenames = self.parsed_args.private_keys
+        keys = [ import_private_key(filename) for filename in filenames ]
+        self.loaded_private_keys = [ k for k in keys if k ]
+
     def main(self):
         self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
@@ -176,9 +205,13 @@ class Apssh:
         parser.add_argument("-u", "--username", default=default_username,
                             help="remote user name - default is {}".format(default_username))
         parser.add_argument("-i", "--private-keys",
-                            default=[default_private_key], action='append', type=str,
-                            help="specify private key file(s) - additive - default is to use {}"
-                            .format(default_private_key))
+                            default=None, action='append', type=str,
+                            help="""
+                            The default is for apssh to locate an ssh-agent through the SSH_AUTH_SOCK
+                            environment variable. If this cannot be found, or has an empty set of keys,
+                            then by default the following
+                            specify private key file(s) - additive
+""")
         parser.add_argument("-g", "--gateway", default=None,
                             help="specify a gateway for 2-hops ssh - either hostname or username@hostname")
         # how to store results
@@ -216,14 +249,12 @@ class Apssh:
         # the commands to run
         parser.add_argument("commands", nargs=argparse.REMAINDER, type=str,
                             help="""
-                            command to run remotely. If that command itself contains options,
-                            it is a good practice to insert `--`
-                            before the actual command.  
+                            command to run remotely. 
 
-                            If the -s or --script option is provided, the first
-                            argument here should denote a (typically script) file
-                            **that must exist** on the local filesystem. This script is then copied
-                            over remotely and serves as the command for the remote execution""")
+                            If the -s or --script option is provided, the first argument
+                            here should denote a (typically script) file **that must exist**
+                            on the local filesystem. This script is then copied over
+                            to the remote system and serves as the command for remote execution""")
 
         args = self.parsed_args = parser.parse_args()
 
@@ -238,12 +269,22 @@ class Apssh:
             parser.print_help()
             exit(1)
 
+        ### load keys
+        self.load_private_keys()
+        if self.parsed_args.debug:
+            print("We have found {} keys".format(len(self.loaded_private_keys)))
+            for key in self.loaded_private_keys:
+                print(key)
+        if not self.loaded_private_keys:
+            print("Could not find any usable key - exiting")
+            exit(1)
+
         ### initialize a gateway proxy if --gateway is specified
         gateway = None
         if args.gateway:
             gwuser, gwhost = self.user_host(args.gateway)
             gateway = SshProxy(gwhost, username=gwuser,
-                               client_keys = self.parsed_args.private_keys,
+                               client_keys = self.loaded_private_keys,
                                formatter = self.get_formatter(),
                                timeout = self.parsed_args.timeout,
                                debug = self.parsed_args.debug)

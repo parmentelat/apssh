@@ -86,7 +86,7 @@ $ apssh -u root -x PLE.dns-unknown -t PLE.nodes cat /etc/fedora-release
 
 ### Good practices
 
-* First off, `apssh` will stop interpreting options on your command line as soon at the beginning of the remote command. That is to say, in the following example
+* First off, `apssh` will stop interpreting options on your command line at the beginning of the remote command. That is to say, in the following example
 
 ```
 $ apssh -t host1 -t file1 -t host2 rpm -aq \| grep libvirt
@@ -121,6 +121,26 @@ $ apssh -u root -t user@host1 -t host2 -t host3 -- true
 Default key is as usual `~/.ssh/id_rsa`, but more keys can be used if necessary with the `-i` or `--private-keys` options.
 
     
+### Gateway a.k.a. Bouncing a.k.a. Tunnelling 
+
+In some cases, the target nodes are not directly addressable from the box that runs `apssh`, and the ssh traffic needs to go through a gateway. This typically occurs with testbeds where nodes only have private addresses. 
+
+For example in the R2lab testbed, you cannot reach nodes directly from the Internet, but you would need to issue something like
+
+```
+$ ssh onelab.inria.r2lab.admin@faraday.inria.fr ssh root@fit02 hostname
+fit02
+```
+
+In such cases, you can specify the gateway username and hostname through the `-g` or `--gateway` option. For example for running the above command on several R2lab nodes in one `apssh` invokation:
+
+```
+$ apssh -g onelab.inria.r2lab.admin@faraday.inria.fr --user root -t "fit02 fit03 fit04" hostname
+fit04:fit04
+fit02:fit02
+fit03:fit03
+```
+
 ## Max connections
 
 By default there is no limit on the number of simultaneous connections, which is likely to be a problem as soon as you go for several tens of hosts, as you would then run into limitations on open connections in your OS or network. To run at most 50 connections at a time

@@ -125,23 +125,29 @@ class SshProxy:
     several commands - a.k.a. sessions
     formatter - see formatters.py 
     """
-    def __init__(self, hostname, username=None, known_hosts=None, client_keys=None,
-                 port=22, formatter=None, debug=False, timeout=30):
+    def __init__(self, hostname, username=None, known_hosts=None, client_keys=None, port=22,
+                 gateway=None, # if another SshProxy is given, it is used as an ssh gateway
+                 formatter=None, debug=False, timeout=30):
         self.hostname = hostname
         self.username = username
         self.known_hosts = known_hosts
         self.client_keys = client_keys if client_keys is not None else []
         self.port = int(port)
+        self.gateway = gateway
         self.formatter = formatter or ColonFormatter()
         self.debug = debug
         self.timeout = timeout
         #
-        self.conn, self.client, self.sftp_client = None, None, None
+        self.conn, self.sftp_client = None, None
+
+    def __user_host__(self):
+        return "{}@{}".format(self.username, self.hostname) if self.username \
+            else "@" + self.hostname
 
     def __repr__(self):
-        text = "{}@{}".format(self.username, self.hostname) \
-               if self.username \
-                  else "@" + self.hostname
+        text = "" if not self.gateway \
+               else "{} <--> ".format(self.gateway.__user_host__())
+        text += self.__user_host__()
         if self.formatter:
             text += " [{}]".format(type(self.formatter).__name__)
         if self.conn:
@@ -155,16 +161,20 @@ class SshProxy:
             await self.connect()
         return self.conn
             
-    async def connect(self):
+    async def connect_direct(self):
+        """
+        The code for connecting to the first ssh hop (i.e. when self.gateway is None)
+        """
+        assert self.gateway is None
         try:
             if self.debug:
-                print_stderr("{} CONNECTING".format(self))
+                print_stderr("{} 1st hop CONNECTING".format(self))
             class client_closure(VerboseClient):
                 def __init__(client_self, *args, **kwds):
                     client_self.proxy = self
                     super().__init__(*args, **kwds)
 
-            self.conn, self.client = \
+            self.conn, client = \
                 await asyncio.wait_for( 
                     asyncssh.create_connection(
                         client_closure, self.hostname, port=self.port, username=self.username,
@@ -174,17 +184,64 @@ class SshProxy:
             if self.formatter:
                 self.formatter.connection_start(self.hostname)
             if self.debug:
-                print_stderr("{} CONNECTED".format(self))
+                print_stderr("{} 1st hop CONNECTED".format(self))
         except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
             self.formatter.connection_failed(self.hostname, self.username, self.port, e)
-            self.conn, self.client = None, None
+            self.conn = None
         except Exception as e:
             print_stderr("Unexpected exception in create_connection")
             import traceback
             traceback.print_exc()
-            self.formatter.connection_failed(self.hostname, self.username, self.port, ("UNHANDLED in create_connection", e))
-            self.conn, self.client = None, None
+            self.formatter.connection_failed(self.hostname, self.username, self.port,
+                                             ("UNHANDLED in create_connection", e))
+            self.conn = None
         return self.conn is not None
+
+    async def connect_tunnel(self):
+        """
+        The code to connect to a higher-degree hop
+        We expect gateway to have its connection open, and issue connect_ssh on that connection
+        """
+        # we assume the gateway has connected already
+        assert self.gateway is not None
+        await self.gateway.connect_lazy()
+        try:
+            if self.debug:
+                print_stderr("{} remote CONNECTING".format(self))
+###            class client_closure(VerboseClient):
+###                def __init__(client_self, *args, **kwds):
+###                    client_self.proxy = self
+###                    super().__init__(*args, **kwds)
+
+            self.conn = \
+                await asyncio.wait_for(
+                    self.gateway.conn.connect_ssh(
+                        ### client_closure,
+                        self.hostname, port=self.port, username=self.username,
+                        known_hosts=self.known_hosts, client_keys=self.client_keys
+                    ),
+                    timeout = self.timeout)
+            if self.formatter:
+                self.formatter.connection_start(self.hostname)
+            if self.debug:
+                print_stderr("{} remote CONNECTED through {}".format(self, self.gateway))
+        except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
+            self.formatter.connection_failed(self.hostname, self.username, self.port, e)
+            self.conn = None
+        except Exception as e:
+            print_stderr("Unexpected exception in connect_ssh")
+            import traceback
+            traceback.print_exc()
+            self.formatter.connection_failed(self.hostname, self.username, self.port,
+                                             ("UNHANDLED in connect_ssh", e))
+            self.conn = None
+        return self.conn is not None
+
+    async def connect(self):
+        if not self.gateway:
+            return await self.connect_direct()
+        else:
+            return await self.connect_tunnel()
 
     async def sftp_connect_lazy(self):
         if self.sftp_client is None:
@@ -208,7 +265,8 @@ class SshProxy:
             print_stderr("Unexpected exception in start_sftp_client")
             import traceback
             traceback.print_exc()
-            self.formatter.connection_failed(self.hostname, self.username, self.port, ("UNHANDLED in start_sftp_client", e))
+            self.formatter.connection_failed(self.hostname, self.username, self.port,
+                                             ("UNHANDLED in start_sftp_client", e))
             self.sftp_client = None
         return self.sftp_client is not None
 
@@ -234,7 +292,7 @@ class SshProxy:
             if self.debug:
                 print_stderr("{} DISCONNECTING".format(self))
             preserve = self.conn
-            self.conn, self.client = None, None
+            self.conn = None
             preserve.close()
             await preserve.wait_closed()
 

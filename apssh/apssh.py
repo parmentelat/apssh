@@ -82,7 +82,17 @@ class Apssh:
             # string
             return True, target.split()
 
-    def create_proxies(self):
+    # create tuples username, hostname
+    # use the username if already present in the target,
+    # otherwise the one specified with --username
+    def user_host(self, target):
+        try:
+            user, hostname = target.split('@')
+            return user, hostname
+        except:
+            return self.parsed_args.username, target
+
+    def create_proxies(self, gateway):
         # start with parsing excludes if any
         excludes = set()
         for exclude in self.parsed_args.excludes:
@@ -115,23 +125,14 @@ class Apssh:
                 print(hostname)
             exit(0)
 
-        # create tuples username, hostname
-        # use the username if already present in the target,
-        # otherwise the one specified with --username
-        def user_host(target):
-            try:
-                user, hostname = target.split('@')
-                return user, hostname
-            except:
-                return self.parsed_args.username, target
-
         # create proxies
         self.proxies = [ SshProxy(hostname, username=username,
                                   client_keys=self.parsed_args.private_keys,
+                                  gateway = gateway,
                                   formatter = self.get_formatter(),
-                                  debug = self.parsed_args.debug,
-                                  timeout = self.parsed_args.timeout)
-                         for username, hostname in  (user_host(target) for target in hostnames) ]
+                                  timeout = self.parsed_args.timeout,
+                                  debug = self.parsed_args.debug)
+                         for username, hostname in  (self.user_host(target) for target in hostnames) ]
         return self.proxies
 
     def get_formatter(self):
@@ -178,6 +179,8 @@ class Apssh:
                             default=[default_private_key], action='append', type=str,
                             help="specify private key file(s) - additive - default is to use {}"
                             .format(default_private_key))
+        parser.add_argument("-g", "--gateway", default=None,
+                            help="specify a gateway for 2-hops ssh - either hostname or username@hostname")
         # how to store results
         # xxx here xxx parser.add_argument()
         parser.add_argument("-o", "--out-dir", default=None,
@@ -235,7 +238,17 @@ class Apssh:
             parser.print_help()
             exit(1)
 
-        proxies = self.create_proxies()
+        ### initialize a gateway proxy if --gateway is specified
+        gateway = None
+        if args.gateway:
+            gwuser, gwhost = self.user_host(args.gateway)
+            gateway = SshProxy(gwhost, username=gwuser,
+                               client_keys = self.parsed_args.private_keys,
+                               formatter = self.get_formatter(),
+                               timeout = self.parsed_args.timeout,
+                               debug = self.parsed_args.debug)
+
+        proxies = self.create_proxies(gateway)
 
         if not args.script:
             command = " ".join(args.commands)

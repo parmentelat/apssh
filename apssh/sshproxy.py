@@ -161,7 +161,16 @@ class SshProxy:
             await self.connect()
         return self.conn
             
-    async def connect_direct(self):
+    async def connect(self):
+        """
+        Unconditionnaly connect
+        """
+        if not self.gateway:
+            return await self._connect_direct()
+        else:
+            return await self._connect_tunnel()
+
+    async def _connect_direct(self):
         """
         The code for connecting to the first ssh hop (i.e. when self.gateway is None)
         """
@@ -197,7 +206,7 @@ class SshProxy:
             self.conn = None
         return self.conn is not None
 
-    async def connect_tunnel(self):
+    async def _connect_tunnel(self):
         """
         The code to connect to a higher-degree hop
         We expect gateway to have its connection open, and issue connect_ssh on that connection
@@ -236,12 +245,6 @@ class SshProxy:
                                              ("UNHANDLED in connect_ssh", e))
             self.conn = None
         return self.conn is not None
-
-    async def connect(self):
-        if not self.gateway:
-            return await self.connect_direct()
-        else:
-            return await self.connect_tunnel()
 
     async def sftp_connect_lazy(self):
         if self.sftp_client is None:

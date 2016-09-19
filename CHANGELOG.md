@@ -1,3 +1,9 @@
+# 0.2.1 - 2016 Sep 19
+
+* support for -g / --gateway option for 2-hops connections
+* support for getting keys at the ssh agent if can be located
+* tentatively fixes issue #2
+
 # 0.1.1 - 2016 Sep 15
 
 * add missing apssh.jobs to pypi packaging

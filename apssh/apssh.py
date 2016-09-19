@@ -347,6 +347,9 @@ class Apssh:
                 with open(os.path.join(subdir,"{}/{}".format(prefix, p.hostname)), "w") as mark:
                     mark.write("{}\n".format(s))
 
+        # xxx - when in gateway mode, the gateway proxy never gets disconnected
+        # which probably is just fine
+        
         # return 0 only if all hosts have returned 0
         # otherwise, return 1
         failures = [ r for r in results if r != 0 ]

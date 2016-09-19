@@ -139,6 +139,9 @@ class SshProxy:
         self.timeout = timeout
         #
         self.conn, self.sftp_client = None, None
+        # critical sections require mutual exclusions
+        self._connect_lock = asyncio.Lock()
+        self._disconnect_lock = asyncio.Lock()
 
     def __user_host__(self):
         return "{}@{}".format(self.username, self.hostname) if self.username \
@@ -157,9 +160,14 @@ class SshProxy:
         return "<SshProxy {}>".format(text)
     
     async def connect_lazy(self):
-        if self.conn is None:
-            await self.connect()
-        return self.conn
+        """
+        Connect if needed - uses a lock to ensure only one connection will 
+        take place even if several calls are done at the same time
+        """
+        with (await self._connect_lock):
+            if self.conn is None:
+                await self.connect()
+            return self.conn
             
     async def connect(self):
         """
@@ -247,17 +255,18 @@ class SshProxy:
         return self.conn is not None
 
     async def sftp_connect_lazy(self):
-        if self.sftp_client is None:
-            await self.sftp_connect()
-        return self.sftp_client
+        await self.connect_lazy()
+        with (await self._connect_lock):
+            if self.sftp_client is None:
+                await self.sftp_connect()
+            return self.sftp_client
             
     async def sftp_connect(self):
         """
-        Performs connection if needed, and initializes SFTP connection
+        Initializes SFTP connection
         Returns True if sftp client is ready to be used, False otherwise
         """
-        connected = await self.connect_lazy()
-        if not connected:
+        if self.conn is None:
             return False
         try:
             self.sftp_client = await self.conn.start_sftp_client()
@@ -306,8 +315,9 @@ class SshProxy:
         # beware that when used with asynciojobs, we often have several jobs
         # sharing the same proxy, and so there might be several calls to
         # close() sent to the same object at the same time...
-        await self.sftp_close()
-        await self.ssh_close()
+        with (await self._disconnect_lock):
+            await self.sftp_close()
+            await self.ssh_close()
 
     ##############################
     async def run(self, command):

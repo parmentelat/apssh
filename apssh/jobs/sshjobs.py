@@ -12,7 +12,7 @@ from asynciojobs.job import AbstractJob
 # probably need a dedicated formatter at some point
 class SshNode(SshProxy):
     """
-    essentially SshProxy
+    essentially similar to SshProxy but under a more meaningful name
     """ 
     def __init__(self, *args, **kwds):
         SshProxy.__init__(self, *args, **kwds)

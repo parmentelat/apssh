@@ -1,3 +1,8 @@
+# 0.2.2 - 2016 Sep 19
+
+* add mutual exclusion locks to SshProxy connection and disconnection
+  to ensure that an object gets connected only once
+
 # 0.2.1 - 2016 Sep 19
 
 * support for -g / --gateway option for 2-hops connections

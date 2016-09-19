@@ -12,11 +12,11 @@
 [sudo] pip3 install apssh
 ```
 
-# Features
+# 2 major modes : well-known commands, or local script
 
 ## Usual mode
 
-* The usual way to run a command that is already present on the remote systems, is to do e.g. this (we'll see the `-t` option right away)
+* The usual way to run a command that is **already present on the remote systems**, is to do e.g. this (we'll see the `-t` option right away)
 
 ```
 apssh -t host1 -t host2 hostname
@@ -25,7 +25,7 @@ apssh -t host1 -t host2 hostname
 ## Script mode : using a local script that gets copied over
 
 * Now if you need to run a more convoluted command, you can of course quote meta characters as `;` and the like, and struggle you way using the same technique.
-*  There is however an other way to achieve this, by writing a local file - say a shell script, but that can be any file that can run on the target nodes - in association with the `-s` a.k.a. `--script` option, like e.g.
+*  There is however an other way to achieve this, by writing a **local script** - usually a shell script, but that can be any file that can run on the target nodes - in association with the `-s` a.k.a. `--script` option, like e.g.
 
 ```
 apssh -t host1 -t host2 --script mymacros.sh one two
@@ -44,9 +44,13 @@ Note that in this mode:
 * the local file must be executable as `apssh` will preserve its permissions when pushing
 * the command executed remotely has its *cwd* set to the remote home directory
 
-## Scope selection
+## Global return code
 
-### Adding names : the `-t` or `--target` option
+`apssh` returns 0 if and only if all remote commands complete and return 0 themselves; otherwise it returns 1.    
+    
+# Scope selection
+
+## Adding names : the `-t` or `--target` option
 
 * to run the command `true` on hosts `host1` and `host2` as well on all hostnames contained in file `hosts.list`, do this:
 
@@ -70,9 +74,9 @@ then if you run
 
 will run `true` on hosts `host1`, `host2`, `host3`, `foo`, `bar`, `toto` and `tutu`.
 
-### Excluding names : the `-x` or `--exclude` option    
+## Excluding names : the `-x` or `--exclude` option    
 
-* you can specify exclusions, the logic is exactly the same; exclusions are parsed first, and then the added hostnmes will be taken into account only if they are not excluded. Which means the order in which you define targets and excludes does not matter.
+* you can specify exclusions, the logic is exactly the same; exclusions are parsed first, and then hostnames from `--target` will be actually added only if they are not excluded. Which means the order in which you define targets and excludes does not matter.
 
 * so for example if you have all the known nodes in PLE in file `PLE.nodes`, and in a separate file `PLE.dns-unknown` the subset of the PLE nodes that are actually unknown to DNS, you can skip them by doing
 
@@ -82,34 +86,17 @@ $ apssh -u root -t PLE.nodes -x PLE.dns-unknown cat /etc/fedora-release
 $ apssh -u root -x PLE.dns-unknown -t PLE.nodes cat /etc/fedora-release
 ```
 
-## Remote command and user
+## Max connections: the `-w` or `--window` option
 
-### Good practices
-
-* First off, `apssh` will stop interpreting options on your command line at the beginning of the remote command. That is to say, in the following example
+By default there is no limit on the number of simultaneous connections, which is likely to be a problem as soon as you go for several tens of hosts, as you would then run into limitations on open connections in your OS or network. Use `w` or `--window` to run at most 50 connections at a time
 
 ```
-$ apssh -t host1 -t file1 -t host2 rpm -aq \| grep libvirt
+$ apssh -w 50 -t tons-of-nodes true
 ```
 
-the `-aq` option is meant for the remote `rpm` command, and that's fine because after the `rpm` token, `apssh` stops taking options, and passes them to the remote command instead.
+# Users and keys
 
-* Also note in the example above that you can pass shell specials, like `|`, `<`, `>`, `;` and the like, by backslashing them, like this:
-
-```
-$ apssh -u root -t faraday.inria.fr -t r2lab.inria.fr uname -a \; cat /etc/fedora-release /etc/lsb-release 2\> /dev/null
-r2lab.inria.fr:Linux r2lab.pl.sophia.inria.fr 4.6.4-201.fc23.x86_64 #1 SMP Tue Jul 12 11:43:59 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
-r2lab.inria.fr:Fedora release 24 (Twenty Four)
-faraday.inria.fr:Linux faraday 4.4.0-36-generic #55-Ubuntu SMP Thu Aug 11 18:01:55 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
-faraday.inria.fr:DISTRIB_ID=Ubuntu
-faraday.inria.fr:DISTRIB_RELEASE=16.04
-faraday.inria.fr:DISTRIB_CODENAME=xenial
-faraday.inria.fr:DISTRIB_DESCRIPTION="Ubuntu 16.04.1 LTS"
-```
-
-    $ apssh -t alive uname -a \;
-
-### Running under a different user       
+## Running under a different user       
 use ` --user` to specify a specific username globally; or give a specific user on a given hostname with `@`
   * so e.g. to run as `user` on `host1`, but as `root` on `host2` and `host3`
 
@@ -117,11 +104,28 @@ use ` --user` to specify a specific username globally; or give a specific user o
 $ apssh -u root -t user@host1 -t host2 -t host3 -- true
 ```
 
-### Keys
-Default key is as usual `~/.ssh/id_rsa`, but more keys can be used if necessary with the `-i` or `--private-keys` options.
+## Keys
 
+Here's how `apssh` locates private keys:
+
+### If no keys are specified using the `-i` command line option 
+
+* (A) if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable, and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent (**NOTE:** use `ssh-add` for managing the keys known to the agent)
+* (B) otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
+
+### If keys are specified on the command line
+
+* (C) That exact list is used for loading private keys
+
+### In both cases
+
+Note that when loading keys from a file - i.e. in cases (B) and (C) above, a passphrase will be prompted at the terminal for each key that is passphrase-protected. Each passphrase gets prompted once for all the target hosts of course. 
+
+It results from all this that passphrase-protected keys can be used in `apssh` without prompting **only if present in an agent**.
+
+This behaviour might not be optimal - for example with this logic there is no way to use agent-loaded keys **and** additional keys. I am eager to receive feedback from users for possible improvements in this area.
     
-### Gateway a.k.a. Bouncing a.k.a. Tunnelling 
+# Gateway a.k.a. Bouncing a.k.a. Tunnelling 
 
 In some cases, the target nodes are not directly addressable from the box that runs `apssh`, and the ssh traffic needs to go through a gateway. This typically occurs with testbeds where nodes only have private addresses. 
 
@@ -141,17 +145,11 @@ fit02:fit02
 fit03:fit03
 ```
 
-## Max connections
+Note that in this case there is a single ssh connection created to the gateway.
 
-By default there is no limit on the number of simultaneous connections, which is likely to be a problem as soon as you go for several tens of hosts, as you would then run into limitations on open connections in your OS or network. To run at most 50 connections at a time
+# Output formats
 
-```
-$ apssh -w 50 -t tons-of-nodes -- true
-```
-
-## Output formats
-
-### Default : on the fly, annotated with hostname
+## Default : on the fly, annotated with hostname
 Default is to output every line as they come back, prefixed with associated hostname. As you might expect, stdout goes to stdout and stderr to stderr. Additionally, error messages issued by apssh itself, like e.g. when a host cannot be reached, also goes on stderr.
 
 ```
@@ -166,11 +164,11 @@ planetlab2.xeno.cl.cam.ac.uk:VERSION_ID=23
 In the above trasnscript, there were 5 target hostnames, one of which being unreachable. 
 The line with `Permission denied` goes on *stderr*, the other ones on *stdout*.
     
-### Raw : on the fly, no annotation
+## Raw : on the fly, no annotation
 
 With the `-r` or `--raw--` option, output is produced as it comes in, so very much like with the default output, but with no annotation as to which node the line is originating from.
 
-### Subdir : store outputs individually in a dedicated dir
+## Subdir : store outputs individually in a dedicated dir
 
 Alternatively, the `-o` or `-d` options allow to select a specific subdir and to store results in files named after each hostname. In this case, *stdout* is expected to contain a single line that says in which directory results are to be found (this is useful mostly with `-d`, since with `-o` you can predict this in advance)
 
@@ -216,15 +214,35 @@ None
 Fedora release 18 (Spherical Cow)
 ```
 
-### Global retcod
+## Good practices
 
-`apssh` returns 0 if and only if all remote commands complete and return 0 themselves; otherwise it returns 1.    
-    
+* First off, `apssh` will stop interpreting options on your command line at the beginning of the remote command. That is to say, in the following example
+
+```
+$ apssh -t host1 -t file1 -t host2 rpm -aq \| grep libvirt
+```
+
+the `-aq` option is meant for the remote `rpm` command, and that's fine because after the `rpm` token, `apssh` stops taking options, and passes them to the remote command instead.
+
+* Also note in the example above that you can pass shell specials, like `|`, `<`, `>`, `;` and the like, by backslashing them, like this:
+
+```
+$ apssh -u root -t faraday.inria.fr -t r2lab.inria.fr uname -a \; cat /etc/fedora-release /etc/lsb-release 2\> /dev/null
+r2lab.inria.fr:Linux r2lab.pl.sophia.inria.fr 4.6.4-201.fc23.x86_64 #1 SMP Tue Jul 12 11:43:59 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+r2lab.inria.fr:Fedora release 24 (Twenty Four)
+faraday.inria.fr:Linux faraday 4.4.0-36-generic #55-Ubuntu SMP Thu Aug 11 18:01:55 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+faraday.inria.fr:DISTRIB_ID=Ubuntu
+faraday.inria.fr:DISTRIB_RELEASE=16.04
+faraday.inria.fr:DISTRIB_CODENAME=xenial
+faraday.inria.fr:DISTRIB_DESCRIPTION="Ubuntu 16.04.1 LTS"
+```
+
+    $ apssh -t alive uname -a \;
+
 # TODO
 
+* password-protected keys / load keys from agent
 * current output system - from just recently - properly separates stdout and stderr; **BUT** this for now will work well only on text-based output, which can be a wrong assumption.
-* allow jump node in the middle
-* check for password-protected keys; and related (?), fetching keys at the ssh-agent
 * automated tests !?!
 * add matching on hostnames 
 * probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*

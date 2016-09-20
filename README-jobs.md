@@ -17,6 +17,8 @@ At this early stage, these classes for now are limited to
 
 ## Example
 
-```
-from apssh.sshjobs import SshNode, SshJob, SshJobScript
-```
+You can see a very simple example of that idea implemented in 2 files
+
+* [the python code](https://github.com/parmentelat/r2lab/blob/master/demos/jobs-angle-measure/angle-measure.py)
+* and [the related shell script](https://github.com/parmentelat/r2lab/blob/master/demos/jobs-angle-measure/angle-measure.sh)
+* a summary of the objects involved [is depicted in this figure](https://github.com/parmentelat/r2lab/blob/master/demos/jobs-angle-measure/jobs.png)

@@ -2,6 +2,8 @@
 
 `apssh` is a tool that aims at running commands remotely using `ssh` on a large number of target nodes at once. It is thus comparable to [parallel-ssh](https://code.google.com/p/parallel-ssh/), except that it is written on top of `asyncio` and `asyncssh`.
 
+In addition, `apssh` comes with a class `SshJob` that can be used in conjunction with `asynciojobs` to write more scenarios that are more elaborate than just sending the same command on a bunch of hosts. This is presented in more details `README-jobs.md`.
+
 # How to get it
 
 ## Requirement
@@ -237,12 +239,22 @@ faraday.inria.fr:DISTRIB_CODENAME=xenial
 faraday.inria.fr:DISTRIB_DESCRIPTION="Ubuntu 16.04.1 LTS"
 ```
 
-    $ apssh -t alive uname -a \;
+```
+$ apssh -u root -t PLE.alive.5 -tc uname -r \; hostname
+16-47-40:mars.planetlab.haw-hamburg.de:2.6.32-36.onelab.i686
+16-47-40:merkur.planetlab.haw-hamburg.de:2.6.32-36.onelab.i686
+16-47-40:mars.planetlab.haw-hamburg.de:mars.planetlab.haw-hamburg.de
+16-47-40:merkur.planetlab.haw-hamburg.de:merkur.planetlab.haw-hamburg.de
+16-47-40:planetlab1.tlm.unavarra.es:4.4.13-200.fc22.x86_64
+16-47-40:planetlab1.tlm.unavarra.es:planetlab1.tlm.unavarra.es
+16-47-40:planetlab1.virtues.fi:2.6.32-36.onelab.i686
+16-47-40:planetlab1.virtues.fi:planetlab1.virtues.fi
+16-47-40:planetlab-2.research.netlab.hut.fi:4.2.3-200.fc22.x86_64
+16-47-40:planetlab-2.research.netlab.hut.fi:planetlab-2.research.netlab.hut.fi
+```
 
 # TODO
 
-* password-protected keys / load keys from agent
-* tunnelled runs apparently fail to share the 1st hop connection in actuality 
-* current output system - from just recently - properly separates stdout and stderr; **BUT** this for now will work well only on text-based output, which can be a wrong assumption.
+* current output system now properly separates stdout and stderr, **BUT** this for now will work well only on text-based output, which can be a wrong assumption.
 * automated tests !?!
 * probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*

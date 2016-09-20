@@ -19,8 +19,8 @@ class SshNode(SshProxy):
 
 class SshJob(AbstractJob):
 
-    def __init__(self, proxy, command, label=None, critical=True):
-        self.proxy = proxy
+    def __init__(self, node, command, label=None, critical=True):
+        self.proxy = node
         self.command = " ".join(command)
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)
 
@@ -33,8 +33,8 @@ class SshJob(AbstractJob):
 class SshJobScript(AbstractJob):
 
     # here the first item in command must be a local filename
-    def __init__(self, proxy, command, label=None, critical=True):
-        self.proxy = proxy
+    def __init__(self, node, command, label=None, critical=True):
+        self.proxy = node
         self.local_script = command[0]
         self.script_args = command[1:]
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)

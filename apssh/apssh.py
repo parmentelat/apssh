@@ -13,7 +13,7 @@ import asyncio
 from .util import print_stderr
 from .config import default_time_name, default_timeout, default_username, default_private_keys, default_remote_workdir
 from .sshproxy import SshProxy
-from .formatters import RawFormatter, ColonFormatter, SubdirFormatter
+from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, SubdirFormatter
 from .window import gather_window
 from .keys import import_private_key, load_agent_keys
 from .version import version as apssh_version
@@ -138,15 +138,19 @@ class Apssh:
 
     def get_formatter(self):
         if self.formatter is None:
-            if self.parsed_args.raw_output:
-                self.formatter = RawFormatter(debug = self.parsed_args.debug)
+            verbose = self.parsed_args.verbose
+            if self.parsed_args.raw_format:
+                self.formatter = RawFormatter(verbose = verbose)
+            elif self.parsed_args.time_colon_format:
+                self.formatter = TimeColonFormatter(verbose = verbose)
             elif self.parsed_args.date_time:
                 run_name = default_time_name
-                self.formatter = SubdirFormatter(run_name)
+                self.formatter = SubdirFormatter(run_name, verbose = verbose)
             elif self.parsed_args.out_dir:
-                self.formatter = SubdirFormatter(self.parsed_args.out_dir)
+                self.formatter = SubdirFormatter(self.parsed_args.out_dir,
+                                                 verbose = verbose)
             else:
-                self.formatter = ColonFormatter()
+                self.formatter = ColonFormatter(verbose = verbose)
         return self.formatter
     
     def load_private_keys(self):
@@ -180,6 +184,13 @@ class Apssh:
     def main(self):
         self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
+        parser.add_argument("-s", "--script", action='store_true', default=False,
+                            help="""If this flag is present, the first element of the remote command 
+                            is assumed to be the name of a local script, that will be copied over
+                            before being executed remotely.
+                            In this case it should be executable.
+                            On the remote boxes it will be installed and run in the {} directory.
+                            """.format(default_remote_workdir))
         parser.add_argument("-t", "--target", dest='targets', action='append', default=[],
                             help="""
                             specify targets (additive); each target can be either 
@@ -214,14 +225,18 @@ class Apssh:
 """)
         parser.add_argument("-g", "--gateway", default=None,
                             help="specify a gateway for 2-hops ssh - either hostname or username@hostname")
-        # how to store results
-        # xxx here xxx parser.add_argument()
+        ##### how to store results
+        # terminal
+        parser.add_argument("-r", "--raw-format", default=False, action='store_true',
+                            help="produce raw result")
+        parser.add_argument("-tc", "--time-colon-format", default=False, action='store_true',
+                            help="produce output with format time:hostname:line")
+
+        # filesystem
         parser.add_argument("-o", "--out-dir", default=None,
                             help="specify directory where to store results")
         parser.add_argument("-d", "--date-time", default=None, action='store_true',
                             help="use date-based directory to store results")
-        parser.add_argument("-r", "--raw-output", default=None, action='store_true',
-                            help="produce raw result")
         parser.add_argument("-m", "--mark", default=False, action='store_true',
                             help="""
                             available with the -d and -o options only.
@@ -231,19 +246,13 @@ class Apssh:
                             or 1failed/<hostname> for the other ones.
                             This mark file will contain a single line with the returned code, or 'None'
                             if the node was not reachable at all""")
-        parser.add_argument("-s", "--script", action='store_true', default=False,
-                            help="""If this flag is present, the first element of the remote command 
-                            is assumed to be the name of a local script, that will be copied over
-                            before being executed remotely.
-                            In this case it should be executable.
-                            On the remote boxes it will be installed and run in the {} directory.
-                            """.format(default_remote_workdir))
 
         
-        # turn on debugging
-        parser.add_argument("-D", "--debug", action='store_true', default=False)
+        # usual stuff
         parser.add_argument("-n", "--dry-run", default=False, action='store_true',
                             help="Only show details on selected hostnames")
+        parser.add_argument("-v", "--verbose", action='store_true', default=False)
+        parser.add_argument("-D", "--debug", action='store_true', default=False)
         parser.add_argument("-V", "--version", action='store_true', default=False)
 
         # the commands to run
@@ -328,8 +337,7 @@ class Apssh:
                     else None
         if subdir:
             print(subdir)
-        ### details on the individual retcods
-        # raw
+        ### details on the individual retcods - a bit rough
         if self.parsed_args.debug:
             for p, s in zip(proxies, results):
                 print("PROXY {} -> {}".format(p.hostname, s))

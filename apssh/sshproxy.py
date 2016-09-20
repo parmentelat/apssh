@@ -90,8 +90,6 @@ class LineBasedSession(asyncssh.SSHClientSession):
             print_stderr('BS {} EOF'.format(self.proxy))
         self.stdout.flush(None, newline=False)
         self.stderr.flush(asyncssh.EXTENDED_DATA_STDERR, newline=False)
-        if self.proxy.formatter:
-            self.proxy.formatter.session_stop(self.proxy.hostname)
 
     def exit_status_received(self, status):
         if self.proxy.debug:
@@ -254,7 +252,7 @@ class SshProxy:
         close the SFTP client if relevant
         """
         if self.sftp_client is not None:
-            self.formatter.connection_stop(self.hostname)
+            self.formatter.connection_stop(self.hostname, "SFTP subsystem")
             # set self.sftp_client to None *before* awaiting
             # to avoid duplicate attempts
             preserve = self.sftp_client
@@ -267,8 +265,7 @@ class SshProxy:
         close the SSH connection if relevant
         """
         if self.conn is not None:
-            if self.debug:
-                print_stderr("{} DISCONNECTING".format(self))
+            self.formatter.connection_stop(self.hostname, "SSH system")
             preserve = self.conn
             self.conn = None
             preserve.close()
@@ -309,6 +306,7 @@ class SshProxy:
             formatter_command = command.replace('>', '..').replace('<', '..')
             self.formatter.session_start(self.hostname, formatter_command)
             await chan.wait_closed()
+            self.formatter.session_stop(self.hostname, command)
             return session._status
         except asyncio.TimeoutError as e:
             self.formatter.session_failed(self.hostname, command, ("UNHANDLED", e))

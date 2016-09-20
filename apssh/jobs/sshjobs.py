@@ -25,7 +25,7 @@ class SshJob(AbstractJob):
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)
 
     async def co_run(self):
-        return await self.proxy.connect_and_run(self.command, disconnect=False)
+        return await self.proxy.connect_run(self.command, disconnect=False)
         
     async def co_shutdown(self):
         await self.proxy.close()
@@ -40,7 +40,7 @@ class SshJobScript(AbstractJob):
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)
 
     async def co_run(self):
-        return await self.proxy.connect_put_and_run(self.local_script,
+        return await self.proxy.connect_install_run(self.local_script,
                                                     *self.script_args,
                                                     disconnect=False)
         

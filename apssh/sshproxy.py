@@ -7,7 +7,8 @@ import socket
 
 from .util import print_stderr
 from .config import default_remote_workdir
-from .formatters import ColonFormatter
+# a dummy formatter
+from .formatters import Formatter
 
 class LineBasedSession(asyncssh.SSHClientSession):
     """
@@ -52,8 +53,6 @@ class LineBasedSession(asyncssh.SSHClientSession):
                 self.line = chunk
 
         def flush(self, datatype, newline):
-            if not self.formatter:
-                return
             # add newline to current line f requested
             if newline:
                 self.line += "\n"
@@ -134,7 +133,8 @@ class SshProxy:
         self.client_keys = client_keys if client_keys is not None else []
         self.port = int(port)
         self.gateway = gateway
-        self.formatter = formatter or ColonFormatter()
+        # if not specified we use a totally dummy and mostly silent formatter
+        self.formatter = formatter or Formatter()
         self.debug = debug
         self.timeout = timeout
         #
@@ -151,8 +151,7 @@ class SshProxy:
         text = "" if not self.gateway \
                else "{} <--> ".format(self.gateway.__user_host__())
         text += self.__user_host__()
-        if self.formatter:
-            text += " [{}]".format(type(self.formatter).__name__)
+        text += " [{}]".format(type(self.formatter).__name__)
         if self.conn:
             text += "<-SSH->"
         if self.sftp_client:
@@ -166,102 +165,78 @@ class SshProxy:
         """
         with (await self._connect_lock):
             if self.conn is None:
-                await self.connect()
+                await self._connect()
             return self.conn
             
-    async def connect(self):
+    async def _connect(self):
         """
-        Unconditionnaly connect
+        Unconditionnaly attemps to connect and raise an exception otherwise
         """
-        if not self.gateway:
-            return await self._connect_direct()
-        else:
-            return await self._connect_tunnel()
-
+        try:
+            if not self.gateway:
+                return await self._connect_direct()
+            else:
+                return await self._connect_tunnel()
+        except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
+            self.formatter.connection_failed(self.hostname, self.username, self.port, e)
+            raise e
+        
     async def _connect_direct(self):
         """
         The code for connecting to the first ssh hop (i.e. when self.gateway is None)
         """
         assert self.gateway is None
-        try:
-            if self.debug:
-                print_stderr("{} 1st hop CONNECTING".format(self))
-            class client_closure(VerboseClient):
-                def __init__(client_self, *args, **kwds):
-                    client_self.proxy = self
-                    super().__init__(*args, **kwds)
+        if self.debug:
+            print_stderr("{} 1st hop CONNECTING".format(self))
 
-            self.conn, client = \
-                await asyncio.wait_for( 
-                    asyncssh.create_connection(
-                        client_closure, self.hostname, port=self.port, username=self.username,
-                        known_hosts=self.known_hosts, client_keys=self.client_keys
-                    ),
-                    timeout = self.timeout)
-            if self.formatter:
-                self.formatter.connection_start(self.hostname)
-            if self.debug:
-                print_stderr("{} 1st hop CONNECTED".format(self))
-        except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
-            self.formatter.connection_failed(self.hostname, self.username, self.port, e)
-            self.conn = None
-        except Exception as e:
-            print_stderr("Unexpected exception in create_connection")
-            import traceback
-            traceback.print_exc()
-            self.formatter.connection_failed(self.hostname, self.username, self.port,
-                                             ("UNHANDLED in create_connection", e))
-            self.conn = None
-        return self.conn is not None
+        class client_closure(VerboseClient):
+            def __init__(client_self, *args, **kwds):
+                client_self.proxy = self
+                super().__init__(*args, **kwds)
+
+        self.conn, client = \
+            await asyncio.wait_for( 
+                asyncssh.create_connection(
+                    client_closure, self.hostname, port=self.port, username=self.username,
+                    known_hosts=self.known_hosts, client_keys=self.client_keys
+                ),
+                timeout = self.timeout)
+        self.formatter.connection_start(self.hostname, direct=True)
+        if self.debug:
+            print_stderr("{} 1st hop CONNECTED".format(self))
 
     async def _connect_tunnel(self):
         """
         The code to connect to a higher-degree hop
         We expect gateway to have its connection open, and issue connect_ssh on that connection
         """
-        # we assume the gateway has connected already
+        # make sure the gateway has connected already
         assert self.gateway is not None
         await self.gateway.connect_lazy()
-        try:
-            if self.debug:
-                print_stderr("{} remote CONNECTING".format(self))
-###            class client_closure(VerboseClient):
-###                def __init__(client_self, *args, **kwds):
-###                    client_self.proxy = self
-###                    super().__init__(*args, **kwds)
-
-            self.conn = \
-                await asyncio.wait_for(
-                    self.gateway.conn.connect_ssh(
-                        ### client_closure,
-                        self.hostname, port=self.port, username=self.username,
-                        known_hosts=self.known_hosts, client_keys=self.client_keys
-                    ),
-                    timeout = self.timeout)
-            if self.formatter:
-                self.formatter.connection_start(self.hostname)
-            if self.debug:
-                print_stderr("{} remote CONNECTED through {}".format(self, self.gateway))
-        except (OSError, asyncssh.Error, asyncio.TimeoutError, socket.gaierror) as e:
-            self.formatter.connection_failed(self.hostname, self.username, self.port, e)
-            self.conn = None
-        except Exception as e:
-            print_stderr("Unexpected exception in connect_ssh")
-            import traceback
-            traceback.print_exc()
-            self.formatter.connection_failed(self.hostname, self.username, self.port,
-                                             ("UNHANDLED in connect_ssh", e))
-            self.conn = None
-        return self.conn is not None
+        if self.debug:
+            print_stderr("{} remote CONNECTING".format(self))
+        # XXX it looks like conn.connect_ssh won't let us define our factory
+        # However we do not see any missing feature here, so somehow asyncssh
+        # must do the right thing under the hood...
+        self.conn = \
+            await asyncio.wait_for(
+                 self.gateway.conn.connect_ssh(
+                     self.hostname, port=self.port, username=self.username,
+                     known_hosts=self.known_hosts, client_keys=self.client_keys
+                 ),
+                 timeout = self.timeout)
+        self.formatter.connection_start(self.hostname, direct=False)
+        if self.debug:
+            print_stderr("{} remote CONNECTED through {}".format(self, self.gateway))
 
     async def sftp_connect_lazy(self):
         await self.connect_lazy()
         with (await self._connect_lock):
             if self.sftp_client is None:
-                await self.sftp_connect()
+                await self._sftp_connect()
             return self.sftp_client
             
-    async def sftp_connect(self):
+    async def _sftp_connect(self):
         """
         Initializes SFTP connection
         Returns True if sftp client is ready to be used, False otherwise
@@ -272,23 +247,14 @@ class SshProxy:
             self.sftp_client = await self.conn.start_sftp_client()
         except (asyncssh.sftp.SFTPError, asyncio.TimeoutError) as e:
             self.formatter.connection_failed(self.hostname, self.username, self.port, e)
-            self.sftp_client = None
-        except Exception as e:
-            print_stderr("Unexpected exception in start_sftp_client")
-            import traceback
-            traceback.print_exc()
-            self.formatter.connection_failed(self.hostname, self.username, self.port,
-                                             ("UNHANDLED in start_sftp_client", e))
-            self.sftp_client = None
-        return self.sftp_client is not None
+            raise e
 
-    async def sftp_close(self):
+    async def _close_sftp(self):
         """
         close the SFTP client if relevant
         """
         if self.sftp_client is not None:
-            if self.debug:
-                print_stderr("{} SFTP DISCONNECTING".format(self))
+            self.formatter.connection_stop(self.hostname)
             # set self.sftp_client to None *before* awaiting
             # to avoid duplicate attempts
             preserve = self.sftp_client
@@ -296,9 +262,9 @@ class SshProxy:
             preserve.exit()
             await preserve.wait_closed()
 
-    async def ssh_close(self):
+    async def _close_ssh(self):
         """
-        clse the SSH connection if relevant
+        close the SSH connection if relevant
         """
         if self.conn is not None:
             if self.debug:
@@ -316,8 +282,8 @@ class SshProxy:
         # sharing the same proxy, and so there might be several calls to
         # close() sent to the same object at the same time...
         with (await self._disconnect_lock):
-            await self.sftp_close()
-            await self.ssh_close()
+            await self._close_sftp()
+            await self._close_ssh()
 
     ##############################
     async def run(self, command):
@@ -341,68 +307,12 @@ class SshProxy:
                     timeout=self.timeout)
             # xxx need to make sure this is clean
             formatter_command = command.replace('>', '..').replace('<', '..')
-            if self.formatter:
-                self.formatter.session_start(self.hostname,
-                                             formatter_command)
+            self.formatter.session_start(self.hostname, formatter_command)
             await chan.wait_closed()
             return session._status
         except asyncio.TimeoutError as e:
             self.formatter.session_failed(self.hostname, command, ("UNHANDLED", e))
-        # also seen here : asyncssh.misc.ChannelOpenError
-        except Exception as e:
-            self.formatter.session_failed(self.hostname, command, ("UNHANDLED", e))
-            return
-
-    async def install_script(self, localpath, remotepath,
-                             follow_symlinks=False, preserve=True, disconnect=False):
-        """
-        opens a connection if needed
-        opens a SFTP connection if needed
-        install a local file as a remote (remote is set as executable if source is)
-        * preserve: if True, copy will preserve access, modtimes and permissions
-        * follow_symlinks: if False, symlinks get created on the remote end
-        * disconnect: tear down connections (ssh and sftp) if True
-
-        returns True if all went well, False otherwise
-        """
-        # half full glass; only one branch that leads to success
-        retcod = False
-        sftp_connected = await self.sftp_connect_lazy()
-        if sftp_connected:
-            try:
-                if self.debug:
-                    print_stderr("{} : Running SFTP put with {} -> {}"
-                                 .format(self, localpath, remotepath))
-                put_result = await self.sftp_client.put(localpath, remotepath, preserve=preserve,
-                                                        follow_symlinks=follow_symlinks)
-                if self.debug:
-                    print_stderr("put returned {}".format(put_result))
-                retcod = True
-            except OSError as e:
-                print("OSError", e)
-            except asyncssh.sftp.SFTPError as e:
-                print("SFTPError", e)
-            except Exception as e:
-                import traceback
-                traceback.print_exc()
-            if disconnect:
-                await self.close()
-        return retcod
-
-    # hight level helpers for direct use in apssh
-    async def connect_and_run(self, command, disconnect=True):
-        """
-        This helper function will connect if needed, run a command
-        also disconnect (close connection) if requested - default is on
-        returns 
-        """
-        connected = await self.connect_lazy()
-        if connected:
-            # xxx protect here with timeout / wait_for
-            data = await self.run(command)
-            if disconnect:
-                await self.close()
-            return data
+            raise e
 
     async def mkdir(self, remotedir):
         if not await self.sftp_connect_lazy():
@@ -421,9 +331,51 @@ class SshProxy:
         except asyncssh.sftp.SFTPError as e:
             if self.debug:
                 print_stderr("Could not create {} on {}".format(default_remote_workdir, self))
-            return False
+            raise e
 
-    async def connect_put_and_run(self, localfile, *script_args, disconnect=True):
+    async def install_script(self, localpath, remotepath,
+                             follow_symlinks=False, preserve=True, disconnect=False):
+        """
+        opens a connection if needed
+        opens a SFTP connection if needed
+        install a local file as a remote (remote is set as executable if source is)
+        * preserve: if True, copy will preserve access, modtimes and permissions
+        * follow_symlinks: if False, symlinks get created on the remote end
+        * disconnect: tear down connections (ssh and sftp) if True
+
+        returns True if all went well, False otherwise
+        """
+        # half full glass; only one branch that leads to success
+        retcod = False
+        sftp_connected = await self.sftp_connect_lazy()
+        if sftp_connected:
+            if self.debug:
+                print_stderr("{} : Running SFTP put with {} -> {}"
+                             .format(self, localpath, remotepath))
+            put_result = await self.sftp_client.put(localpath, remotepath, preserve=preserve,
+                                                    follow_symlinks=follow_symlinks)
+            if self.debug:
+                print_stderr("put returned {}".format(put_result))
+            return True
+
+    #################### high level helpers for direct use in apssh or jobs
+    # regarding exceptions, the most convenient approach is for
+    # jobs to raise an exception when something serious happens
+    async def connect_run(self, command, disconnect=True):
+        """
+        This helper function will connect if needed, run a command
+        also disconnect (close connection) if requested - default is on
+        returns 
+        """
+        connected = await self.connect_lazy()
+        if connected:
+            # xxx protect here with timeout / wait_for ???
+            data = await self.run(command)
+            if disconnect:
+                await self.close()
+            return data
+
+    async def connect_install_run(self, localfile, *script_args, disconnect=True):
         """
         This helper function does everything needed to push a script remotely
         and run it; which involves

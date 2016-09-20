@@ -11,7 +11,6 @@ def ensure_visible(exc):
         exc = repr(exc)
     return exc
 
-
 class Formatter:
     """
     This class is an abstract class that allows to define
@@ -36,7 +35,7 @@ class Formatter:
         print_stderr("{} - Session failed {}".format(hostname, exc))
 
     # events
-    def connection_start(self, hostname):
+    def connection_start(self, hostname, direct):
         pass
 
     def connection_stop(self, hostname):
@@ -62,18 +61,19 @@ class RawFormatter(Formatter):
     """
     def __init__(self, debug=False):
         self.debug = debug
-    def connection_start(self, hostname):
+    def connection_start(self, hostname, direct):
         if self.debug:
-            print_stderr("RF CA: Connected to {}".format(hostname))
+            msg = "direct" if direct else "tunnelled"
+            print_stderr("Connected ({}) to {}".format(msg, hostname))
     def connection_stop(self, hostname):
         if self.debug:
-            print_stderr("RF CO: Disconnected from {}".format(hostname))
+            print_stderr("Disconnected from {}".format(hostname))
     def session_start(self, hostname, command):
         if self.debug:
-            print_stderr("RF SA: Session on {} started for command {}".format(hostname, command))
+            print_stderr("Session on {} started for command {}".format(hostname, command))
     def session_stop(self, hostname):
         if self.debug:
-            print_stderr("RF SO: Session ended on {}".format(hostname))
+            print_stderr("Session ended on {}".format(hostname))
     def line(self, line, datatype, hostname):
         print_function = print_stderr if datatype == EXTENDED_DATA_STDERR else print
         print_function(line, end="")
@@ -88,9 +88,10 @@ class ColonFormatter(Formatter):
 
 class SubdirFormatter(Formatter):
 
-    def __init__(self, run_name):
+    def __init__(self, run_name, debug=False):
         self.run_name = run_name
         self._dir_checked = False
+        self.debug = debug
 
     def out(self, hostname):
         return os.path.join(self.run_name, hostname)
@@ -104,12 +105,14 @@ class SubdirFormatter(Formatter):
                 os.makedirs(self.run_name)
             self._dir_checked = True
 
-    def connection_start(self, hostname):
+    def connection_start(self, hostname, direct):
         try:
             self.check_dir()
             # create output file
             with open(self.out(hostname), 'w') as out:
-                pass
+                if self.debug:
+                    msg = "direct" if direct else "tunnelled"
+                    out.write("Connected ({}) to {}\n".format(msg, hostname))
         except OSError as e:
             print_stderr("File permission problem {}".format(e))
             exit(1)

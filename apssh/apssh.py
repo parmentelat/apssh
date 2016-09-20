@@ -293,7 +293,7 @@ class Apssh:
 
         if not args.script:
             command = " ".join(args.commands)
-            tasks = [ proxy.connect_and_run(command) for proxy in proxies ]
+            tasks = [ proxy.connect_run(command) for proxy in proxies ]
         else:
             ### an executable is provided on the command line
             script, args = args.commands[0], args.commands[1:]
@@ -304,7 +304,7 @@ class Apssh:
             # xxx could also check it's executable
             
             # in this case a first pass is required to push the code
-            tasks = [ proxy.connect_put_and_run(script, *args) for proxy in proxies ]
+            tasks = [ proxy.connect_install_run(script, *args) for proxy in proxies ]
 
 
         loop = asyncio.get_event_loop()
@@ -312,12 +312,14 @@ class Apssh:
         if not window:
             if self.parsed_args.debug:
                 print("No window limit")
-            results = loop.run_until_complete(asyncio.gather(*tasks))
+            results = loop.run_until_complete(asyncio.gather(*tasks,
+                                                             return_exceptions = True))
         else:
             if self.parsed_args.debug:
                 print("Window limit={}".format(window))
             results = loop.run_until_complete(gather_window(*tasks, window=window,
-                                                            debug=args.debug))
+                                                            debug=args.debug,
+                                                            return_exceptions = True))
 
         ### print on stdout the name of the output directory
         # useful mostly with -d : 

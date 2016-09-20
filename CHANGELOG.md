@@ -1,3 +1,9 @@
+# 0.2.3 - 2016 Sep 20
+
+* exception handling :
+  * more uniform way to write jobs, always let exceptions through
+  * ending up in simpler code
+
 # 0.2.2 - 2016 Sep 19
 
 * add mutual exclusion locks to SshProxy connection and disconnection

@@ -96,11 +96,12 @@ class LineBasedSession(asyncssh.SSHClientSession):
             print_stderr("BS {} ESR {}".format(self.proxy, status))
         self._status = status
 
+# VerboseClient is created through factories that
+# set its .proxy attribute
 class VerboseClient(asyncssh.SSHClient):
     def connection_made(self, conn):
-        self.ip = conn.get_extra_info('peername')[0]
         if self.proxy.debug:
-            print_stderr('VC Connection made to {}'.format(self.ip))
+            print_stderr('VC Connection made to {}'.format(self.proxy.hostname))
 
     # xxx we don't get this; at least, not always
     # the issue seems to be that we use close() on the asyncssh connection
@@ -109,11 +110,13 @@ class VerboseClient(asyncssh.SSHClient):
     # this actually triggers though occasionnally esp. with several targets
     def connection_lost(self, exc):
         if self.proxy.debug:
-            print_stderr('VC Connection lost to {} (exc={})'.format(self.ip, exc))
+            print_stderr('VC Connection lost to {} (exc={})'
+                         .format(self.proxy.hostname, exc))
 
     def auth_completed(self):
         if self.proxy.debug:
-            print_stderr('VC Authentication successful on {}.'.format(self.ip))
+            print_stderr('VC Authentication successful on {}.'
+                         .format(self.proxy.hostname))
 
 ####################
 class SshProxy:
@@ -213,13 +216,16 @@ class SshProxy:
         await self.gateway.connect_lazy()
         if self.debug:
             print_stderr("{} remote CONNECTING".format(self))
-        # XXX it looks like conn.connect_ssh won't let us define our factory
-        # However we do not see any missing feature here, so somehow asyncssh
-        # must do the right thing under the hood...
-        self.conn = \
+
+        class client_closure(VerboseClient):
+            def __init__(client_self, *args, **kwds):
+                client_self.proxy = self
+                super().__init__(*args, **kwds)
+
+        self.conn, client = \
             await asyncio.wait_for(
-                 self.gateway.conn.connect_ssh(
-                     self.hostname, port=self.port, username=self.username,
+                 self.gateway.conn.create_ssh_connection(
+                     client_closure, self.hostname, port=self.port, username=self.username,
                      known_hosts=self.known_hosts, client_keys=self.client_keys
                  ),
                  timeout = self.timeout)

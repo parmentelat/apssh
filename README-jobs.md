@@ -1,6 +1,6 @@
 # `apssh` and `asynciojobs`
 
-Originally, the idea presented here addresses the needs of experimetal research, where an experience often boils down to running jobs like preparing a set of nodes, initializing them, running some bash script, collecting results, all of them having temporal relationships.
+Originally, the idea presented here addresses the needs of experimental research, where an experience often boils down to running jobs like preparing a set of nodes, initializing them, running some bash script, collecting results, all of them having temporal relationships.
 
 ## `asynciojobs`
 `asynciojobs` is a microscopic orchestration engine for asyncio-based jobs - [see this link for details](https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb). This is the part that handles the temporal relationships.
@@ -21,4 +21,4 @@ You can see a very simple example of that idea implemented in 2 files
 
 * [the python code](https://github.com/parmentelat/r2lab/blob/master/demos/jobs-angle-measure/angle-measure.py)
 * and [the related shell script](https://github.com/parmentelat/r2lab/blob/master/demos/jobs-angle-measure/angle-measure.sh)
-* a summary of the objects involved [is depicted in this figure](https://github.com/parmentelat/r2lab/blob/master/demos/jobs-angle-measure/jobs.png)
+* plus, a summary of the objects involved [is depicted in this figure](https://github.com/parmentelat/r2lab/blob/master/demos/jobs-angle-measure/jobs.png)

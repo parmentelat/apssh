@@ -1,3 +1,8 @@
+# 0.2.4 - 2016 Sep 21
+
+* big cleanup in formatters that can be verbose or not
+* sshjobs uniformly refers to *node* rather than *proxy* including in attributes
+
 # 0.2.3 - 2016 Sep 20
 
 * exception handling :

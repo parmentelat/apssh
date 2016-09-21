@@ -256,5 +256,7 @@ $ apssh -u root -t PLE.alive.5 -tc uname -r \; hostname
 # TODO
 
 * current output system now properly separates stdout and stderr, **BUT** this for now will work well only on text-based output, which can be a wrong assumption.
+* it would seem trivial to implement the `apssh` tool on `asynciojobs`.
+  However at this point the way `apssh`'s `--window` (`window.py`) works might be a little trickier with an `Engine` than with `gather`, so for now we stick to this initial `gather`-based implementation
 * automated tests !?!
 * probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*

@@ -39,21 +39,15 @@ class Formatter:
                    .replace("%time", "%H-%M-%S")
         return time.strftime(text)
 
-    # this seems like a reasonable default
-    def connection_failed(self, hostname, username, port, exc):
-        exc = ensure_visible(exc)
-        print_stderr("{}@{}[{}]:Connection failed:{}".format(username, hostname, port, exc))
-
-    def session_failed(self, hostname, command, exc):
-        exc = ensure_visible(exc)
-        print_stderr("{} - Session failed {}".format(hostname, exc))
-
     # events
-    def connection_start(self, hostname, direct):
+    def connection_made(self, hostname, direct):
         pass
 
-    def connection_stop(self, hostname, message):
+    def connection_lost(self, hostname, exc):
         pass    
+
+    def auth_completed(self, hostname, username):
+        pass
 
     def session_start(self, hostname, command):
         pass
@@ -63,10 +57,7 @@ class Formatter:
     
     # the bulk of the matter
     def line(self, line, datatype, hostname):
-        print_stderr("WARNING: class Formatter is intended as a pure abstract class")
-        print_stderr("Received line {} from hostname {}".format(line, hostname))
-        print_stderr("WARNING: class Formatter is intended as a pure abstract class")
-
+        pass
         
 ########################################
 sep = 10*'='
@@ -79,15 +70,21 @@ class TermFormatter(Formatter):
         go on stderr
     """
 
-    def connection_start(self, hostname, direct):
+    def connection_made(self, hostname, direct):
         if self.verbose:
             msg = "direct" if direct else "tunnelled"
             line = sep + " Connected ({})".format(msg)
             print_stderr(self._formatted_line(line, hostname))
-    def connection_stop(self, hostname, message):
+    def connection_lost(self, hostname, exc):
         if self.verbose:
-            line = sep + " Disconnected {}".format(message)
+            line = sep + " Connection lost {}".format(exc)
             print_stderr(self._formatted_line(line, hostname))
+
+    def auth_completed(self, hostname, username):
+        if self.verbose:
+            line = sep + " Authorization OK with user {}".format(username)
+            print_stderr(self._formatted_line(line, hostname))
+
     def session_start(self, hostname, command):
         if self.verbose:
             line = sep + " Session started for {}".format(command)
@@ -145,7 +142,7 @@ class SubdirFormatter(Formatter):
                 os.makedirs(self.run_name)
             self._dir_checked = True
 
-    def connection_start(self, hostname, direct):
+    def connection_made(self, hostname, direct):
         try:
             self.check_dir()
             # create output file

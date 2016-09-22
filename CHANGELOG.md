@@ -1,3 +1,7 @@
+# 0.2.6 - 2016 Sep 22
+
+* class `SshJobCollector` can retrieve data
+
 # 0.2.5 - 2016 Sep 22
 
 * formatter cleanupmostly done

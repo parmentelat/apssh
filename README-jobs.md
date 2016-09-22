@@ -20,6 +20,7 @@ At this early stage, these classes for now are limited to
 * `SshNode` : describe how to reach a node (possible through a gateway)
 * `SshJob` : to run a remote command
 * `SshJobScript` : to push a local script remotely and run it
+* `SshJobCollector` : to retrieve one or several files
 
 ## example
 

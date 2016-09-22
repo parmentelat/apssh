@@ -1,3 +1,9 @@
+# 0.2.5 - 2016 Sep 22
+
+* formatter cleanupmostly done
+* all verbose reporting about connections and authentication and the like
+  is now primarily done throuch asyncssh callbacks, except for sessions and sftp
+
 # 0.2.4 - 2016 Sep 21
 
 * big cleanup in formatters that can be verbose or not

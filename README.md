@@ -2,7 +2,7 @@
 
 `apssh` is a tool that aims at running commands remotely using `ssh` on a large number of target nodes at once. It is thus comparable to [parallel-ssh](https://code.google.com/p/parallel-ssh/), except that it is written on top of `asyncio` and `asyncssh`.
 
-In addition, `apssh` comes with a class `SshJob` that can be used in conjunction with `asynciojobs` to write more scenarios that are more elaborate than just sending the same command on a bunch of hosts. This is presented in more details `README-jobs.md`.
+In addition, `apssh` comes with a class `SshJob` that can be used in conjunction with `asynciojobs` to write scenarios that are more elaborate than just sending the same command on a bunch of hosts. This is presented in more details in `README-jobs.md`.
 
 # How to get it
 

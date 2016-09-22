@@ -85,12 +85,15 @@ class LineBasedSession(asyncssh.SSHClientSession):
     def eof_received(self):
         self.stdout.flush(None, newline=False)
         self.stderr.flush(asyncssh.EXTENDED_DATA_STDERR, newline=False)
-        self.proxy.formatter.line("EOF", asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
+        if self.proxy.debug:
+            self.proxy.formatter.line("EOF\n",
+                                      asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
 
     def exit_status_received(self, status):
         self._status = status
-        self.proxy.formatter.line("STATUS = {}".format(status),
-                                  asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
+        if self.proxy.debug:
+            self.proxy.formatter.line("STATUS = {}\n".format(status),
+                                      asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
 
 # VerboseClient is created through factories attached to each proxy
 class VerboseClient(asyncssh.SSHClient):
@@ -103,8 +106,6 @@ class VerboseClient(asyncssh.SSHClient):
 
     def connection_made(self, conn):
         self.formatter.connection_made(self.proxy.hostname, self.proxy.username, self.direct)
-        if self.proxy.debug:
-            print_stderr('VC Connection made to {}'.format(self.proxy.hostname))
 
     # xxx we don't get this; at least, not always
     # the issue seems to be that we use close() on the asyncssh connection
@@ -113,9 +114,6 @@ class VerboseClient(asyncssh.SSHClient):
     # this actually triggers though occasionnally esp. with several targets
     def connection_lost(self, exc):
         self.formatter.connection_lost(self.proxy.hostname, exc, self.proxy.username)
-        if self.proxy.debug:
-            print_stderr('VC Connection lost to {} (exc={})'
-                         .format(self.proxy.hostname, exc))
 
     def auth_completed(self):
         self.formatter.auth_completed(self.proxy.hostname, self.proxy.username)

@@ -8,8 +8,9 @@ from apssh.sshproxy import SshProxy
 
 from asynciojobs.job import AbstractJob
 
-# mostly expose a more meaningful name in this context
-# probably need a dedicated formatter at some point
+########## SshNode == SshProxy
+# it's mostly a matter of exposing a more meaningful name in this context
+# might need a dedicated formatter at some point
 class SshNode(SshProxy):
     """
     essentially similar to SshProxy but under a more meaningful name
@@ -20,29 +21,45 @@ class SshNode(SshProxy):
 class SshJob(AbstractJob):
 
     def __init__(self, node, command, label=None, critical=True):
-        self.proxy = node
+        self.node = node
         self.command = " ".join(command)
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)
 
     async def co_run(self):
-        return await self.proxy.connect_run(self.command, disconnect=False)
+        return await self.node.connect_run(self.command, disconnect=False)
         
     async def co_shutdown(self):
-        await self.proxy.close()
+        await self.node.close()
 
 class SshJobScript(AbstractJob):
 
     # here the first item in command must be a local filename
     def __init__(self, node, command, label=None, critical=True):
-        self.proxy = node
+        self.node = node
         self.local_script = command[0]
         self.script_args = command[1:]
         AbstractJob.__init__(self, forever=False, label=label, critical=critical)
 
     async def co_run(self):
-        return await self.proxy.connect_install_run(self.local_script,
-                                                    *self.script_args,
-                                                    disconnect=False)
+        return await self.node.connect_put_run(self.local_script,
+                                               *self.script_args,
+                                               disconnect=False)
         
     async def co_shutdown(self):
-        await self.proxy.close()
+        await self.node.close()
+
+class SshJobCollector(AbstractJob):
+
+    def __init__(self, node, remotepaths, localpath, label=None, critical=True):
+        self.node = node
+        self.remotepaths = remotepaths
+        self.localpath = localpath
+        AbstractJob.__init__(self, forever=False, label=label, critical=critical)
+
+    async def co_run(self):
+        await self.node.get_file_s(self.remotepaths, self.localpath)
+
+    async def co_shutdown(self):
+        await self.node.close()    
+        
+        

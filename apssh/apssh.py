@@ -313,7 +313,7 @@ class Apssh:
             # xxx could also check it's executable
             
             # in this case a first pass is required to push the code
-            tasks = [ proxy.connect_install_run(script, *args) for proxy in proxies ]
+            tasks = [ proxy.connect_put_run(script, *args) for proxy in proxies ]
 
 
         loop = asyncio.get_event_loop()

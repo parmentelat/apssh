@@ -85,15 +85,11 @@ class LineBasedSession(asyncssh.SSHClientSession):
     def eof_received(self):
         self.stdout.flush(None, newline=False)
         self.stderr.flush(asyncssh.EXTENDED_DATA_STDERR, newline=False)
-        if self.proxy.debug:
-            self.proxy.formatter.line("EOF\n",
-                                      asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
+        self.proxy.debug_line("EOF")
 
     def exit_status_received(self, status):
         self._status = status
-        if self.proxy.debug:
-            self.proxy.formatter.line("STATUS = {}\n".format(status),
-                                      asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
+        self.proxy.debug_line("STATUS = {}\n".format(status))
 
 # VerboseClient is created through factories attached to each proxy
 class VerboseClient(asyncssh.SSHClient):
@@ -158,6 +154,12 @@ class SshProxy:
             text += "<-SFTP->"
         return "<SshProxy {}>".format(text)
     
+    def debug_line(self, line):
+        if not line.endswith("\n"):
+            line += "\n"
+        if self.debug:
+            self.formatter.line(line, asyncssh.EXTENDED_DATA_STDERR, self.hostname)
+
     async def connect_lazy(self):
         """
         Connect if needed - uses a lock to ensure only one connection will 
@@ -182,8 +184,6 @@ class SshProxy:
         The code for connecting to the first ssh hop (i.e. when self.gateway is None)
         """
         assert self.gateway is None
-        if self.debug:
-            print_stderr("{} 1st hop CONNECTING".format(self))
 
         class client_closure(VerboseClient):
             def __init__(client_self, *args, **kwds):
@@ -205,8 +205,6 @@ class SshProxy:
         # make sure the gateway has connected already
         assert self.gateway is not None
         await self.gateway.connect_lazy()
-        if self.debug:
-            print_stderr("{} remote CONNECTING".format(self))
 
         class client_closure(VerboseClient):
             def __init__(client_self, *args, **kwds):
@@ -297,13 +295,11 @@ class SshProxy:
             return False
         exists = await self.sftp_client.isdir(remotedir)
         if exists:
-            if self.debug:
-                print_stderr("{} mkdir: {} already exists".format(self, remotedir))
+            self.debug_line("{} already exists - no need to create".format(remotedir))
             return True
             exit(0)
         try:
-            if self.debug:
-                print_stderr("{} mkdir: actual creation of {}".format(self, remotedir))
+            self.debug_line("actual creation of {}".format(remotedir))
             retcod = await self.sftp_client.mkdir(remotedir)
             return True
         except asyncssh.sftp.SFTPError as e:
@@ -311,30 +307,34 @@ class SshProxy:
                 print_stderr("Could not create {} on {}".format(default_remote_workdir, self))
             raise e
 
-    async def install_script(self, localpath, remotepath,
-                             follow_symlinks=False, preserve=True, disconnect=False):
+    async def put_file_s(self, localpaths, remotepath,
+                         follow_symlinks=False, preserve=True):
         """
-        opens a connection if needed
-        opens a SFTP connection if needed
-        install a local file as a remote (remote is set as executable if source is)
+        if needed, opens the ssh connection and SFTP subsystem
+        put a local file - or files - as a remote
+        http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
         * preserve: if True, copy will preserve access, modtimes and permissions
         * follow_symlinks: if False, symlinks get created on the remote end
-        * disconnect: tear down connections (ssh and sftp) if True
 
         returns True if all went well, False otherwise
         """
-        # half full glass; only one branch that leads to success
-        retcod = False
         sftp_connected = await self.sftp_connect_lazy()
-        if sftp_connected:
-            if self.debug:
-                print_stderr("{} : Running SFTP put with {} -> {}"
-                             .format(self, localpath, remotepath))
-            put_result = await self.sftp_client.put(localpath, remotepath, preserve=preserve,
-                                                    follow_symlinks=follow_symlinks)
-            if self.debug:
-                print_stderr("put returned {}".format(put_result))
-            return True
+        self.debug_line("Running SFTP put with {} -> {}".format(localpaths, remotepath))
+        await self.sftp_client.put(localpaths, remotepath, preserve=preserve,
+                                   follow_symlinks=follow_symlinks)
+        return True
+
+    async def get_file_s(self, remotepaths, localpath,
+                         follow_symlinks=False, preserve=True):
+        """
+        identical to put_file_s but the other way around
+        """
+        sftp_connected = await self.sftp_connect_lazy()
+        self.debug_line("Running SFTP get with {} -> {}".format(remotepaths, localpath))
+        await self.sftp_client.get(remotepaths, localpath, preserve=preserve,
+                                   follow_symlinks=follow_symlinks)
+        return True
+
 
     #################### high level helpers for direct use in apssh or jobs
     # regarding exceptions, the most convenient approach is for
@@ -347,13 +347,12 @@ class SshProxy:
         """
         connected = await self.connect_lazy()
         if connected:
-            # xxx protect here with timeout / wait_for ???
             data = await self.run(command)
             if disconnect:
                 await self.close()
             return data
 
-    async def connect_install_run(self, localfile, *script_args, disconnect=True):
+    async def connect_put_run(self, localfile, *script_args, disconnect=True):
         """
         This helper function does everything needed to push a script remotely
         and run it; which involves
@@ -372,7 +371,7 @@ class SshProxy:
         if not await self.mkdir(default_remote_workdir):
             return None
         # install local file remotely
-        if not await self.install_script(localfile, default_remote_workdir):
+        if not await self.put_file_s(localfile, default_remote_workdir):
             return None
         # run it
         basename = os.path.basename(localfile)

@@ -28,8 +28,8 @@ class LineBasedSession(asyncssh.SSHClientSession):
         """
         def __init__(self, name, proxy):
             self.name = name
-            self.hostname = proxy.hostname
-            self.debug = proxy.debug
+            self.proxy = proxy
+            # buffering
             self.buffer = ""
             self.line = ""
             
@@ -37,9 +37,9 @@ class LineBasedSession(asyncssh.SSHClientSession):
             # preserve it before any postprocessing occurs
             self.buffer += data
             # not adding a \n since it's already in there
-            if self.debug:
+            if self.proxy.debug:
                 print_stderr('BS {} DR: -> {} [[of type {}]]'.
-                             format(self.hostname, data, self.name))
+                             format(self.proxy.hostname, data, self.name))
             chunks = [ x for x in data.split("\n") ]
             # len(chunks) cannot be 0
             assert len(chunks) > 0, "unexpected data received"
@@ -58,7 +58,7 @@ class LineBasedSession(asyncssh.SSHClientSession):
             # actually write line, if there's anything to write
             # (EOF calls flush too)
             if self.line:
-                self.proxy.formatter.line(self.line, datatype, self.hostname)
+                self.proxy.formatter.line(self.line, datatype, self.proxy.hostname)
                 self.line = ""
 
     ##########
@@ -66,8 +66,8 @@ class LineBasedSession(asyncssh.SSHClientSession):
         # self.proxy is expected to be set already by the closure/subclass
         self.proxy = proxy
         self.command = command
-        self.stdout = self.Channel("stdout", self.proxy)
-        self.stderr = self.Channel("stderr", self.proxy)
+        self.stdout = self.Channel("stdout", proxy)
+        self.stderr = self.Channel("stderr", proxy)
         self._status = None
         super().__init__(*args, **kwds)
 
@@ -77,20 +77,20 @@ class LineBasedSession(asyncssh.SSHClientSession):
         channel.data_received(data, datatype)
 
     def connection_made(self, conn):
-        self.proxy.session_start(self.proxy.hostname, self.command)
+        self.proxy.formatter.session_start(self.proxy.hostname, self.command)
 
     def connection_lost(self, exc):
-        self.proxy.session_stop(self, proxy.hostname, self.command)
+        self.proxy.formatter.session_stop(self.proxy.hostname, self.command)
 
     def eof_received(self):
         self.stdout.flush(None, newline=False)
         self.stderr.flush(asyncssh.EXTENDED_DATA_STDERR, newline=False)
-        self.formatter.line("EOF", asyncssh.EXTENDED_DATA_STDERR, self.hostname)
+        self.proxy.formatter.line("EOF", asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
 
     def exit_status_received(self, status):
         self._status = status
-        self.formatter.line("STATUS = {}".format(status),
-                            asyncssh.EXTENDED_DATA_STDERR, self.hostname)
+        self.proxy.formatter.line("STATUS = {}".format(status),
+                                  asyncssh.EXTENDED_DATA_STDERR, self.proxy.hostname)
 
 # VerboseClient is created through factories attached to each proxy
 class VerboseClient(asyncssh.SSHClient):
@@ -102,7 +102,7 @@ class VerboseClient(asyncssh.SSHClient):
         asyncssh.SSHClient.__init__(self, *args, **kwds)
 
     def connection_made(self, conn):
-        self.formatter.connection_made(self.proxy.hostname, self.direct)
+        self.formatter.connection_made(self.proxy.hostname, self.proxy.username, self.direct)
         if self.proxy.debug:
             print_stderr('VC Connection made to {}'.format(self.proxy.hostname))
 
@@ -112,7 +112,7 @@ class VerboseClient(asyncssh.SSHClient):
     # for what other future I should await instead/afterwards
     # this actually triggers though occasionnally esp. with several targets
     def connection_lost(self, exc):
-        self.formatter.connection_lost(self.proxy.hostname, exc)
+        self.formatter.connection_lost(self.proxy.hostname, exc, self.proxy.username)
         if self.proxy.debug:
             print_stderr('VC Connection lost to {} (exc={})'
                          .format(self.proxy.hostname, exc))
@@ -237,6 +237,7 @@ class SshProxy:
         if self.conn is None:
             return False
         self.sftp_client = await self.conn.start_sftp_client()
+        self.formatter.sftp_start(self.hostname)
 
     async def _close_sftp(self):
         """
@@ -249,6 +250,7 @@ class SshProxy:
             self.sftp_client = None
             preserve.exit()
             await preserve.wait_closed()
+            self.formatter.sftp_stop(self.hostname)
 
     async def _close_ssh(self):
         """
@@ -281,7 +283,7 @@ class SshProxy:
         class session_closure(LineBasedSession):
             # not using 'self' because 'self' is the SshProxy instance already
             def __init__(session_self, *args, **kwds):
-                LineBasedSession.__init__(session_self, proxy, command, *args, **kwds)
+                LineBasedSession.__init__(session_self, self, command, *args, **kwds)
 
         chan, session = \
             await asyncio.wait_for(

@@ -32,18 +32,19 @@ class Formatter:
         self.format = format
         self.verbose = verbose
 
-    def _formatted_line(self, line, hostname=None):
+    def _formatted_line(self, line, hostname=None, username=None):
         text = self.format \
                    .replace("%line",line) \
                    .replace("%host", hostname or "") \
+                   .replace("%user", "{}@".format(username) if username else "") \
                    .replace("%time", "%H-%M-%S")
         return time.strftime(text)
 
     # events
-    def connection_made(self, hostname, direct):
+    def connection_made(self, hostname, username, direct):
         pass
 
-    def connection_lost(self, hostname, exc):
+    def connection_lost(self, hostname, exc, username):
         pass    
 
     def auth_completed(self, hostname, username):
@@ -55,6 +56,11 @@ class Formatter:
     def session_stop(self, hostname, command):
         pass    
     
+    def sftp_start(self, hostname):
+        pass
+    def sftp_stop(self, hostname):
+        pass
+
     # the bulk of the matter
     def line(self, line, datatype, hostname):
         pass
@@ -70,20 +76,20 @@ class TermFormatter(Formatter):
         go on stderr
     """
 
-    def connection_made(self, hostname, direct):
+    def connection_made(self, hostname, username, direct):
         if self.verbose:
             msg = "direct" if direct else "tunnelled"
             line = sep + " Connected ({})".format(msg)
-            print_stderr(self._formatted_line(line, hostname))
-    def connection_lost(self, hostname, exc):
+            print_stderr(self._formatted_line(line, hostname, username))
+    def connection_lost(self, hostname, exc, username):
         if self.verbose:
             line = sep + " Connection lost {}".format(exc)
-            print_stderr(self._formatted_line(line, hostname))
+            print_stderr(self._formatted_line(line, hostname, username))
 
     def auth_completed(self, hostname, username):
         if self.verbose:
             line = sep + " Authorization OK with user {}".format(username)
-            print_stderr(self._formatted_line(line, hostname))
+            print_stderr(self._formatted_line(line, hostname, username))
 
     def session_start(self, hostname, command):
         if self.verbose:
@@ -92,6 +98,15 @@ class TermFormatter(Formatter):
     def session_stop(self, hostname, command):
         if self.verbose:
             line = sep + " Session ended for {}".format(command)
+            print_stderr(self._formatted_line(line, hostname))
+
+    def sftp_start(self, hostname):
+        if self.verbose:
+            line = sep + " SFTP subsystem started"
+            print_stderr(self._formatted_line(line, hostname))
+    def sftp_stop(self, hostname):
+        if self.verbose:
+            line = sep + " SFTP subsystem stopped"
             print_stderr(self._formatted_line(line, hostname))
 
     def line(self, line, datatype, hostname):
@@ -110,7 +125,7 @@ class ColonFormatter(TermFormatter):
     TermFormatter(format="%host:%line")
     """
     def __init__(self, *args, **kwds):
-        Formatter.__init__(self, "%host:%line", *args, **kwds)
+        Formatter.__init__(self, "%user%host:%line", *args, **kwds)
         
 class TimeColonFormatter(TermFormatter):
     """
@@ -142,14 +157,14 @@ class SubdirFormatter(Formatter):
                 os.makedirs(self.run_name)
             self._dir_checked = True
 
-    def connection_made(self, hostname, direct):
+    def connection_made(self, hostname, username, direct):
         try:
             self.check_dir()
             # create output file
             with open(self.out(hostname), 'w') as out:
                 if self.verbose:
                     msg = "direct" if direct else "tunnelled"
-                    out.write("Connected ({}) to {}\n".format(msg, hostname))
+                    out.write("Connected ({}) to {}@{}\n".format(msg, username, hostname))
         except OSError as e:
             print_stderr("File permission problem {}".format(e))
             exit(1)

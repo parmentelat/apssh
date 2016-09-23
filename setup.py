@@ -27,6 +27,7 @@ with open("README.md") as f:
 # which is required before pip can install asyncssh
 required_modules = [
     'asyncssh',
+    'asynciojobs', 
 ]
 
 setup(

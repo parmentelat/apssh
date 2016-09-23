@@ -131,7 +131,7 @@ class SshProxy:
         self.port = int(port)
         self.gateway = gateway
         # if not specified we use a totally dummy and mostly silent formatter
-        self.formatter = formatter or Formatter()
+        self.formatter = formatter or Formatter("")
         self.debug = debug
         self.timeout = timeout
         #

@@ -12,6 +12,7 @@ def ensure_visible(exc):
         exc = repr(exc)
     return exc
 
+##############################
 class Formatter:
     """
     This class is an abstract class that allows to define

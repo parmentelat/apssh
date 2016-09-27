@@ -11,7 +11,7 @@ import argparse
 import asyncio
 
 from .util import print_stderr
-from .config import default_time_name, default_timeout, default_username, default_private_keys, default_remote_workdir
+from .config import default_time_name, default_timeout, default_username, default_private_keys, default_remote_workdir, local_config_dir
 from .sshproxy import SshProxy
 from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, SubdirFormatter
 from .window import gather_window
@@ -30,10 +30,19 @@ class Apssh:
     def __repr__(self):
         return "".join([str(p) for p in self.proxies])
 
+    def locate_file(self, file):
+        if os.path.exists(file):
+            return file
+        if not os.path.isabs(file):
+            in_home = os.path.join(local_config_dir, file)
+            if os.path.exists(in_home):
+                return in_home
+
     def analyze_target(self, target):
         """
         A target can be specified as either
         * a filename
+          Searched also in ~/.apssh
           If the provided filename exists and could be parsed, returned object will be
             True, [ hostname1, ...]
         * a directory name
@@ -53,16 +62,17 @@ class Apssh:
           not sure this truly is useful
         """
         names = []
-        if os.path.exists(target):
-            if os.path.isdir(target):
+        located = self.locate_file(target)
+        if located:
+            if os.path.isdir(located):
     # directory
                 onlyfiles = [ f for f in os.listdir(target)
-                              if os.path.isfile(os.path.join(target, f))]
+                              if os.path.isfile(os.path.join(located, f))]
                 return True, onlyfiles
             else:
     # file
                 try:
-                    with open(target) as input:
+                    with open(located) as input:
                         for line in input:
                             line = line.strip()
                             if line.startswith('#'):
@@ -80,7 +90,7 @@ class Apssh:
                         traceback.print_exc()
                     return False, None
         else:
-            # string
+    # string
             return True, target.split()
 
     # create tuples username, hostname

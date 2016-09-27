@@ -65,6 +65,7 @@ $ apssh -t host1 -t hosts.list -t host2 true
   * the name of **an existing file**: in this case, the file is read, lines with a `#` are considered comments and ignored, all the rest is considered a list of hostnames; you can have several hostnames on one line if you want;
   * the name of **an existing directory**: in this case, all the simple files present in this directory are considered hostnames (See the `--mark` option below to see how this feature allows to refine a set of nodes to the ones that are actually reachable);
   * otherwise, the string is considered a hostname itself (or possibly several space-separated hostnames.
+  * **NOTE** that files and directories are also searched in `~/.apssh` so that shorthands can be defined globally.
 
 * So if directory `hosts.outputs` contains only 2 files named `tutu` and `toto`, and `hosts.file` is a text file containing this single line
 

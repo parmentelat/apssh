@@ -1,3 +1,9 @@
+# 0.2.7 - 2016 Sep 27
+
+* new class SshJobPusher
+* SshJob(commands=..) allows to run several commands in a row
+* all SshJob* classes are critical by default
+
 # 0.2.6 - 2016 Sep 22
 
 * class `SshJobCollector` can retrieve data

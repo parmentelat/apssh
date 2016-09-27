@@ -1,3 +1,7 @@
+# 0.2.8 - 2016 Sep 27
+
+* for --target, files and directories are also searched in ~/.apssh
+
 # 0.2.7 - 2016 Sep 27
 
 * new class SshJobPusher

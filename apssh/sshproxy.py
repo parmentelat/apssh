@@ -147,7 +147,8 @@ class SshProxy:
     def __repr__(self):
         text = "" if not self.gateway \
                else "{} <--> ".format(self.gateway.__user_host__())
-        text += self.__user_host__()
+        text += self.__user_host__() + " "
+        text += "[no key] " if not self.client_keys else "[{} keys] ".format(len(self.client_keys))
         if self.conn:
             text += "<-SSH->"
         if self.sftp_client:
@@ -155,8 +156,9 @@ class SshProxy:
         return "<SshProxy {}>".format(text)
     
     def debug_line(self, line):
-        if not line.endswith("\n"):
-            line += "\n"
+        if line.endswith("\n"):
+            line = line[:-1]
+        line += " " + repr(self) + "\n"
         if self.debug:
             self.formatter.line(line, asyncssh.EXTENDED_DATA_STDERR, self.hostname)
 
@@ -189,6 +191,7 @@ class SshProxy:
             def __init__(client_self, *args, **kwds):
                 VerboseClient.__init__(client_self, self, direct=True, *args, **kwds)
 
+        self.debug_line("SSH direct connecting")
         self.conn, client = \
             await asyncio.wait_for( 
                 asyncssh.create_connection(
@@ -210,6 +213,7 @@ class SshProxy:
             def __init__(client_self, *args, **kwds):
                 VerboseClient.__init__(client_self, self, direct=False, *args, **kwds)
 
+        self.debug_line("SSH tunnel connecting")
         self.conn, client = \
             await asyncio.wait_for(
                  self.gateway.conn.create_ssh_connection(
@@ -217,6 +221,7 @@ class SshProxy:
                      known_hosts=self.known_hosts, client_keys=self.client_keys
                  ),
                  timeout = self.timeout)
+        self.debug_line("SSH tunnel connected")
 
     async def sftp_connect_lazy(self):
         await self.connect_lazy()
@@ -244,7 +249,10 @@ class SshProxy:
             # to avoid duplicate attempts
             preserve = self.sftp_client
             self.sftp_client = None
-            preserve.exit()
+            try:
+                preserve.exit()
+            except:
+                pass
             await preserve.wait_closed()
             self.formatter.sftp_stop(self.hostname)
 

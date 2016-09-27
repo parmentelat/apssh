@@ -52,7 +52,7 @@ def import_private_key(filename):
 def load_agent_keys(loop=None, agent_path=None):
     """
     returns a list of keys from the agent
-    agent_path defaults to $SSH_AUTH_SOCK
+    agent_path defaults to env. variable $SSH_AUTH_SOCK
     """
     async def co_load_agent_keys(loop, agent_path):
         agent_client = asyncssh.SSHAgentClient(loop, agent_path)
@@ -65,6 +65,8 @@ def load_agent_keys(loop=None, agent_path=None):
             traceback.print_exc()
             return []
 
-    agent_path = agent_path or os.environ['SSH_AUTH_SOCK']
+    agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
+    if agent_path is None:
+        return []
     loop = loop or asyncio.get_event_loop()
     return loop.run_until_complete(co_load_agent_keys(loop, agent_path))

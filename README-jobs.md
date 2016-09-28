@@ -36,7 +36,8 @@ You can see a very simple example of that idea implemented in 2 files
 * As can be seen, the paradigms are very similar for the programmer.
 
 #### Where is `nepi` better ?
-* It must be outlined however that `nepi-ng` at this point has a much lower coverage as `nepi`'s, at it is restricted to `ssh`-based accesses - which is what we used to offer with PlanetLab, and what we offer now at R2lab - , so as long as this is your focus you're in the clear.
+* It must be outlined however that `nepi-ng` at this point has a much smaller coverage as `nepi`'s, at it is restricted to `ssh`-based accesses - as opposed to `nepi` whose ambition was to cover a wide range of technos for controlling nodes, including specifics for `ns3`, XMPP-based `OMF` messaging system, `SFA` layer for provisioning, and so on ...
+* Note however that `ssh`-based access is what we used to offer with PlanetLab, and what we offer now at R2lab - , so as long as this is your focus you're in the clear with `nepi-ng`.
 
 #### Where is `nepi-ng` better ?
 * All this being said, the `nepi-ng` version runs several orders of magnitude faster, essentially because 

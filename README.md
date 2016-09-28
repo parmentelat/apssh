@@ -26,7 +26,7 @@ apssh -t host1 -t host2 hostname
 
 ## Script mode : using a local script that gets copied over
 
-* Now if you need to run a more convoluted command, you can of course quote meta characters as `;` and the like, and struggle you way using the same technique.
+* Now if you need to run a more convoluted command, you can of course quote meta characters as `;` and the like, and struggle your way using the same technique.
 *  There is however an other way to achieve this, by writing a **local script** - usually a shell script, but that can be any file that can run on the target nodes - in association with the `-s` a.k.a. `--script` option, like e.g.
 
 ```

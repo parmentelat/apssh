@@ -90,9 +90,13 @@ class SshJobScript(AbstractJob):
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
 
     async def co_run(self):
-        return await self.node.connect_put_run(self.local_script,
-                                               *self.script_args,
-                                               disconnect=False)
+        result = await self.node.connect_put_run(self.local_script,
+                                                 *self.script_args,
+                                                 disconnect=False)
+        if result != 0:
+            raise Exception("command {} {} returned {} on {}"
+                            .format(self.local_script, " ".join(self.script_args),
+                                    result, self.node))
         
     async def co_shutdown(self):
         await self.node.close()

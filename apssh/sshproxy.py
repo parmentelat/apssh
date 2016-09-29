@@ -315,32 +315,30 @@ class SshProxy:
                 print_stderr("Could not create {} on {}".format(default_remote_workdir, self))
             raise e
 
-    async def put_file_s(self, localpaths, remotepath,
-                         follow_symlinks=False, preserve=True):
+    async def put_file_s(self, localpaths, remotepath, *args, **kwds):
+                         
         """
         if needed, opens the ssh connection and SFTP subsystem
         put a local file - or files - as a remote
         http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
-        * preserve: if True, copy will preserve access, modtimes and permissions
-        * follow_symlinks: if False, symlinks get created on the remote end
+        * preserve, recurse and follow_symlinks are honored like in 
+          asyncssh's sftp client
 
-        returns True if all went well, False otherwise
+        returns True if all went well, or raise exception
         """
         sftp_connected = await self.sftp_connect_lazy()
         self.debug_line("Running SFTP put with {} -> {}".format(localpaths, remotepath))
-        await self.sftp_client.put(localpaths, remotepath, preserve=preserve,
-                                   follow_symlinks=follow_symlinks)
+        await self.sftp_client.put(localpaths, remotepath, *args, **kwds)
         return True
 
-    async def get_file_s(self, remotepaths, localpath,
-                         follow_symlinks=False, preserve=True):
+    async def get_file_s(self, remotepaths, localpath, *args, **kwds):
         """
         identical to put_file_s but the other way around
+        can use asyncssh's SFTP client get options as well
         """
         sftp_connected = await self.sftp_connect_lazy()
         self.debug_line("Running SFTP get with {} -> {}".format(remotepaths, localpath))
-        await self.sftp_client.get(remotepaths, localpath, preserve=preserve,
-                                   follow_symlinks=follow_symlinks)
+        await self.sftp_client.get(remotepaths, localpath, *args, **kwds)
         return True
 
 

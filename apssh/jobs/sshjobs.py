@@ -111,6 +111,9 @@ class SshJobCollector(AbstractJob):
                  forever = None,
                  # set to True if not set explicitly here
                  critical = None,
+                 # asyncssh's SFTP client get option
+                 preserve = False, recurse = False, follow_symlinks = False,
+                 # this goes to AbstractJob
                  *args, **kwds):
         self.node = node
         self.remotepaths = remotepaths
@@ -118,10 +121,16 @@ class SshJobCollector(AbstractJob):
         # set defaults to pass to upper level
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
+        self.preserve = preserve
+        self.recurse = recurse
+        self.follow_symlinks = follow_symlinks
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
 
     async def co_run(self):
-        await self.node.get_file_s(self.remotepaths, self.localpath)
+        await self.node.get_file_s(self.remotepaths, self.localpath,
+                                   preserve = self.preserve,
+                                   recurse = self.recurse,
+                                   follow_symlinks = self.follow_symlinks)
 
     async def co_shutdown(self):
         await self.node.close()    
@@ -137,6 +146,9 @@ class SshJobPusher(AbstractJob):
                  forever = None,
                  # set to True if not set explicitly here
                  critical = None,
+                 # asyncssh's SFTP client get option
+                 preserve = False, recurse = False, follow_symlinks = False,
+                 # this goes to AbstractJob
                  *args, **kwds):
         self.node = node
         self.localpaths = localpaths
@@ -144,10 +156,16 @@ class SshJobPusher(AbstractJob):
         # set defaults to pass to upper level
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
+        self.preserve = preserve
+        self.recurse = recurse
+        self.follow_symlinks = follow_symlinks
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
 
     async def co_run(self):
-        await self.node.put_file_s(self.localpaths, self.remotepath)
+        await self.node.put_file_s(self.localpaths, self.remotepath,
+                                   preserve = self.preserve,
+                                   recurse = self.recurse,
+                                   follow_symlinks = self.follow_symlinks)                                   
 
     async def co_shutdown(self):
         await self.node.close()    

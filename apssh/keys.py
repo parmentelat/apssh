@@ -28,6 +28,7 @@ def import_private_key(filename):
     sshkey = None
     basename = os.path.basename(filename)
     if not os.path.exists(filename):
+        print("No such key file {}".format(filename))
         return
     with open(filename) as file:
         data = file.read()

@@ -169,5 +169,3 @@ class SshJobPusher(AbstractJob):
 
     async def co_shutdown(self):
         await self.node.close()    
-        
-        

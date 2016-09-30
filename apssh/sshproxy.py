@@ -377,7 +377,7 @@ class SshProxy:
         if not await self.mkdir(default_remote_workdir):
             return None
         # install local file remotely
-        if not await self.put_file_s(localfile, default_remote_workdir):
+        if not await self.put_file_s(localfile, default_remote_workdir, preserve=True):
             return None
         # run it
         basename = os.path.basename(localfile)

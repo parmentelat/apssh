@@ -1,3 +1,7 @@
+# 0.2.9 - 2016 Sep 30
+
+* SshJobScript fails if script retcod is not 0
+
 # 0.2.8 - 2016 Sep 27
 
 * for --target, files and directories are also searched in ~/.apssh

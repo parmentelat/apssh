@@ -1,3 +1,9 @@
+# 0.2.11 - 2016 Oct 4
+
+* SshJobScript accepts command= or commands= just like SshJob
+* apssh -i become -k
+* apssh -i now is for included files when running -s
+
 # 0.2.10 - 2016 Oct 4
 
 * SshJobScript has optional includes that get pushed too

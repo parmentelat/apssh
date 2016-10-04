@@ -230,7 +230,7 @@ class Apssh:
         # ssh settings
         parser.add_argument("-u", "--username", default=default_username,
                             help="remote user name - default is {}".format(default_username))
-        parser.add_argument("-k", "--key",
+        parser.add_argument("-k", "--key", dest='keys',
                             default=None, action='append', type=str,
                             help="""
                             The default is for apssh to locate an ssh-agent through the SSH_AUTH_SOCK

@@ -179,7 +179,7 @@ class Apssh:
         * (C) That exact list is used for loading private keys
         """
         filenames = []
-        if self.parsed_args.private_keys is None:
+        if self.parsed_args.keys is None:
             keys = load_agent_keys()
             # agent has stuff : let's use it
             if keys:
@@ -187,7 +187,7 @@ class Apssh:
                 return
             filenames = default_private_keys
         else:
-            filenames = self.parsed_args.private_keys
+            filenames = self.parsed_args.keys
         keys = [ import_private_key(filename) for filename in filenames ]
         self.loaded_private_keys = [ k for k in keys if k ]
 

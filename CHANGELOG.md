@@ -1,3 +1,9 @@
+# 0.2.10 - 2016 Oct 4
+
+* SshJobScript has optional includes that get pushed too
+* SshProxy/SshNode : renamed client_keys into just keys
+* SshNode with no keys: default now is to use ssh agent keys
+
 # 0.2.9 - 2016 Sep 30
 
 * SshJobScript fails if script retcod is not 0

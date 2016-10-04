@@ -33,3 +33,18 @@ tags:
 	git ls-files | xargs etags
 
 .PHONY: tags
+
+##########
+tests:
+	python3 tests/tests.py
+
+.PHONY: tests
+
+# actually install
+infra:
+	apssh -t r2lab.infra pip3 install --upgrade apssh
+check:
+	apssh -t r2lab.infra apssh --version
+
+.PHONY: infra check
+

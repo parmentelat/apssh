@@ -80,10 +80,14 @@ class SshJobScript(AbstractJob):
                  forever = None,
                  # set to True if not set explicitly here
                  critical = None,
+                 # an optional list of local files
+                 # to install remotely in the dir where the script is run
+                 includes = None,
                  *args, **kwds):
         self.node = node
         self.local_script = command[0]
         self.script_args = command[1:]
+        self.includes = [] if includes is None else includes
         # set defaults to pass to upper level
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
@@ -92,6 +96,7 @@ class SshJobScript(AbstractJob):
     async def co_run(self):
         result = await self.node.connect_put_run(self.local_script,
                                                  *self.script_args,
+                                                 includes = self.includes,
                                                  disconnect=False)
         if result != 0:
             raise Exception("command {} {} returned {} on {}"

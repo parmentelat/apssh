@@ -358,12 +358,14 @@ class SshProxy:
                 await self.close()
             return data
 
-    async def connect_put_run(self, localfile, *script_args, disconnect=True):
+    async def connect_put_run(self, localfile, *script_args, preserve=True, includes = None, disconnect=True):
         """
         This helper function does everything needed to push a script remotely
         and run it; which involves
         * creating a remote subdir {}
         * pushing local file in there
+        * also push optional includes in the same remote dir
+          such includes must be local files of course
         * remote run in the home directory the command with 
           .apssh/basename
         returns either
@@ -377,8 +379,14 @@ class SshProxy:
         if not await self.mkdir(default_remote_workdir):
             return None
         # install local file remotely
-        if not await self.put_file_s(localfile, default_remote_workdir, preserve=True):
+        if not await self.put_file_s(localfile, default_remote_workdir, preserve=preserve):
             return None
+        # install optional includes in the same directory
+        if includes:
+            # sequential is good enough
+            for include in includes:
+                if not await self.put_file_s(include, default_remote_workdir, preserve=preserve):
+                    return None
         # run it
         basename = os.path.basename(localfile)
         # accept integers and the like

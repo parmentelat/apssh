@@ -121,13 +121,13 @@ class SshProxy:
     several commands - a.k.a. sessions
     formatter - see formatters.py 
     """
-    def __init__(self, hostname, username=None, known_hosts=None, client_keys=None, port=22,
+    def __init__(self, hostname, username=None, known_hosts=None, keys=None, port=22,
                  gateway=None, # if another SshProxy is given, it is used as an ssh gateway
                  formatter=None, debug=False, timeout=30):
         self.hostname = hostname
         self.username = username
         self.known_hosts = known_hosts
-        self.client_keys = client_keys if client_keys is not None else []
+        self.keys = keys if keys is not None else []
         self.port = int(port)
         self.gateway = gateway
         # if not specified we use a totally dummy and mostly silent formatter
@@ -148,7 +148,7 @@ class SshProxy:
         text = "" if not self.gateway \
                else "{} <--> ".format(self.gateway.__user_host__())
         text += self.__user_host__() + " "
-        text += "[no key] " if not self.client_keys else "[{} keys] ".format(len(self.client_keys))
+        text += "[no key] " if not self.keys else "[{} keys] ".format(len(self.keys))
         if self.conn:
             text += "<-SSH->"
         if self.sftp_client:
@@ -196,7 +196,7 @@ class SshProxy:
             await asyncio.wait_for( 
                 asyncssh.create_connection(
                     client_closure, self.hostname, port=self.port, username=self.username,
-                    known_hosts=self.known_hosts, client_keys=self.client_keys
+                    known_hosts=self.known_hosts, client_keys=self.keys
                 ),
                 timeout = self.timeout)
 
@@ -218,7 +218,7 @@ class SshProxy:
             await asyncio.wait_for(
                  self.gateway.conn.create_ssh_connection(
                      client_closure, self.hostname, port=self.port, username=self.username,
-                     known_hosts=self.known_hosts, client_keys=self.client_keys
+                     known_hosts=self.known_hosts, client_keys=self.keys
                  ),
                  timeout = self.timeout)
         self.debug_line("SSH tunnel connected")

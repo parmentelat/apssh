@@ -138,7 +138,7 @@ class Apssh:
 
         # create proxies
         self.proxies = [ SshProxy(hostname, username=username,
-                                  client_keys=self.loaded_private_keys,
+                                  keys = self.loaded_private_keys,
                                   gateway = gateway,
                                   formatter = self.get_formatter(),
                                   timeout = self.parsed_args.timeout,
@@ -302,8 +302,8 @@ class Apssh:
         gateway = None
         if args.gateway:
             gwuser, gwhost = self.user_host(args.gateway)
-            gateway = SshProxy(gwhost, username=gwuser,
-                               client_keys = self.loaded_private_keys,
+            gateway = SshProxy(hostname = gwhost, username = gwuser,
+                               keys = self.loaded_private_keys,
                                formatter = self.get_formatter(),
                                timeout = self.parsed_args.timeout,
                                debug = self.parsed_args.debug)

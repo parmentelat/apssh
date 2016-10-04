@@ -12,6 +12,7 @@ class Tests(unittest.TestCase):
     def node1(self):
         return SshNode(hostname='faraday.inria.fr',
                        username='root',
+# that's the default anyway
 #                       keys=load_agent_keys(),
                        formatter=ColonFormatter(),
                    )
@@ -35,6 +36,17 @@ class Tests(unittest.TestCase):
     def test_script_includes(self):
         todo = SshJobScript(node=self.node1(),
                             command = [ "tests/main.sh" ],
+                            includes = [ "tests/inclusion.sh" ],
+                            label = 'crap'
+                        )
+        self.assertTrue(Engine(todo).orchestrate())
+
+    def test_script_commmands(self):
+        todo = SshJobScript(node=self.node1(),
+                            commands = [
+                                ["tests/main.sh", "run1" ],
+                                ["tests/main.sh", "another", "run" ],
+                                ],
                             includes = [ "tests/inclusion.sh" ],
                             label = 'crap'
                         )

@@ -167,7 +167,7 @@ class Apssh:
         """
         Here's how `apssh` locates private keys:
 
-        ### If no keys are specified using the `-i` command line option 
+        ### If no keys are specified using the `-k` command line option 
 
         * (A) if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable,
           and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent
@@ -201,6 +201,11 @@ class Apssh:
                             In this case it should be executable.
                             On the remote boxes it will be installed and run in the {} directory.
                             """.format(default_remote_workdir))
+        parser.add_argument("-i", "--includes", dest='includes', default=[], action='append',
+                            help="""for script mode only : a list of local files that are pushed remotely 
+                            together with the local script, and in the same location; useful when you want to
+                            to run remotely a shell script that sources other files; remember that on the remote
+                            end all files (scripts and includes) end up in the same location""")
         parser.add_argument("-t", "--target", dest='targets', action='append', default=[],
                             help="""
                             specify targets (additive); each target can be either 
@@ -225,14 +230,12 @@ class Apssh:
         # ssh settings
         parser.add_argument("-u", "--username", default=default_username,
                             help="remote user name - default is {}".format(default_username))
-        parser.add_argument("-i", "--private-keys",
+        parser.add_argument("-k", "--key",
                             default=None, action='append', type=str,
                             help="""
                             The default is for apssh to locate an ssh-agent through the SSH_AUTH_SOCK
                             environment variable. If this cannot be found, or has an empty set of keys,
-                            then by default the following
-                            specify private key file(s) - additive
-""")
+                            then the user should specify private key file(s) - additive""")
         parser.add_argument("-g", "--gateway", default=None,
                             help="specify a gateway for 2-hops ssh - either hostname or username@hostname")
         ##### how to store results
@@ -315,7 +318,7 @@ class Apssh:
             tasks = [ proxy.connect_run(command) for proxy in proxies ]
         else:
             ### an executable is provided on the command line
-            script, args = args.commands[0], args.commands[1:]
+            script, r_args = args.commands[0], args.commands[1:]
             if not os.path.exists(script):
                 print("File not found {}".format(script))
                 parser.print_help()
@@ -323,7 +326,7 @@ class Apssh:
             # xxx could also check it's executable
             
             # in this case a first pass is required to push the code
-            tasks = [ proxy.connect_put_run(script, *args) for proxy in proxies ]
+            tasks = [ proxy.connect_put_run(script, includes=args.includes, *r_args) for proxy in proxies ]
 
 
         loop = asyncio.get_event_loop()

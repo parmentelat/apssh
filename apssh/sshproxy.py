@@ -385,6 +385,8 @@ class SshProxy:
         if includes:
             # sequential is good enough
             for include in includes:
+                if not os.path.exists(include):
+                    print("include file {} not found -- skipped".format(include))
                 if not await self.put_file_s(include, default_remote_workdir, preserve=preserve):
                     return None
         # run it

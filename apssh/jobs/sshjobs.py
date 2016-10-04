@@ -31,6 +31,13 @@ class SshJob(AbstractJob):
     Run a command, or list of commands, remotely
     each command is expected as a list of shell tokens that 
     are later assembled using " ".join()
+    
+    commands can be set with command= or commands= but not both
+
+    e.g. 
+    command = [ "uname", "-a" ]
+    or
+    commands = [ [ "uname", "-a" ], [ "cat", "/etc/fedora-release" ] ]
     """
 
     def __init__(self, node, command=None, commands=None,
@@ -40,7 +47,6 @@ class SshJob(AbstractJob):
                  critical = None,
                  *args, **kwds):
         self.node = node
-        # commands cab be set with command= or commands= but not both
         if command is None and commands is None:
             print("WARNING: SshJob requires either command or commands")
             self.commands = [ "echo", "misformed", "SshJob"]
@@ -60,6 +66,7 @@ class SshJob(AbstractJob):
         
     async def co_run(self):
         result = None
+        # the commands are of course sequential, so we wait for one before we run the next
         for command in self.commands:
             command_str = " ".join(command)
             result = await self.node.connect_run(command_str, disconnect=False)
@@ -71,13 +78,14 @@ class SshJob(AbstractJob):
     async def co_shutdown(self):
         await self.node.close()
 
+# xxx : commands instead of command would help
 class SshJobScript(AbstractJob):
     """
-    Like SshJob, but the command to run is a local script
-    that is pushed remotely first
-    For that reason the first item in command must be a local filename
+    Like SshJob, but each command to run is a local script
+    that is first pushed remotely
+    For that reason the first item in each command must be a local filename
     """
-    def __init__(self, node, command,
+    def __init__(self, node, command=None, commands=None,
                  # set to False if not set explicitly here
                  forever = None,
                  # set to True if not set explicitly here
@@ -87,8 +95,18 @@ class SshJobScript(AbstractJob):
                  includes = None,
                  *args, **kwds):
         self.node = node
-        self.local_script = command[0]
-        self.script_args = command[1:]
+        if command is None and commands is None:
+            print("WARNING: SshJobScript requires either command or commands")
+            self.commands = [ "echo", "misformed", "SshJobScript"]
+        elif command and commands:
+            print("WARNING: SshJobScript created with command and commands - keeping the latter")
+            self.commands = commands
+        elif command:
+            self.commands = [ command ]
+        else:
+            # allow to pass empty subcommands so one can use if-expressions there
+            self.commands = [ x for x in commands if x]
+
         self.includes = [] if includes is None else includes
         # set defaults to pass to upper level
         forever = forever if forever is not None else False
@@ -96,14 +114,21 @@ class SshJobScript(AbstractJob):
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
 
     async def co_run(self):
-        result = await self.node.connect_put_run(self.local_script,
-                                                 *self.script_args,
-                                                 includes = self.includes,
-                                                 disconnect=False)
-        if result != 0:
-            raise Exception("command {} {} returned {} on {}"
-                            .format(self.local_script, " ".join(self.script_args),
-                                    result, self.node))
+        result = None
+        # run commands sequentially
+        # we need to copy the includes only for the first run
+        for i, command in enumerate(self.commands):
+            local_script = command[0]
+            script_args = command[1:]
+            includes = self.includes if i == 0 else None
+            result = await self.node.connect_put_run(local_script,
+                                                     *script_args,
+                                                     includes = includes,
+                                                     disconnect=False)
+            if result != 0:
+                raise Exception("command {} {} returned {} on {}"
+                                .format(local_script, " ".join(script_args),
+                                        result, self.node))
         
     async def co_shutdown(self):
         await self.node.close()

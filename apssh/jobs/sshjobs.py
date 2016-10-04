@@ -5,6 +5,7 @@
 # but well, right now I'm in a rush and would want to see stuff running...
 
 from apssh.sshproxy import SshProxy
+from apssh import load_agent_keys
 
 from asynciojobs.job import AbstractJob
 
@@ -15,8 +16,9 @@ class SshNode(SshProxy):
     """
     essentially similar to SshProxy but under a more meaningful name
     """ 
-    def __init__(self, *args, **kwds):
-        SshProxy.__init__(self, *args, **kwds)
+    def __init__(self, *args, keys=None, **kwds):
+        keys = keys if keys is not None else load_agent_keys()
+        SshProxy.__init__(self, *args, keys=keys, **kwds)
 
 
 ########## various kinds of jobs

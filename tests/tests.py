@@ -12,7 +12,7 @@ class Tests(unittest.TestCase):
     def node1(self):
         return SshNode(hostname='faraday.inria.fr',
                        username='root',
-                       keys=load_agent_keys(),
+#                       keys=load_agent_keys(),
                        formatter=ColonFormatter(),
                    )
         

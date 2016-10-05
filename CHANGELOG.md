@@ -1,3 +1,7 @@
+# 0.2.14 - 2016 Oct 4
+
+* minor fixes
+
 # 0.2.13 - 2016 Oct 4
 
 * SshJobScript accepts command= or commands= just like SshJob

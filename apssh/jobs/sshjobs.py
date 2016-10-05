@@ -4,11 +4,18 @@
 # in particular this works fine only with remote processes whose output is text-based 
 # but well, right now I'm in a rush and would want to see stuff running...
 
+import os.path
+
 from apssh.sshproxy import SshProxy
 from apssh import load_agent_keys
 
 from asynciojobs.job import AbstractJob
 
+########## helper
+# let people provide non-str objects when specifying commands
+def asemble_command(command):
+    return " ".join( str(x) for x in command )
+        
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context
 # might need a dedicated formatter at some point
@@ -63,12 +70,11 @@ class SshJob(AbstractJob):
         critical = critical if critical is not None else True
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
 
-        
     async def co_run(self):
         result = None
         # the commands are of course sequential, so we wait for one before we run the next
         for command in self.commands:
-            command_str = " ".join(command)
+            command_str = asemble_command(command)
             result = await self.node.connect_run(command_str, disconnect=False)
             if result != 0:
                 raise Exception("command {} returned {} on {}"
@@ -113,13 +119,20 @@ class SshJobScript(AbstractJob):
         critical = critical if critical is not None else True
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
 
+    def check_includes(self):
+        for include in self.includes:
+            if not os.path.exists(include):
+                print("WARNING: include not found {}".format(include))
+
     async def co_run(self):
         result = None
         # run commands sequentially
         # we need to copy the includes only for the first run
+        self.check_includes()
         for i, command in enumerate(self.commands):
             local_script = command[0]
             script_args = command[1:]
+            # actual copy of includes only for the first command
             includes = self.includes if i == 0 else None
             result = await self.node.connect_put_run(local_script,
                                                      *script_args,
@@ -127,7 +140,7 @@ class SshJobScript(AbstractJob):
                                                      disconnect=False)
             if result != 0:
                 raise Exception("command {} {} returned {} on {}"
-                                .format(local_script, " ".join(script_args),
+                                .format(local_script, asemble_command(script_args),
                                         result, self.node))
         
     async def co_shutdown(self):

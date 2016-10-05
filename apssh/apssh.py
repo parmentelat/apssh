@@ -283,7 +283,7 @@ class Apssh:
         ### helpers
         if args.version:
             print("apssh version {}".format(apssh_version))
-            exit(1)
+            exit(0)
 
         ### manual check for REMAINDER
         if not args.commands:

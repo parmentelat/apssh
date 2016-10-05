@@ -158,7 +158,7 @@ class SshProxy:
     def debug_line(self, line):
         if line.endswith("\n"):
             line = line[:-1]
-        line += " " + repr(self) + "\n"
+        line += " ((from:" + repr(self) + "))\n"
         if self.debug:
             self.formatter.line(line, asyncssh.EXTENDED_DATA_STDERR, self.hostname)
 
@@ -305,14 +305,12 @@ class SshProxy:
         if exists:
             self.debug_line("{} already exists - no need to create".format(remotedir))
             return True
-            exit(0)
         try:
             self.debug_line("actual creation of {}".format(remotedir))
             retcod = await self.sftp_client.mkdir(remotedir)
             return True
         except asyncssh.sftp.SFTPError as e:
-            if self.debug:
-                print_stderr("Could not create {} on {}".format(default_remote_workdir, self))
+            self.debug_line("Could not create {} on {}\n{}".format(default_remote_workdir, self, e))
             raise e
 
     async def put_file_s(self, localpaths, remotepath, *args, **kwds):
@@ -327,8 +325,13 @@ class SshProxy:
         returns True if all went well, or raise exception
         """
         sftp_connected = await self.sftp_connect_lazy()
-        self.debug_line("Running SFTP put with {} -> {}".format(localpaths, remotepath))
-        await self.sftp_client.put(localpaths, remotepath, *args, **kwds)
+        try:
+            self.debug_line("Running SFTP put with {} -> {}".format(localpaths, remotepath))
+            await self.sftp_client.put(localpaths, remotepath, *args, **kwds)
+        except asyncssh.sftp.SFTPError as e:
+            self.debug_line("Could not SFTP PUT local {} to remote {} - exception={}".
+                            format(localpaths, remotepath, e))
+            raise e
         return True
 
     async def get_file_s(self, remotepaths, localpath, *args, **kwds):
@@ -337,8 +340,13 @@ class SshProxy:
         can use asyncssh's SFTP client get options as well
         """
         sftp_connected = await self.sftp_connect_lazy()
-        self.debug_line("Running SFTP get with {} -> {}".format(remotepaths, localpath))
-        await self.sftp_client.get(remotepaths, localpath, *args, **kwds)
+        try:
+            self.debug_line("Running SFTP get with {} -> {}".format(remotepaths, localpath))
+            await self.sftp_client.get(remotepaths, localpath, *args, **kwds)
+        except asyncssh.sftp.SFTPError as e:
+            self.debug_line("Could not SFTP GET remotes {} to local {} - exception={}".
+                            format(remotepaths, localpath, e))
+            raise e
         return True
 
 
@@ -358,7 +366,7 @@ class SshProxy:
                 await self.close()
             return data
 
-    async def connect_put_run(self, localfile, *script_args, preserve=True, includes = None, disconnect=True):
+    async def connect_put_run(self, localfile, *script_args, preserve=True, includes=None, disconnect=True):
         """
         This helper function does everything needed to push a script remotely
         and run it; which involves

@@ -1,3 +1,7 @@
+# 0.2.15 - 2016 Oct 4
+
+* connect_put_run propagates follow_symlinks, which defaults to True
+
 # 0.2.14 - 2016 Oct 4
 
 * minor fixes

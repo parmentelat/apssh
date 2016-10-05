@@ -293,9 +293,7 @@ class SshProxy:
             await asyncio.wait_for(
                 self.conn.create_session(session_closure, command),
                 timeout=self.timeout)
-        self.formatter.session_start(self.hostname, command)
         await chan.wait_closed()
-        self.formatter.session_stop(self.hostname, command)
         return session._status
 
     async def mkdir(self, remotedir):
@@ -366,7 +364,8 @@ class SshProxy:
                 await self.close()
             return data
 
-    async def connect_put_run(self, localfile, *script_args, preserve=True, includes=None, disconnect=True):
+    async def connect_put_run(self, localfile, *script_args, includes=None, disconnect=True,
+                              preserve=True, follow_symlinks=True):
         """
         This helper function does everything needed to push a script remotely
         and run it; which involves
@@ -387,7 +386,8 @@ class SshProxy:
         if not await self.mkdir(default_remote_workdir):
             return None
         # install local file remotely
-        if not await self.put_file_s(localfile, default_remote_workdir, preserve=preserve):
+        if not await self.put_file_s(localfile, default_remote_workdir+"/",
+                                     follow_symlinks=follow_symlinks, preserve=preserve):
             return None
         # install optional includes in the same directory
         if includes:
@@ -395,7 +395,8 @@ class SshProxy:
             for include in includes:
                 if not os.path.exists(include):
                     print("include file {} not found -- skipped".format(include))
-                if not await self.put_file_s(include, default_remote_workdir, preserve=preserve):
+                if not await self.put_file_s(include, default_remote_workdir+"/",
+                                             follow_symlinks=follow_symlinks, preserve=preserve):
                     return None
         # run it
         basename = os.path.basename(localfile)

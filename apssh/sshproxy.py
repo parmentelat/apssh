@@ -263,7 +263,10 @@ class SshProxy:
         if self.conn is not None:
             preserve = self.conn
             self.conn = None
-            preserve.close()
+            try:
+                preserve.close()
+            except:
+                pass
             await preserve.wait_closed()
 
     async def close(self):

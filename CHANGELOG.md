@@ -1,3 +1,7 @@
+# 0.2.16 - 2016 Oct 28
+
+* bugfix - protect against issues when closing connection
+
 # 0.2.15 - 2016 Oct 4
 
 * connect_put_run propagates follow_symlinks, which defaults to True

@@ -1,3 +1,7 @@
+# 0.2.17 - 2016 Oct 28
+
+* CaptureFormatter allows to capture the output of a command
+
 # 0.2.16 - 2016 Oct 28
 
 * bugfix - protect against issues when closing connection

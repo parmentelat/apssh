@@ -9,8 +9,8 @@ from .sshproxy import SshProxy
 __all__ += [ SshProxy ]
 
 # how to format outputs
-from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter
-__all__ += [ RawFormatter, ColonFormatter, TimeColonFormatter ]
+from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, CaptureFormatter
+__all__ += [ RawFormatter, ColonFormatter, TimeColonFormatter, CaptureFormatter ]
 
 # jobs for asynciojobs
 from .jobs.sshjobs import SshNode, SshJob, SshJobScript, SshJobCollector, SshJobPusher

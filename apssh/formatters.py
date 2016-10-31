@@ -29,9 +29,8 @@ class Formatter:
     . SubdirFormatter: stores in <subdir>/<hostname> all outputs from that host
     """
 
-    def __init__(self, format, verbose=False):
+    def __init__(self, format):
         self.format = format
-        self.verbose = verbose
 
     def _formatted_line(self, line, hostname=None, username=None):
         text = self.format \
@@ -69,13 +68,15 @@ class Formatter:
 ########################################
 sep = 10*'='
 
-class TermFormatter(Formatter):
+class VerboseFormatter(Formatter):
     """
-    print raw lines as they come
-    (*) regular stdout foes to stdout
-    (*) regular stderr, plus event-based annotations like connection open, 
-        go on stderr
+    plus event-based annotations like connection open, go on stderr
+    if verbose is specified
     """
+
+    def __init__(self, format, verbose):
+        self.verbose = verbose
+        Formatter.__init__(self, format)
 
     def connection_made(self, hostname, username, direct):
         if self.verbose:
@@ -110,38 +111,50 @@ class TermFormatter(Formatter):
             line = sep + " SFTP subsystem stopped"
             print_stderr(self._formatted_line(line, hostname))
 
+class TerminalFormatter(VerboseFormatter):
+    """
+    print raw lines as they come
+    (*) regular stdout goes to stdout
+    (*) regular stderr, plus event-based annotations like connection open, 
+        go on stderr
+    """
+
     def line(self, line, datatype, hostname):
         print_function = print_stderr if datatype == EXTENDED_DATA_STDERR else print
         print_function(self._formatted_line(line, hostname), end="")
 
-class RawFormatter(TermFormatter):
+class RawFormatter(TerminalFormatter):
     """
-    TermFormatter(format="%line")
+    TerminalFormatter(format="%line")
     """
-    def __init__(self, *args, **kwds):
-        Formatter.__init__(self, "%line", *args, **kwds)
+    def __init__(self, format, verbose = True):
+        TermFormatter.__init__(self, "%line", verbose)
         
-class ColonFormatter(TermFormatter):
+class ColonFormatter(TerminalFormatter):
     """
-    TermFormatter(format="%host:%line")
+    TerminalFormatter(format="%host:%line")
     """
-    def __init__(self, *args, **kwds):
-        Formatter.__init__(self, "%user%host:%line", *args, **kwds)
+    def __init__(self, verbose = True):
+        TerminalFormatter.__init__(self, "%user%host:%line", verbose)
         
-class TimeColonFormatter(TermFormatter):
+class TimeColonFormatter(TerminalFormatter):
     """
     TermFormatter(format="%H-%M-%S:%host:%line")
     """
-    def __init__(self, *args, **kwds):
-        Formatter.__init__(self, "%time:%host:%line", *args, **kwds)
+    def __init__(self, verbose = True):
+        Formatter.__init__(self, "%time:%host:%line", verbose)
         
 ########################################
-class SubdirFormatter(Formatter):
-
-    def __init__(self, run_name, verbose=False):
+class SubdirFormatter(VerboseFormatter):
+    """
+    Stores outputs in a subdirectory run_name, 
+    in a file named after the hostname
+    """
+    def __init__(self, run_name, verbose = True):
+        self.verbose = verbose
         self.run_name = run_name
+        Formatter.__init__(self, "%line")
         self._dir_checked = False
-        Formatter.__init__(self, "%line", verbose = verbose)
 
     def out(self, hostname):
         return os.path.join(self.run_name, hostname)
@@ -177,3 +190,26 @@ class SubdirFormatter(Formatter):
         filename = self.filename(hostname, datatype)
         with open(filename, 'a') as out:
             out.write(self._formatted_line(line, hostname))
+
+########################################
+class CaptureFormatter(VerboseFormatter):
+    """
+    This class allows to implement something like this bash fragment
+    x=$(ssh hostname command)
+    For now it just provides options to start and get capture
+    """
+    def __init__(self, format = "%line", verbose = True):
+        VerboseFormatter.__init__(self, format, verbose)
+        self.start_capture()
+
+    def start_capture(self):
+        self._capture = ""
+
+    def get_capture(self):
+        return self._capture
+
+    def line(self, line, datatype, hostname):
+        if datatype != EXTENDED_DATA_STDERR:
+            self._capture += line
+        else:
+            print_stderr(self._formatted_line(line, hostname), end="")

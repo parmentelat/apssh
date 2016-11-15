@@ -23,10 +23,11 @@ class Formatter:
     and then passed to SshProxy
 
     Examples:
-    . TermFormatter:   prints out line based on a format (time, hostname, actual line...)
-    . RawFormatter:    TermFormatter("@line@")
-    . ColonFormatter:  TermFormatter("@host@:@line@")
-    . SubdirFormatter: stores in <subdir>/<hostname> all outputs from that host
+    . VerboseFormatter:  prints out ssh-details based on verbose flag
+    . TerminalFormatter: prints out line based on a format (time, hostname, actual line...)
+    . RawFormatter:      TerminalFormatter("@line@")
+    . ColonFormatter:    TerminalFormatter("@host@:@line@")
+    . SubdirFormatter:   stores in <subdir>/<hostname> all outputs from that host
     """
 
     time_format = "%H-%M-%S"
@@ -128,7 +129,7 @@ class RawFormatter(TerminalFormatter):
     TerminalFormatter(format="@line@")
     """
     def __init__(self, format, verbose = True):
-        TermFormatter.__init__(self, "@line@", verbose)
+        TerminalFormatter.__init__(self, "@line@", verbose)
         
 class ColonFormatter(TerminalFormatter):
     """
@@ -139,10 +140,10 @@ class ColonFormatter(TerminalFormatter):
         
 class TimeColonFormatter(TerminalFormatter):
     """
-    TermFormatter(format="%H-%M-%S:@host@:@line@")
+    TerminalFormatter(format="%H-%M-%S:@host@:@line@")
     """
     def __init__(self, verbose = True):
-        Formatter.__init__(self, "@time@:@host@:@line@", verbose)
+        TerminalFormatter.__init__(self, "@time@:@host@:@line@", verbose)
         
 ########################################
 class SubdirFormatter(VerboseFormatter):

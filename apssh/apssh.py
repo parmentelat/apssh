@@ -13,7 +13,7 @@ import asyncio
 from .util import print_stderr
 from .config import default_time_name, default_timeout, default_username, default_private_keys, default_remote_workdir, local_config_dir
 from .sshproxy import SshProxy
-from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, SubdirFormatter
+from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, SubdirFormatter, TerminalFormatter
 from .window import gather_window
 from .keys import import_private_key, load_agent_keys
 from .version import version as apssh_version
@@ -149,7 +149,9 @@ class Apssh:
     def get_formatter(self):
         if self.formatter is None:
             verbose = self.parsed_args.verbose
-            if self.parsed_args.raw_format:
+            if self.parsed_args.format:
+                self.formatter = TerminalFormatter(self.parsed_args.format, verbose = verbose)  
+            elif self.parsed_args.raw_format:
                 self.formatter = RawFormatter(verbose = verbose)
             elif self.parsed_args.time_colon_format:
                 self.formatter = TimeColonFormatter(verbose = verbose)
@@ -241,9 +243,11 @@ class Apssh:
         ##### how to store results
         # terminal
         parser.add_argument("-r", "--raw-format", default=False, action='store_true',
-                            help="produce raw result")
+                            help="produce raw result, incoming lines are shown as-is without hostname")
         parser.add_argument("-tc", "--time-colon-format", default=False, action='store_true',
-                            help="produce output with format time:hostname:line")
+                            help="equivalent to --format '@time@:@host@:@line@")
+        parser.add_argument("-f", "--format", default=None, action='store',
+                            help="specify output format, e.g. @user@@host@ at %H-%M-%S == @line@")
 
         # filesystem
         parser.add_argument("-o", "--out-dir", default=None,

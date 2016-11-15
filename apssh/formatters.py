@@ -24,21 +24,21 @@ class Formatter:
 
     Examples:
     . TermFormatter:   prints out line based on a format (time, hostname, actual line...)
-    . RawFormatter:    TermFormatter("%line")
-    . ColonFormatter:  TermFormatter("%host:%line")
+    . RawFormatter:    TermFormatter("@line@")
+    . ColonFormatter:  TermFormatter("@host@:@line@")
     . SubdirFormatter: stores in <subdir>/<hostname> all outputs from that host
     """
 
+    time_format = "%H-%M-%S"
+
     def __init__(self, format):
-        self.format = format
+        self.format = format.replace("@time@", self.time_format)
 
     def _formatted_line(self, line, hostname=None, username=None):
-        text = self.format \
-                   .replace("%line",line) \
-                   .replace("%host", hostname or "") \
-                   .replace("%user", "{}@".format(username) if username else "") \
-                   .replace("%time", "%H-%M-%S")
-        return time.strftime(text)
+        return time.strftime(self.format) \
+                   .replace("@line@",line) \
+                   .replace("@host@", hostname or "") \
+                   .replace("@user@", "{}@".format(username) if username else "")
 
     # events
     def connection_made(self, hostname, username, direct):
@@ -125,24 +125,24 @@ class TerminalFormatter(VerboseFormatter):
 
 class RawFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="%line")
+    TerminalFormatter(format="@line@")
     """
     def __init__(self, format, verbose = True):
-        TermFormatter.__init__(self, "%line", verbose)
+        TermFormatter.__init__(self, "@line@", verbose)
         
 class ColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="%host:%line")
+    TerminalFormatter(format="@host@:@line@")
     """
     def __init__(self, verbose = True):
-        TerminalFormatter.__init__(self, "%user%host:%line", verbose)
+        TerminalFormatter.__init__(self, "@user@@host@:@line@", verbose)
         
 class TimeColonFormatter(TerminalFormatter):
     """
-    TermFormatter(format="%H-%M-%S:%host:%line")
+    TermFormatter(format="%H-%M-%S:@host@:@line@")
     """
     def __init__(self, verbose = True):
-        Formatter.__init__(self, "%time:%host:%line", verbose)
+        Formatter.__init__(self, "@time@:@host@:@line@", verbose)
         
 ########################################
 class SubdirFormatter(VerboseFormatter):
@@ -153,7 +153,7 @@ class SubdirFormatter(VerboseFormatter):
     def __init__(self, run_name, verbose = True):
         self.verbose = verbose
         self.run_name = run_name
-        Formatter.__init__(self, "%line")
+        Formatter.__init__(self, "@line@")
         self._dir_checked = False
 
     def out(self, hostname):
@@ -198,7 +198,7 @@ class CaptureFormatter(VerboseFormatter):
     x=$(ssh hostname command)
     For now it just provides options to start and get capture
     """
-    def __init__(self, format = "%line", verbose = True):
+    def __init__(self, format = "@line@", verbose = True):
         VerboseFormatter.__init__(self, format, verbose)
         self.start_capture()
 

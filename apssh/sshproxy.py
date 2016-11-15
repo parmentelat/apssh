@@ -162,6 +162,9 @@ class SshProxy:
         if self.debug:
             self.formatter.line(line, asyncssh.EXTENDED_DATA_STDERR, self.hostname)
 
+    def is_connected(self):
+        return self.conn is not None
+
     async def connect_lazy(self):
         """
         Connect if needed - uses a lock to ensure only one connection will 
@@ -222,6 +225,9 @@ class SshProxy:
                  ),
                  timeout = self.timeout)
         self.debug_line("SSH tunnel connected")
+
+    def is_sftp_connected(self):
+        return self.sftp_client is not None
 
     async def sftp_connect_lazy(self):
         await self.connect_lazy()

@@ -14,7 +14,10 @@ from asynciojobs.job import AbstractJob
 ########## helper
 # let people provide non-str objects when specifying commands
 def asemble_command(command):
-    return " ".join( str(x) for x in command )
+    if isinstance(command, str):
+        return command
+    else:
+        return " ".join( str(x) for x in command )
         
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context

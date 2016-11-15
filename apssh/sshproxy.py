@@ -8,7 +8,7 @@ import socket
 from .util import print_stderr
 from .config import default_remote_workdir
 # a dummy formatter
-from .formatters import Formatter
+from .formatters import Formatter, ColonFormatter
 
 class LineBasedSession(asyncssh.SSHClientSession):
     """
@@ -131,7 +131,7 @@ class SshProxy:
         self.port = int(port)
         self.gateway = gateway
         # if not specified we use a totally dummy and mostly silent formatter
-        self.formatter = formatter or Formatter("")
+        self.formatter = formatter or ColonFormatter("")
         self.debug = debug
         self.timeout = timeout
         #

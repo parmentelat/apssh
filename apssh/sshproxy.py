@@ -356,18 +356,18 @@ class SshProxy:
             raise e
         return True
 
-    async def put_script(self, script_body, remotefile, *args, **kwds):
+    async def put_string_script(self, script_body, remotefile, *args, **kwds):
         """
         creates remotefile and uses script_body as its contents
         also chmod's remotefile to 755
         """
-        sftp_connected = seld.sftp_connect_lazy()
+        sftp_connected = self.sftp_connect_lazy()
         sftp_attrs = asyncssh.SFTPAttrs()
         sftp_attrs.permissions = 0o755
         try:
-            async with self.sftp_client.open(remotefile, mode = 'w',
+            async with self.sftp_client.open(remotefile, pflags_or_mode = 'w',
                                              attrs = sftp_attrs, *args, **kwds) as writer:
-                writer.write(script_body)
+                await writer.write(script_body)
         except Exception as e:
             self.debug_line("Could not create remotefile {} - exception={}"
                             .format(remotefile, e))

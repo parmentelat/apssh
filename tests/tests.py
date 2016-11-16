@@ -110,20 +110,21 @@ class Tests(unittest.TestCase):
                             ))
 
     ##########
-#    def test_string_script(self):
-#        with open("tests/script-with-args.sh") as reader:
-#            my_script = reader.read()
-#        self.run_one_job(SshJob(node = self.node1(),
-#                                command = StringScript(my_script, "foo", "bar", "tutu"),
-#                                label = "test_string_script"))
-#    
-#    def test_string_script_includes(self):
-#        with open("tests/needsinclude.sh") as reader:
-#            my_script = reader.read()
-#        self.run_one_job(SshJob(node = self.node1(),
-#                                command = StringScript(my_script,
-#                                                       includes = [ "tests/inclusion.sh" ]),
-#                                label = "test_string_script"))
+    def test_string_script(self):
+        with open("tests/script-with-args.sh") as reader:
+            my_script = reader.read()
+        self.run_one_job(SshJob(node = self.node1(),
+                                command = StringScript(my_script, "foo", "bar", "tutu"),
+                                label = "test_string_script"))
+    
+    def test_string_script_includes(self):
+        with open("tests/needsinclude.sh") as reader:
+            my_script = reader.read()
+        self.run_one_job(SshJob(node = self.node1(),
+                                command = StringScript(my_script,
+                                                       remote_name = "string-script-sample.sh",
+                                                       includes = [ "tests/inclusion.sh" ]),
+                                label = "test_string_script"))
     
     ########## 
     def test_capture(self):

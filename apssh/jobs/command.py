@@ -5,6 +5,7 @@
 # but well, right now I'm in a rush and would want to see stuff running...
 
 import os.path
+import random
 
 from apssh.sshproxy import SshProxy
 from apssh import load_agent_keys
@@ -42,7 +43,6 @@ class AbstractCommand:
         """up to 30 chars seems reasonable"""
         return "AbstractCommand.default_label() needs to be redefined"
 
-
 ##### The usual
 class Command(AbstractCommand):
 
@@ -59,7 +59,7 @@ class Command(AbstractCommand):
         return " ".join( str(x) for x in self.argv )
 
     async def co_prepare(self, node):
-        """we need to node to be connected"""
+        """we need the node to be ssh-connected"""
         connected = await node.connect_lazy()
         return connected
 
@@ -94,7 +94,7 @@ class LocalScript(AbstractCommand):
         return default_remote_workdir + "/" + simple if with_path else simple
 
     async def co_prepare(self, node):
-        """we need to node to be connected by ssh and SFTP"""
+        """we need the node to be connected by ssh and SFTP"""
         if not os.path.exists(self.local_script):
             print("LocalScript : {} not found - bailing out"
                   .format(self.local_script))
@@ -102,7 +102,7 @@ class LocalScript(AbstractCommand):
         if not ( await node.sftp_connect_lazy() 
                  and await node.mkdir(default_remote_workdir) 
                  and await node.put_file_s(
-                     self.local_script, default_remote_workdir+"/",
+                     self.local_script, default_remote_workdir + "/",
                      follow_symlinks = self.follow_symlinks,
                      preserve = self.preserve)):
             return
@@ -111,8 +111,9 @@ class LocalScript(AbstractCommand):
             for include in self.includes:
                 if not os.path.exists(include):
                     print("include file {} not found -- skipped".format(include))
+                    continue
                 if not await node.put_file_s(
-                        include, default_remote_workdir+"/",
+                        include, default_remote_workdir + "/",
                         follow_symlinks = self.follow_symlinks,
                         preserve = self.preserve):
                     return
@@ -124,46 +125,51 @@ class LocalScript(AbstractCommand):
 
 #####
 class StringScript(AbstractCommand):
+
+    @staticmethod
+    def random_id():
+        return "".join(random.choice('abcdefghijklmnopqrstuvwxyz') 
+            for i in range(8))
+    
     def __init__(self, script_body, *args, includes = None,
                  # the name under which the remote command will be installed
-                 remote_name = None,
-                 # when copying the script and includes over
-                 preserve = True, follow_symlinks = True):
+                 remote_name = None):
         """
-        Example
-        run a local script located in ../foo.sh with specified args:
-                        LocalScript("../foo.sh", "arg1", 2, "arg3")
+        run a script provided as a python string script_body
+
+        remote_name, if provided, will tell how the created script
+        should be named on the remote node - it is randomly generated if not specified
 
         includes allows to specify a list of local files 
         that need to be copied over at the same location as the local script
         i.e. typically in ~/.apssh-remote
+
+        Example:
+
+        myscript = "#!/bin/bash\nfor arg in "$@"; do echo arg=$arg; done"
+        StringScript(myscript, "foo", "bar", 2, "arg3",
+                     remote_name = "echo-all-args.sh")
+
         """
-        self.local_script = local_script
+        self.script_body = script_body
         self.includes = includes
-        self.follow_symlinks = follow_symlinks
-        self.preserve = preserve
         self.args = args
         ###
-        self.basename = os.path.basename(local_script)
+        self.remote_name = remote_name or self.random_id()
+        # just in case
+        self.remote_name = os.path.basename(self.remote_name)
 
-    # xxx NOT FINISHED
-    
     def command(self, with_path=False):
-        simple = self.basename + " " + " ".join( str(x) for x in self.args)
+        simple = self.remote_name + " " + " ".join( str(x) for x in self.args)
         return default_remote_workdir + "/" + simple if with_path else simple
 
     async def co_prepare(self, node):
-        """we need to node to be connected by ssh and SFTP"""
-        if not os.path.exists(self.local_script):
-            print("LocalScript : {} not found - bailing out"
-                  .format(self.local_script))
-            return
+        """we need the node to be connected by ssh and SFTP"""
         if not ( await node.sftp_connect_lazy() 
                  and await node.mkdir(default_remote_workdir) 
-                 and await node.put_file_s(
-                     self.local_script, default_remote_workdir+"/",
-                     follow_symlinks = self.follow_symlinks,
-                     preserve = self.preserve)):
+                 and await node.put_string_script(
+                     self.script_body,
+                     default_remote_workdir + "/" + self.remote_name)):
             return
         if self.includes:
             # sequential is good enough
@@ -171,7 +177,7 @@ class StringScript(AbstractCommand):
                 if not os.path.exists(include):
                     print("include file {} not found -- skipped".format(include))
                 if not await node.put_file_s(
-                        include, default_remote_workdir+"/",
+                        include, default_remote_workdir + "/",
                         follow_symlinks = self.follow_symlinks,
                         preserve = self.preserve):
                     return

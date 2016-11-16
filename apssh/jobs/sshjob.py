@@ -1,4 +1,4 @@
-# iteration 1 : use apssh's sshproxy as-is
+# use apssh's sshproxy mostly as-is, except for keys handling
 # the thing is, this implementation relies on formatters
 # which probably needs more work.
 # in particular this works fine only with remote processes whose output is text-based 
@@ -6,19 +6,13 @@
 
 import os.path
 
+from asynciojobs.job import AbstractJob
+
 from apssh.sshproxy import SshProxy
 from apssh import load_agent_keys
 
-from asynciojobs.job import AbstractJob
+from .command import AbstractCommand, Command
 
-########## helper
-# let people provide non-str objects when specifying commands
-def asemble_command(command):
-    if isinstance(command, str):
-        return command
-    else:
-        return " ".join( str(x) for x in command )
-        
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context
 # might need a dedicated formatter at some point
@@ -31,23 +25,28 @@ class SshNode(SshProxy):
         SshProxy.__init__(self, *args, keys=keys, **kwds)
 
 
-########## various kinds of jobs
-# XXX it would make sense for sshjob to accept a flag that causes
-# it to raise an exception when result is not == 0
-# could maybe be the default in fact
+########## a single kind of job
+# that can involve several sorts of commands
+# as defined in command.py
+
 class SshJob(AbstractJob):
 
     """
-    Run a command, or list of commands, remotely
-    each command is expected as a list of shell tokens that 
-    are later assembled using " ".join()
+    A asynciojobs Job object that is set to 
+    run a command, or list of commands, remotely
     
-    commands can be set with command= or commands= but not both
+    commands can be set as either
+    * (1) a list/tuple of AbstractCommands
+      e.g.     commands = [ Command(..), LocalScript(...), ..]
+    * (2) a single instance of AbstractCommand
+      e.g.     commands = LocalScript(...)
+    * (3) a list/tuple of strings -> a single Command object is created
+      e.g.     commands = [ "uname", "-a" ]
+    * (4) a single string
+      e.g.     commands = "uname -a"
 
-    e.g. 
-    command = [ "uname", "-a" ]
-    or
-    commands = [ [ "uname", "-a" ], [ "cat", "/etc/fedora-release" ] ]
+    For convenience, you can set commands = or command = 
+    (make sure to give exactly one)
     """
 
     def __init__(self, node, command=None, commands=None,
@@ -57,36 +56,92 @@ class SshJob(AbstractJob):
                  critical = None,
                  *args, **kwds):
         self.node = node
+
+        # use command or commands
         if command is None and commands is None:
             print("WARNING: SshJob requires either command or commands")
-            self.commands = [ "echo", "misformed", "SshJob"]
+            commands = [ Command("echo misformed SshJob") ]
         elif command and commands:
             print("WARNING: SshJob created with command and commands - keeping the latter")
-            self.commands = commands
+            commands = commands
         elif command:
-            self.commands = [ command ]
+            commands = command
         else:
-            # allow to pass empty subcommands so one can use if-expressions there
-            self.commands = [ x for x in commands if x]
+            pass
+        
+        # find out what really is meant here
+        if not commands:
+            # cannot tell which case in (1) (2) (3) (4)
+            print("WARNING: SshJob requires a meaningful commands")
+            self.commands = [ Command("echo misformed SshJob") ]
+        elif isinstance(commands, str):
+            # print("case (4)")
+            self.commands = [ Command(commands) ]
+        elif isinstance(commands, AbstractCommand):
+            # print("case (2)")
+            self.commands = [ commands ]
+        elif isinstance(commands, (list, tuple)):
+            if isinstance(commands[0], AbstractCommand):
+                # print("case (1)")
+                # check the list is homogeneous
+                if not all( isinstance(c, AbstractCommand) for c in commands):
+                    print("WARNING: commands must be a list of AbstractCommand objects")
+                self.commands = commands
+            else:
+                # print("case (3)")
+                tokens = commands
+                args = (str(t) for t in tokens)
+                self.commands = [ Command (*args) ]
+        else:
+            print("WARNING: SshJob could not make sense of commands")
+            self.commands = [ Command("echo misformed SshJob") ]
+
+        assert(len(self.commands) >= 1)
+        assert(all(isinstance(c, AbstractCommand) for c in self.commands))
+
         # set defaults to pass to upper level
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
 
     async def co_run(self):
+        """
+        run all commands - i.e. call co_prepare and co_exec
+        if the last command does not return 0, then an exception is raised
+        so if this job is critical it will abort orchestration 
+        """
         result = None
         # the commands are of course sequential, so we wait for one before we run the next
+        last_command = self.commands[-1]
+        result = None
         for command in self.commands:
-            command_str = asemble_command(command)
-            result = await self.node.connect_run(command_str, disconnect=False)
-            if result != 0:
+            if not await command.co_prepare(self.node):
+                print("preparation failed for command {} - skipped"
+                      .format(command))
+                continue
+            result = await command.co_exec(self.node)
+            if command is last_command and result != 0:
                 raise Exception("command {} returned {} on {}"
-                                .format(command_str, result, self.node))
+                                .format(command.command(), result, self.node))
         return result
         
     async def co_shutdown(self):
+        """
+        don't bother to terminate all the commands separately
+        all that matters is to terminate the ssh connection to that node
+        """
         await self.node.close()
 
+####################        
+####################        
+####################        
+####################        
+####################        
+####################        
+####################        
+####################        
+####################        
+####################        
 # xxx : commands instead of command would help
 class SshJobScript(AbstractJob):
     """

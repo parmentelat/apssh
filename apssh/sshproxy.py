@@ -317,7 +317,7 @@ class SshProxy:
             retcod = await self.sftp_client.mkdir(remotedir)
             return True
         except asyncssh.sftp.SFTPError as e:
-            self.debug_line("Could not create {} on {}\n{}".format(default_remote_workdir, self, e))
+            self.debug_line("Could not create {} on {}\n{}".format(remotedir, self, e))
             raise e
 
     async def put_file_s(self, localpaths, remotepath, *args, **kwds):
@@ -356,6 +356,23 @@ class SshProxy:
             raise e
         return True
 
+    async def put_script(self, script_body, remotefile, *args, **kwds):
+        """
+        creates remotefile and uses script_body as its contents
+        also chmod's remotefile to 755
+        """
+        sftp_connected = seld.sftp_connect_lazy()
+        sftp_attrs = asyncssh.SFTPAttrs()
+        sftp_attrs.permissions = 0o755
+        try:
+            async with self.sftp_client.open(remotefile, mode = 'w',
+                                             attrs = sftp_attrs, *args, **kwds) as writer:
+                writer.write(script_body)
+        except Exception as e:
+            self.debug_line("Could not create remotefile {} - exception={}"
+                            .format(remotefile, e))
+            raise e
+        return True
 
     #################### high level helpers for direct use in apssh or jobs
     # regarding exceptions, the most convenient approach is for

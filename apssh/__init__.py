@@ -14,5 +14,10 @@ __all__ += [ RawFormatter, ColonFormatter, TimeColonFormatter, CaptureFormatter 
 
 # jobs for asynciojobs
 from .jobs.sshjob import SshNode, SshJob
-from .jobs.command import Command, LocalScript, StringScript
-__all__ +=  [ SshNode, Command, LocalScript, StringScript ]
+__all__ +=  [ SshNode, SshJob ]
+
+from .jobs.commands import Command, LocalScript, StringScript
+__all__ +=  [ Command, LocalScript, StringScript ]
+
+from .jobs.sshfiles import SshJobCollector, SshJobPusher
+__all__ +=  [  SshJobCollector, SshJobPusher ]

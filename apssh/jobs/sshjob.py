@@ -4,14 +4,12 @@
 # in particular this works fine only with remote processes whose output is text-based 
 # but well, right now I'm in a rush and would want to see stuff running...
 
-import os.path
-
 from asynciojobs.job import AbstractJob
 
 from apssh.sshproxy import SshProxy
 from apssh import load_agent_keys
 
-from .command import AbstractCommand, Command
+from .commands import AbstractCommand, Command
 
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context
@@ -24,6 +22,8 @@ class SshNode(SshProxy):
         keys = keys if keys is not None else load_agent_keys()
         SshProxy.__init__(self, *args, keys=keys, **kwds)
 
+    def user_host(self):
+        return "{}@{}".format(self.username, self.hostname)
 
 ########## a single kind of job
 # that can involve several sorts of commands
@@ -81,7 +81,12 @@ class SshJob(AbstractJob):
             # print("case (2)")
             self.commands = [ commands ]
         elif isinstance(commands, (list, tuple)):
-            if isinstance(commands[0], AbstractCommand):
+            # allows to insert None as a command
+            commands = [ c for c in commands if c]
+            if not commands:
+                print("WARNING: SshJob requires at least one non-void command")
+                commands = [ Command("echo misformed SshJob") ]
+            elif isinstance(commands[0], AbstractCommand):
                 # print("case (1)")
                 # check the list is homogeneous
                 if not all( isinstance(c, AbstractCommand) for c in commands):
@@ -90,8 +95,8 @@ class SshJob(AbstractJob):
             else:
                 # print("case (3)")
                 tokens = commands
-                args = (str(t) for t in tokens)
-                self.commands = [ Command (*args) ]
+                command_args = (str(t) for t in tokens)
+                self.commands = [ Command (*command_args) ]
         else:
             print("WARNING: SshJob could not make sense of commands")
             self.commands = [ Command("echo misformed SshJob") ]
@@ -132,143 +137,12 @@ class SshJob(AbstractJob):
         """
         await self.node.close()
 
-####################        
-####################        
-####################        
-####################        
-####################        
-####################        
-####################        
-####################        
-####################        
-####################        
-# xxx : commands instead of command would help
-class SshJobScript(AbstractJob):
-    """
-    Like SshJob, but each command to run is a local script
-    that is first pushed remotely
-    For that reason the first item in each command must be a local filename
-    """
-    def __init__(self, node, command=None, commands=None,
-                 # set to False if not set explicitly here
-                 forever = None,
-                 # set to True if not set explicitly here
-                 critical = None,
-                 # an optional list of local files
-                 # to install remotely in the dir where the script is run
-                 includes = None,
-                 *args, **kwds):
-        self.node = node
-        if command is None and commands is None:
-            print("WARNING: SshJobScript requires either command or commands")
-            self.commands = [ "echo", "misformed", "SshJobScript"]
-        elif command and commands:
-            print("WARNING: SshJobScript created with command and commands - keeping the latter")
-            self.commands = commands
-        elif command:
-            self.commands = [ command ]
-        else:
-            # allow to pass empty subcommands so one can use if-expressions there
-            self.commands = [ x for x in commands if x]
 
-        self.includes = [] if includes is None else includes
-        # set defaults to pass to upper level
-        forever = forever if forever is not None else False
-        critical = critical if critical is not None else True
-        AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
+    def details(self):
+        return "\n".join(["{}@{}:{}".format(self.node.username, self.node.hostname, c.details())
+                          for c in self.commands ])
 
-    def check_includes(self):
-        for include in self.includes:
-            if not os.path.exists(include):
-                print("WARNING: include not found {}".format(include))
-
-    async def co_run(self):
-        result = None
-        # run commands sequentially
-        # we need to copy the includes only for the first run
-        self.check_includes()
-        for i, command in enumerate(self.commands):
-            local_script = command[0]
-            script_args = command[1:]
-            # actual copy of includes only for the first command
-            includes = self.includes if i == 0 else None
-            result = await self.node.connect_put_run(local_script,
-                                                     *script_args,
-                                                     includes = includes,
-                                                     disconnect=False)
-            if result != 0:
-                raise Exception("command {} {} returned {} on {}"
-                                .format(local_script, asemble_command(script_args),
-                                        result, self.node))
-        
-    async def co_shutdown(self):
-        await self.node.close()
-
-class SshJobCollector(AbstractJob):
-    """
-    Retrieve remote files and stores them locally
-    """
-
-    def __init__(self, node, remotepaths, localpath,
-                 # set to False if not set explicitly here
-                 forever = None,
-                 # set to True if not set explicitly here
-                 critical = None,
-                 # asyncssh's SFTP client get option
-                 preserve = False, recurse = False, follow_symlinks = False,
-                 # this goes to AbstractJob
-                 *args, **kwds):
-        self.node = node
-        self.remotepaths = remotepaths
-        self.localpath = localpath
-        # set defaults to pass to upper level
-        forever = forever if forever is not None else False
-        critical = critical if critical is not None else True
-        self.preserve = preserve
-        self.recurse = recurse
-        self.follow_symlinks = follow_symlinks
-        AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
-
-    async def co_run(self):
-        await self.node.get_file_s(self.remotepaths, self.localpath,
-                                   preserve = self.preserve,
-                                   recurse = self.recurse,
-                                   follow_symlinks = self.follow_symlinks)
-
-    async def co_shutdown(self):
-        await self.node.close()    
-        
-        
-class SshJobPusher(AbstractJob):
-    """
-    Put local files onto target node
-    """
-
-    def __init__(self, node, localpaths, remotepath,
-                 # set to False if not set explicitly here
-                 forever = None,
-                 # set to True if not set explicitly here
-                 critical = None,
-                 # asyncssh's SFTP client get option
-                 preserve = False, recurse = False, follow_symlinks = False,
-                 # this goes to AbstractJob
-                 *args, **kwds):
-        self.node = node
-        self.localpaths = localpaths
-        self.remotepath = remotepath
-        # set defaults to pass to upper level
-        forever = forever if forever is not None else False
-        critical = critical if critical is not None else True
-        self.preserve = preserve
-        self.recurse = recurse
-        self.follow_symlinks = follow_symlinks
-        AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
-
-    async def co_run(self):
-        await self.node.put_file_s(self.localpaths, self.remotepath,
-                                   preserve = self.preserve,
-                                   recurse = self.recurse,
-                                   follow_symlinks = self.follow_symlinks)                                   
-
-    async def co_shutdown(self):
-        await self.node.close()    
+    def default_label(self):
+        first_details = self.commands[0].details()
+        first_line = first_details.split("\n")[0]
+        return first_line if len(self.commands) == 1 else first_line + " + {} others...".format(len(self.commands)-1)

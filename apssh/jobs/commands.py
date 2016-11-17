@@ -51,7 +51,6 @@ class Command(AbstractCommand):
         Example         Command("tail", "-n", 1, "/etc/lsb-release")
         or equivalently Command("tail -n 1 /etc/lsb-release")
         """
-        print("Command.__init__ ->", argv)
         self.argv = argv
         
     def command(self):
@@ -66,6 +65,9 @@ class Command(AbstractCommand):
     async def co_exec(self, node):
         data = await node.run(self.command())
         return data
+
+    def details(self):
+        return self.command()
 
 ##### same but using a script that is available as a local file
 class LocalScript(AbstractCommand):
@@ -90,7 +92,7 @@ class LocalScript(AbstractCommand):
         self.basename = os.path.basename(local_script)
 
     def command(self, with_path=False):
-        simple = self.basename + " " + " ".join( str(x) for x in self.args)
+        simple = self.basename + " " + " ".join('"{}"'.format(x) for x in self.args)
         return default_remote_workdir + "/" + simple if with_path else simple
 
     async def co_prepare(self, node):
@@ -102,9 +104,7 @@ class LocalScript(AbstractCommand):
         if not ( await node.sftp_connect_lazy() 
                  and await node.mkdir(default_remote_workdir) 
                  and await node.put_file_s(
-                     self.local_script, default_remote_workdir + "/",
-                     follow_symlinks = self.follow_symlinks,
-                     preserve = self.preserve)):
+                     self.local_script, default_remote_workdir + "/")):
             return
         if self.includes:
             # sequential is good enough
@@ -122,6 +122,9 @@ class LocalScript(AbstractCommand):
     async def co_exec(self, node):
         data = await node.run(self.command(with_path=True))
         return data
+
+    def details(self):
+        return self.command() + " (local script pushed and executed)" 
 
 #####
 class StringScript(AbstractCommand):
@@ -160,7 +163,7 @@ class StringScript(AbstractCommand):
         self.remote_name = os.path.basename(self.remote_name)
 
     def command(self, with_path=False):
-        simple = self.remote_name + " " + " ".join( str(x) for x in self.args)
+        simple = self.remote_name + " " + " ".join('"{}"'.format(x) for x in self.args)
         return default_remote_workdir + "/" + simple if with_path else simple
 
     async def co_prepare(self, node):
@@ -177,9 +180,7 @@ class StringScript(AbstractCommand):
                 if not os.path.exists(include):
                     print("include file {} not found -- skipped".format(include))
                 if not await node.put_file_s(
-                        include, default_remote_workdir + "/",
-                        follow_symlinks = self.follow_symlinks,
-                        preserve = self.preserve):
+                        include, default_remote_workdir + "/"):
                     return
         return True
 
@@ -187,4 +188,14 @@ class StringScript(AbstractCommand):
         data = await node.run(self.command(with_path=True))
         return data
 
+    # if it's small let's show it all
+    def details(self):
+        lines = self.script_body.split("\n")
+        if len(lines) > 6:
+            return self.command() + " (string script installed and executed)"
+        else:
+            result = "Following script called with args "
+            result += " ".join('"{}"'.format(arg) for arg in self.args) + "\n"
+            result += self.script_body
+            return result
     

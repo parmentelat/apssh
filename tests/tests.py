@@ -110,6 +110,10 @@ class Tests(unittest.TestCase):
                             ))
 
     ##########
+    ### NOTE
+    # we are cheating here, and open tests/script-with-args.sh
+    # for reading a string that has a script...
+
     def test_string_script(self):
         with open("tests/script-with-args.sh") as reader:
             my_script = reader.read()
@@ -121,7 +125,7 @@ class Tests(unittest.TestCase):
         with open("tests/needsinclude.sh") as reader:
             my_script = reader.read()
         self.run_one_job(SshJob(node = self.node1(),
-                                command = StringScript(my_script,
+                                command = StringScript(my_script, "some", "'more text'",
                                                        remote_name = "string-script-sample.sh",
                                                        includes = [ "tests/inclusion.sh" ]),
                                 label = "test_string_script"))
@@ -137,22 +141,18 @@ class Tests(unittest.TestCase):
         self.assertEqual(node.formatter.get_capture(),"faraday\n")
 
     def test_logic1(self):
-        todo = SshJob(node = self.node1(),
-                      commands = [ Command("false"),
-                                   Command("true") ],
-                      label = "should succeed")
-        self.assertTrue(Engine(todo).orchestrate())
+        self.run_one_job(SshJob(node = self.node1(),
+                                commands = [ Command("false"),
+                                             Command("true") ],
+                                label = "should succeed"))
         
-#    def test_logic2(self):
-#        todo = SshJob(node = self.node1(),
-#                      commands = [ Command("true"),
-#                                   Command("false") ],
-#                      label = "should fail")
-#        e = Engine(todo)
-#        r = e.orchestrate()
-#        print("->", r)
-#        e.list()
-#        e.why()
-#        self.assertFalse(r)
+    def test_logic2(self):
+        todo = SshJob(node = self.node1(),
+                      commands = [ Command("true"),
+                                   Command("false") ],
+                      label = "should fail")
+        e = Engine(todo, verbose=True)
+        r = e.orchestrate()
+        self.assertFalse(r)
 
 unittest.main()    

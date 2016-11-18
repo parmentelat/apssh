@@ -1,8 +1,12 @@
 import unittest
 
+import string
+import random
+
 from asynciojobs import Engine, Job, Sequence
 
-from apssh import SshNode, SshJob, SshJob, Command, LocalScript, StringScript
+from apssh import SshNode, SshJob
+from apssh import Command, LocalScript, StringScript, Push, Pull
 from apssh import load_agent_keys
 
 from apssh.formatters import ColonFormatter, CaptureFormatter
@@ -133,11 +137,10 @@ class Tests(unittest.TestCase):
     ########## 
     def test_capture(self):
         node =  self.node1(capture = True)
-        todo = SshJob(node = node,
-                      command = "hostname",
-                      label = 'capture')
+        self.run_one_job(SshJob(node = node,
+                                command = "hostname",
+                                label = 'capture'))
 
-        self.assertTrue(Engine(todo).orchestrate())
         self.assertEqual(node.formatter.get_capture(),"faraday\n")
 
     def test_logic1(self):
@@ -155,4 +158,42 @@ class Tests(unittest.TestCase):
         r = e.orchestrate()
         self.assertFalse(r)
 
+    ##########
+    def test_file_loopback(self, size=20):
+        # randomly create a 2**size chars file
+        b1 = "random-{}".format(size)
+        b2 = "loopback-{}".format(size)
+        b3 = "again-{}".format(size)
+        p1 = "tests/" + b1
+        p2 = "tests/" + b2
+        p3 = "tests/" + b3
+        with open(p1, "w") as file1:
+            for i in range(2**size):
+                file1.write(random.choice(string.ascii_lowercase))
+
+        self.run_one_job(SshJob(node = self.node1(),
+                                commands = [
+                                    Command("mkdir -p apssh-tests"),
+                                    Push(localpaths = p1, remotepath = "apssh-tests"),
+                                    Pull(remotepaths = "apssh-tests/" + b1, localpath = "tests/" + b2),
+                                ]))
+
+        with open(p1) as f1:
+            s1 = f1.read()
+
+        with open(p2) as f2:
+            s2 = f2.read()
+            self.assertEqual(s1, s2)
+                         
+        # pull it again in another ssh connection
+        self.run_one_job(SshJob(node = self.node1(),
+                                commands = [
+                                    Command("mkdir -p apssh-tests"),
+                                    Pull(remotepaths = "apssh-tests/" + b1, localpath = "tests/" + b3),
+                                ]))
+        with open(p3) as f3:
+            s3 = f3.read()
+            self.assertEqual(s1, s3)
+                         
+            
 unittest.main()    

@@ -32,7 +32,7 @@ class AbstractCommand:
 
     # descriptive views, required by SshJob
     def details(self):
-        "used by SshJob for conveniently show the inside of a Job"
+        "used by SshJob to conveniently show the inside of a Job"
         return "AbstractCommand.details needs to be redefined"
 
 ##### The usual
@@ -191,3 +191,69 @@ class StringScript(AbstractCommand):
         node_run = await node.run(self.command(with_path=True))
         return node_run
 
+####
+class Pull(AbstractCommand):
+    """
+    Retrieve remote files and stores them locally
+    """
+
+    def __init__(self, remotepaths, localpath,
+                 # asyncssh's SFTP client get options
+                 *args, **kwds):
+        self.remotepaths = remotepaths
+        self.localpath = localpath
+        self.args = args
+        self.kwds = kwds
+
+    def remote_path(self):
+        paths = self.remotepaths
+        if isinstance(self.remotepaths, str):
+            paths = [ paths ]
+        return "remote path {}".format(paths[0]) \
+            if len(paths) == 1 \
+               else "{} remote path(s) starting with {}"\
+                   .format(len(self.remotepaths), self.remotepaths[0])
+
+    def details(self):
+        return "Pull {} into {}".\
+            format(self.remote_path(), self.localpath)
+
+    async def co_run(self, node):
+        await node.sftp_connect_lazy()
+        await node.get_file_s(self.remotepaths, self.localpath,
+                              *self.args, **self.kwds)
+        return 0
+
+
+####
+class Push(AbstractCommand):
+    """
+    Put local files onto target node
+    """
+
+    def __init__(self, localpaths, remotepath,
+                 # asyncssh's SFTP client put option
+                 *args, **kwds):
+        self.localpaths = localpaths
+        self.remotepath = remotepath
+        self.args = args
+        self.kwds = kwds
+
+    def local_path(self):
+        paths = self.localpaths
+        if isinstance(self.localpaths, str):
+            paths = [ paths ]
+        return "local path {}".format(paths[0]) \
+            if len(paths) == 1 \
+               else "{} local path(s) starting with {}"\
+                   .format(len(self.localpaths), self.localpaths[0])
+
+    def details(self):
+        return "push {} onto {}".\
+            format(self.local_path(), self.remotepath)
+        
+    async def co_run(self, node):
+        await node.sftp_connect_lazy()
+        await node.put_file_s(self.localpaths, self.remotepath,
+                              *self.args, **self.kwds)
+        return 0

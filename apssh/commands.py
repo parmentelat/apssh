@@ -36,12 +36,12 @@ class AbstractCommand:
         return "AbstractCommand.details needs to be redefined"
 
 ##### The usual
-class Command(AbstractCommand):
+class Run(AbstractCommand):
 
     def __init__(self, *argv):
         """
-        Example         Command("tail", "-n", 1, "/etc/lsb-release")
-        or equivalently Command("tail -n 1 /etc/lsb-release")
+        Example         Run("tail", "-n", 1, "/etc/lsb-release")
+        or equivalently Run("tail -n 1 /etc/lsb-release")
         """
         self.argv = argv
         
@@ -61,14 +61,14 @@ class Command(AbstractCommand):
         return node_run
 
 ##### same but using a script that is available as a local file
-class LocalScript(AbstractCommand):
+class RunScript(AbstractCommand):
     def __init__(self, local_script, *args, includes = None,
                  # when copying the script and includes over
                  preserve = True, follow_symlinks = True):
         """
         Example
         run a local script located in ../foo.sh with specified args:
-                        LocalScript("../foo.sh", "arg1", 2, "arg3")
+                        RunScript("../foo.sh", "arg1", 2, "arg3")
 
         includes allows to specify a list of local files 
         that need to be copied over at the same location as the local script
@@ -93,7 +93,7 @@ class LocalScript(AbstractCommand):
         # we need the node to be connected by ssh and SFTP
         remote_path =  default_remote_workdir + "/" + self.basename
         if not os.path.exists(self.local_script):
-            print("LocalScript : {} not found - bailing out"
+            print("RunScript : {} not found - bailing out"
                   .format(self.local_script))
             return
         if not ( await node.sftp_connect_lazy() 
@@ -120,7 +120,7 @@ class LocalScript(AbstractCommand):
         return node_run
 
 #####
-class StringScript(AbstractCommand):
+class RunString(AbstractCommand):
 
     @staticmethod
     def random_id():
@@ -143,7 +143,7 @@ class StringScript(AbstractCommand):
         Example:
 
         myscript = "#!/bin/bash\nfor arg in "$@"; do echo arg=$arg; done"
-        StringScript(myscript, "foo", "bar", 2, "arg3",
+        RunString(myscript, "foo", "bar", 2, "arg3",
                      remote_name = "echo-all-args.sh")
 
         """

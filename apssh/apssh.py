@@ -18,7 +18,7 @@ from .window import gather_window
 from .keys import import_private_key, load_agent_keys
 from .version import version as apssh_version
 
-from .commands import Command, LocalScript
+from .commands import Run, RunScript, RunString
 
 class Apssh:
     """
@@ -212,7 +212,7 @@ class Apssh:
                             end all files (scripts and includes) end up in the same location""")
         parser.add_argument("-t", "--target", dest='targets', action='append', default=[],
                             help="""
-                            specify targets (additive); each target can be either 
+                            specify targets (additive); at least one is required; each target can be either 
                               * a space-separated list of hostnames
                               * the name of a file containing hostnames
                               * the name of a directory containing files named after hostnames; 
@@ -249,7 +249,12 @@ class Apssh:
         parser.add_argument("-tc", "--time-colon-format", default=False, action='store_true',
                             help="equivalent to --format '@time@:@host@:@line@")
         parser.add_argument("-f", "--format", default=None, action='store',
-                            help="specify output format, e.g. @user@@host@ at %H-%M-%S == @line@")
+                            help="""specify output format, which may include 
+* `strftime` formats like e.g. %%H-%%M, and one of the following: 
+* @user@ for the remote username, 
+* @host@ for target hostname, 
+* @line@ for the actual line output (which contains the actual newline)
+* @time@ is a shorthand for %%H-%%M-%%S""")
 
         # filesystem
         parser.add_argument("-o", "--out-dir", default=None,
@@ -321,7 +326,7 @@ class Apssh:
 
         if not args.script:
             command = " ".join(args.commands)
-            tasks = [ Command(command).co_run(proxy) for proxy in proxies ]
+            tasks = [ Run(command).co_run(proxy) for proxy in proxies ]
         else:
             ### an executable is provided on the command line
             script, r_args = args.commands[0], args.commands[1:]

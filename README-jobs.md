@@ -19,16 +19,16 @@ At this early stage, these classes for now are limited to
 
 * `SshNode` : describe how to reach a node (possible through a gateway)
 * `SshJob` : to run one or several remote commands; each of these can be
-  * `Command` : that is designed to run a command readily available on the taget node
-  * `LocalScript` : when you have a local script file to run remotely, so there is a need to push it over there prior to running it
-  * `StringScript` : same idea, but you do not even have a local file, it's just a python string in memory; useful to embed your shell code inside a python code
+  * `Run` : that is designed to run a command readily available on the target node
+  * `RunScript` : when you have a local script file to run remotely, so there is a need to push it over there prior to running it
+  * `RunString` : same idea, but you do not even have a local file, it's just a python string in memory; useful to embed your shell code inside a python code
 * `SshJobCollector` and `SshJobPusher` : to transfer files back and forth
 
 As the names may suggest:
 
 * `SshJob`, `SshJobCollector` and `SshJobPusher` are suitable to run as `asynciojobs's` jobs, i.e. inside an engine.
 * instances of each of these 3 classes must be created attached to a `SshNode` instance, that contains the details of the target node (hostname, username, gateway if relevant, etc...)
-* An `SshJob` instance can contain a list of actual commands to run, of either of the 3 supported types, i.e. `Command`, `LocalScript` or `StringScript`
+* An `SshJob` instance can contain a list of actual commands to run, of either of the 3 supported types, i.e. `Run`, `RunScript` or `RunString`
 
 ## example
 

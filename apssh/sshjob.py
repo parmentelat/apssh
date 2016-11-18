@@ -9,7 +9,7 @@ from asynciojobs.job import AbstractJob
 from apssh.sshproxy import SshProxy
 from apssh import load_agent_keys
 
-from apssh.commands import AbstractCommand, Command
+from apssh.commands import AbstractCommand, Run
 
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context
@@ -37,10 +37,10 @@ class SshJob(AbstractJob):
     
     commands can be set as either
     * (1) a list/tuple of AbstractCommands
-      e.g.     commands = [ Command(..), LocalScript(...), ..]
+      e.g.     commands = [ Run(..), RunScript(...), ..]
     * (2) a single instance of AbstractCommand
-      e.g.     commands = LocalScript(...)
-    * (3) a list/tuple of strings -> a single Command object is created
+      e.g.     commands = RunScript(...)
+    * (3) a list/tuple of strings -> a single Run object is created
       e.g.     commands = [ "uname", "-a" ]
     * (4) a single string
       e.g.     commands = "uname -a"
@@ -60,7 +60,7 @@ class SshJob(AbstractJob):
         # use command or commands
         if command is None and commands is None:
             print("WARNING: SshJob requires either command or commands")
-            commands = [ Command("echo misformed SshJob") ]
+            commands = [ Run("echo misformed SshJob") ]
         elif command and commands:
             print("WARNING: SshJob created with command and commands - keeping the latter")
             commands = commands
@@ -73,10 +73,10 @@ class SshJob(AbstractJob):
         if not commands:
             # cannot tell which case in (1) (2) (3) (4)
             print("WARNING: SshJob requires a meaningful commands")
-            self.commands = [ Command("echo misformed SshJob") ]
+            self.commands = [ Run("echo misformed SshJob") ]
         elif isinstance(commands, str):
             # print("case (4)")
-            self.commands = [ Command(commands) ]
+            self.commands = [ Run(commands) ]
         elif isinstance(commands, AbstractCommand):
             # print("case (2)")
             self.commands = [ commands ]
@@ -85,7 +85,7 @@ class SshJob(AbstractJob):
             commands = [ c for c in commands if c]
             if not commands:
                 print("WARNING: SshJob requires at least one non-void command")
-                commands = [ Command("echo misformed SshJob") ]
+                commands = [ Run("echo misformed SshJob") ]
             elif isinstance(commands[0], AbstractCommand):
                 # print("case (1)")
                 # check the list is homogeneous
@@ -96,10 +96,10 @@ class SshJob(AbstractJob):
                 # print("case (3)")
                 tokens = commands
                 command_args = (str(t) for t in tokens)
-                self.commands = [ Command (*command_args) ]
+                self.commands = [ Run (*command_args) ]
         else:
             print("WARNING: SshJob could not make sense of commands")
-            self.commands = [ Command("echo misformed SshJob") ]
+            self.commands = [ Run("echo misformed SshJob") ]
 
         assert(len(self.commands) >= 1)
         assert(all(isinstance(c, AbstractCommand) for c in self.commands))

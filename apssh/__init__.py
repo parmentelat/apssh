@@ -12,10 +12,10 @@ __all__ += [ SshProxy ]
 from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, CaptureFormatter
 __all__ += [ RawFormatter, ColonFormatter, TimeColonFormatter, CaptureFormatter ]
 
-from .commands import Command, LocalScript, StringScript, Push, Pull
-__all__ +=  [ Command, LocalScript, StringScript, Push, Pull ]
+from .commands import Run, RunScript, RunString, Push, Pull
+__all__ +=  [ Run, RunScript, RunString, Push, Pull ]
 
 # jobs for asynciojobs
-from .jobs.sshjob import SshNode, SshJob
+from .sshjob import SshNode, SshJob
 __all__ +=  [ SshNode, SshJob ]
 

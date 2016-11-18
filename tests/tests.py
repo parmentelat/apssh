@@ -6,7 +6,7 @@ import random
 from asynciojobs import Engine, Job, Sequence
 
 from apssh import SshNode, SshJob
-from apssh import Command, LocalScript, StringScript, Push, Pull
+from apssh import Run, RunScript, RunString, Push, Pull
 from apssh import load_agent_keys
 
 from apssh.formatters import ColonFormatter, CaptureFormatter
@@ -40,13 +40,13 @@ class Tests(unittest.TestCase):
         
     def test_s2(self):
         self.run_one_job( SshJob(node = self.node1(),
-                                 command = Command("echo", "SshJob with s2 command singular", "$(hostname)"),
+                                 command = Run("echo", "SshJob with s2 command singular", "$(hostname)"),
                                  label = 's2'
                              ))
         
     def test_s3(self):
         self.run_one_job( SshJob(node = self.node1(),
-                                 command = [ Command("echo", "SshJob with s3 command singular", "$(hostname)")] ,
+                                 command = [ Run("echo", "SshJob with s3 command singular", "$(hostname)")] ,
                                  label = 's3'
                              ))
         
@@ -64,13 +64,13 @@ class Tests(unittest.TestCase):
         
     def test_p2(self):
         self.run_one_job( SshJob(node = self.node1(),
-                                 commands = Command("echo", "SshJob with p2 commands plural", "$(hostname)"),
+                                 commands = Run("echo", "SshJob with p2 commands plural", "$(hostname)"),
                                  label = 'p2'
                              ))
         
     def test_p3(self):
         self.run_one_job( SshJob(node = self.node1(),
-                                 commands = [ Command("echo", "SshJob with p3 commands plural", "$(hostname)")] ,
+                                 commands = [ Run("echo", "SshJob with p3 commands plural", "$(hostname)")] ,
                                  label = 'p3'
                              ))
         
@@ -80,23 +80,23 @@ class Tests(unittest.TestCase):
                                  label = 'p4'
                              ))
 
-    ########## LocalScript stuff
+    ########## RunScript stuff
     def test_local_script(self):
         self.run_one_job(SshJob(node = self.node1(),
-                                command = LocalScript("tests/script.sh"),
+                                command = RunScript("tests/script.sh"),
                                 label = 'script'
                             ))
         
     def test_local_script_includes(self):
         self.run_one_job(SshJob(node = self.node1(),
-                                command = LocalScript("tests/needsinclude.sh",
+                                command = RunScript("tests/needsinclude.sh",
                                                       includes = [ "tests/inclusion.sh" ]),
                                 label = 'script_includes'
                             ))
 
     def test_local_script_args(self):
         self.run_one_job(SshJob(node = self.node1(),
-                                command = LocalScript("tests/script-with-args.sh", "foo", "bar", "tutu"),
+                                command = RunScript("tests/script-with-args.sh", "foo", "bar", "tutu"),
                                 label = 'script'
                             ))
         
@@ -106,9 +106,9 @@ class Tests(unittest.TestCase):
         includes = [ "tests/inclusion.sh" ]
         self.run_one_job(SshJob(node = self.node1(),
                                 commands = [
-                                    LocalScript("tests/needsinclude.sh", "run1", includes = includes),
-                                    Command("echo +++++; cat /etc/lsb-release; echo +++++"),
-                                    LocalScript("tests/needsinclude.sh", "another", "run", includes = includes)
+                                    RunScript("tests/needsinclude.sh", "run1", includes = includes),
+                                    Run("echo +++++; cat /etc/lsb-release; echo +++++"),
+                                    RunScript("tests/needsinclude.sh", "another", "run", includes = includes)
                                 ],
                                 label = 'script_commands'
                             ))
@@ -122,14 +122,14 @@ class Tests(unittest.TestCase):
         with open("tests/script-with-args.sh") as reader:
             my_script = reader.read()
         self.run_one_job(SshJob(node = self.node1(),
-                                command = StringScript(my_script, "foo", "bar", "tutu"),
+                                command = RunString(my_script, "foo", "bar", "tutu"),
                                 label = "test_string_script"))
     
     def test_string_script_includes(self):
         with open("tests/needsinclude.sh") as reader:
             my_script = reader.read()
         self.run_one_job(SshJob(node = self.node1(),
-                                command = StringScript(my_script, "some", "'more text'",
+                                command = RunString(my_script, "some", "'more text'",
                                                        remote_name = "string-script-sample.sh",
                                                        includes = [ "tests/inclusion.sh" ]),
                                 label = "test_string_script"))
@@ -145,14 +145,14 @@ class Tests(unittest.TestCase):
 
     def test_logic1(self):
         self.run_one_job(SshJob(node = self.node1(),
-                                commands = [ Command("false"),
-                                             Command("true") ],
+                                commands = [ Run("false"),
+                                             Run("true") ],
                                 label = "should succeed"))
         
     def test_logic2(self):
         todo = SshJob(node = self.node1(),
-                      commands = [ Command("true"),
-                                   Command("false") ],
+                      commands = [ Run("true"),
+                                   Run("false") ],
                       label = "should fail")
         e = Engine(todo, verbose=True)
         r = e.orchestrate()
@@ -173,7 +173,7 @@ class Tests(unittest.TestCase):
 
         self.run_one_job(SshJob(node = self.node1(),
                                 commands = [
-                                    Command("mkdir -p apssh-tests"),
+                                    Run("mkdir -p apssh-tests"),
                                     Push(localpaths = p1, remotepath = "apssh-tests"),
                                     Pull(remotepaths = "apssh-tests/" + b1, localpath = "tests/" + b2),
                                 ]))
@@ -188,7 +188,7 @@ class Tests(unittest.TestCase):
         # pull it again in another ssh connection
         self.run_one_job(SshJob(node = self.node1(),
                                 commands = [
-                                    Command("mkdir -p apssh-tests"),
+                                    Run("mkdir -p apssh-tests"),
                                     Pull(remotepaths = "apssh-tests/" + b1, localpath = "tests/" + b3),
                                 ]))
         with open(p3) as f3:

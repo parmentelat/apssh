@@ -128,6 +128,7 @@ class Apssh:
                 else:
                     actually_excluded += 1
         if not hostnames:
+            print("it makes no sense to run apssh without any hostname")
             self.parser.print_help()
             exit(1)
 
@@ -200,7 +201,8 @@ class Apssh:
         # scope - on what hosts
         parser.add_argument("-s", "--script", action='store_true', default=False,
                             help="""If this flag is present, the first element of the remote command 
-                            is assumed to be the name of a local script, that will be copied over
+                            is assumed to be either the name of a local script, or, if this is not found,
+                            the body of a local script, that will be copied over
                             before being executed remotely.
                             In this case it should be executable.
                             On the remote boxes it will be installed and run in the {} directory.
@@ -330,14 +332,12 @@ class Apssh:
         else:
             ### an executable is provided on the command line
             script, r_args = args.commands[0], args.commands[1:]
+            command_class = RunScript
             if not os.path.exists(script):
-                print("File not found {}".format(script))
-                parser.print_help()
-                exit(1)
-            # xxx could also check it's executable
-            
-            # in this case a first pass is required to push the code
-            tasks = [ LocalScript(script, includes=args.includes, *r_args).co_run(proxy) for proxy in proxies ]
+                if args.verbose:
+                    print("Warning: file not found '{}'\n => Using RunString instead".format(script))
+                command_class = RunString
+            tasks = [ command_class(script, includes=args.includes, *r_args).co_run(proxy) for proxy in proxies ]
 
 
         loop = asyncio.get_event_loop()

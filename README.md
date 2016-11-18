@@ -33,17 +33,26 @@ apssh -t host1 -t host2 hostname
 apssh -t host1 -t host2 --script mymacros.sh one two
 ```
 
+* You can also use this option and provide your own script directly on the command line
+
+```
+$ apssh -s -t r2lab.infra --script 'arg1=$1; shift; arg2=$1; shift; echo exchanged $arg2 $arg1' one two
+faraday.inria.fr:exchanged two one
+bemol.pl.sophia.inria.fr:exchanged two one
+```
+
+
 This will have the effect to perform the following on each target node :
 
-* create if needed a directory named `~/.apssh` 
-* copy the local file `mymacros.sh` into that remote dir
+* create if needed a directory named `~/.apssh-remote` 
+* copy the local file `mymacros.sh` - or your inline script - into that remote dir
 * run `.apssh/mymacros.sh one two` remotely in the home directory
 
 Note that in this mode:
 
-* the first argument of the commands part (here `mymacros.sh`) must denote a file that exists locally
-* it does not have to sit in the local directory but will be installed right under `~/.apssh`
-* the local file must be executable as `apssh` will preserve its permissions when pushing
+* the first argument of the commands part (here `mymacros.sh`) should denote a file that exists locally, or be a valid script
+* it does not have to sit in the local directory but will be installed right under `~/.apssh-remote` regardless
+* the remote file will be created in mode o755
 * the command executed remotely has its *cwd* set to the remote home directory
 
 ## Global return code
@@ -167,9 +176,12 @@ planetlab2.xeno.cl.cam.ac.uk:VERSION_ID=23
 In the above trasnscript, there were 5 target hostnames, one of which being unreachable. 
 The line with `Permission denied` goes on *stderr*, the other ones on *stdout*.
     
-## Raw : on the fly, no annotation
+## Your own format
 
-With the `-r` or `--raw--` option, output is produced as it comes in, so very much like with the default output, but with no annotation as to which node the line is originating from.
+You can specify a format with the `--format` option (see `apssh --help`); there also are a few predefined formats for convenience:
+
+* `-r/--raw` (equivalent to `--format '@line@'`) output is produced as it comes from the host, with no annotation as to which node the line is originating from.
+* `-tc/--time-colon-format` is equivalent to `--format '%H-%M-%S:@host@:@line@'`
 
 ## Subdir : store outputs individually in a dedicated dir
 
@@ -219,7 +231,7 @@ Fedora release 18 (Spherical Cow)
 
 ## Good practices
 
-* First off, `apssh` will stop interpreting options on your command line at the beginning of the remote command. That is to say, in the following example
+* First off, **options order matters**; `apssh` will stop interpreting options on your command line at the beginning of the remote command. That is to say, in the following example
 
 ```
 $ apssh -t host1 -t file1 -t host2 rpm -aq \| grep libvirt
@@ -256,8 +268,8 @@ $ apssh -u root -t PLE.alive.5 -tc uname -r \; hostname
 
 # TODO
 
-* current output system now properly separates stdout and stderr, **BUT** this for now will work well only on text-based output, which can be a wrong assumption.
+* current output system can only properly handle commands output that are **text-based**; if your remote command produces binary data instead, you must redirect its output on the remote system, and fetch the results by other means; note that the binary command `apssh` has no option for doing that, but the library has 2 objects `Pull` and `Push` for doing this in a more elaborate scenario (see README-jobs.md).
 * it would seem trivial to implement the `apssh` tool on `asynciojobs`.
   However at this point the way `apssh`'s `--window` (`window.py`) works might be a little trickier with an `Engine` than with `gather`, so for now we stick to this initial `gather`-based implementation
-* automated tests !?!
+* better tests coverage would not hurt !?!
 * probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*

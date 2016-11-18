@@ -325,6 +325,8 @@ class Apssh:
                                debug = self.parsed_args.debug)
 
         proxies = self.create_proxies(gateway)
+        if args.verbose:
+            print("Working on {} nodes".format(len(proxies)))
 
         if not args.script:
             command = " ".join(args.commands)

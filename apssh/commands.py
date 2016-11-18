@@ -22,26 +22,18 @@ class AbstractCommand:
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, self.command())
 
-    async def co_exec(self, node):
-        "needs to be redefined"
-        pass
-
-    async def co_prepare(self, node):
-        "needs to be redefined" 
+    ### 
+    async def co_run(self, node):
+        """
+        needs to be redefined
+        should return 0 if everything is fine
+        """
         pass
 
     # descriptive views, required by SshJob
-    def command(self):
-        """a one-liner please"""
-        return "AbstractCommand.command needs to be redefined"
-        
     def details(self):
-        """up to 4-5 lines or so"""
+        "used by SshJob for conveniently show the inside of a Job"
         return "AbstractCommand.details needs to be redefined"
-
-    def default_label(self):
-        """up to 30 chars seems reasonable"""
-        return "AbstractCommand.default_label() needs to be redefined"
 
 ##### The usual
 class Command(AbstractCommand):
@@ -53,21 +45,20 @@ class Command(AbstractCommand):
         """
         self.argv = argv
         
+    def details(self):
+        return self.command()
+
     def command(self):
         """build the (remote) command to invoke"""
         return " ".join( str(x) for x in self.argv )
 
-    async def co_prepare(self, node):
-        """we need the node to be ssh-connected"""
+    async def co_run(self, node):
+        # need an ssh connection
         connected = await node.connect_lazy()
-        return connected
-
-    async def co_exec(self, node):
-        data = await node.run(self.command())
-        return data
-
-    def details(self):
-        return self.command()
+        if not connected:
+            return 
+        node_run = await node.run(self.command())
+        return node_run
 
 ##### same but using a script that is available as a local file
 class LocalScript(AbstractCommand):
@@ -95,8 +86,11 @@ class LocalScript(AbstractCommand):
         simple = self.basename + " " + " ".join('"{}"'.format(x) for x in self.args)
         return default_remote_workdir + "/" + simple if with_path else simple
 
-    async def co_prepare(self, node):
-        """we need the node to be connected by ssh and SFTP"""
+    def details(self):
+        return self.command() + " (local script pushed and executed)" 
+
+    async def co_run(self, node):
+        # we need the node to be connected by ssh and SFTP
         remote_path =  default_remote_workdir + "/" + self.basename
         if not os.path.exists(self.local_script):
             print("LocalScript : {} not found - bailing out"
@@ -110,8 +104,7 @@ class LocalScript(AbstractCommand):
         # make sure the remote script is executable - chmod 755
         print("Setting permissions")
         permissions = 0o755
-        foo = await node.sftp_client.chmod(remote_path, permissions)
-        print("Got foo")
+        await node.sftp_client.chmod(remote_path, permissions)
         
         if self.includes:
             # sequential is good enough
@@ -124,14 +117,8 @@ class LocalScript(AbstractCommand):
                         follow_symlinks = self.follow_symlinks,
                         preserve = self.preserve):
                     return
-        return True
-
-    async def co_exec(self, node):
-        data = await node.run(self.command(with_path=True))
-        return data
-
-    def details(self):
-        return self.command() + " (local script pushed and executed)" 
+        node_run = await node.run(self.command(with_path=True))
+        return node_run
 
 #####
 class StringScript(AbstractCommand):
@@ -169,11 +156,22 @@ class StringScript(AbstractCommand):
         # just in case
         self.remote_name = os.path.basename(self.remote_name)
 
+    # if it's small let's show it all
+    def details(self):
+        lines = self.script_body.split("\n")
+        if len(lines) > 6:
+            return self.command() + " (string script installed and executed)"
+        else:
+            result = "Following script called with args "
+            result += " ".join('"{}"'.format(arg) for arg in self.args) + "\n"
+            result += self.script_body
+            return result
+    
     def command(self, with_path=False):
         simple = self.remote_name + " " + " ".join('"{}"'.format(x) for x in self.args)
         return default_remote_workdir + "/" + simple if with_path else simple
 
-    async def co_prepare(self, node):
+    async def co_run(self, node):
         """we need the node to be connected by ssh and SFTP"""
         remote_path = default_remote_workdir + "/" + self.remote_name
         if not ( await node.sftp_connect_lazy() 
@@ -190,20 +188,7 @@ class StringScript(AbstractCommand):
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/"):
                     return
-        return True
 
-    async def co_exec(self, node):
-        data = await node.run(self.command(with_path=True))
-        return data
+        node_run = await node.run(self.command(with_path=True))
+        return node_run
 
-    # if it's small let's show it all
-    def details(self):
-        lines = self.script_body.split("\n")
-        if len(lines) > 6:
-            return self.command() + " (string script installed and executed)"
-        else:
-            result = "Following script called with args "
-            result += " ".join('"{}"'.format(arg) for arg in self.args) + "\n"
-            result += self.script_body
-            return result
-    

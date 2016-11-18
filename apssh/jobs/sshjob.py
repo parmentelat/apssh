@@ -9,7 +9,7 @@ from asynciojobs.job import AbstractJob
 from apssh.sshproxy import SshProxy
 from apssh import load_agent_keys
 
-from .commands import AbstractCommand, Command
+from apssh.commands import AbstractCommand, Command
 
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context
@@ -120,11 +120,9 @@ class SshJob(AbstractJob):
         last_command = self.commands[-1]
         result = None
         for command in self.commands:
-            if not await command.co_prepare(self.node):
-                print("preparation failed for command {} - skipped"
-                      .format(command))
-                continue
-            result = await command.co_exec(self.node)
+            result = await command.co_run(self.node)
+            # XXX not clear if we should not ALWAYS raise
+            # here, at least if self.critical 
             if command is last_command and result != 0:
                 raise Exception("command {} returned {} on {}"
                                 .format(command.command(), result, self.node))

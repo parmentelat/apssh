@@ -1,3 +1,13 @@
+# 0.3.1 - 2016 Nov 18 28
+
+* Redesigned interface
+* a single AbstrctJob class SshJob
+* is created with a list of AbstractCommands
+* that can be any of `Run`, `RunScript`, `RunString`, `Push` or `Pull`
+* so now script scenarii can embed their shell fragments inside a python script
+* also this is in accordance with asynciojobs 0.3.3 for
+  the details() and default_label() protocols
+
 # 0.2.17 - 2016 Oct 28
 
 * CaptureFormatter allows to capture the output of a command

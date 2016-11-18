@@ -97,6 +97,7 @@ class LocalScript(AbstractCommand):
 
     async def co_prepare(self, node):
         """we need the node to be connected by ssh and SFTP"""
+        remote_path =  default_remote_workdir + "/" + self.basename
         if not os.path.exists(self.local_script):
             print("LocalScript : {} not found - bailing out"
                   .format(self.local_script))
@@ -104,8 +105,14 @@ class LocalScript(AbstractCommand):
         if not ( await node.sftp_connect_lazy() 
                  and await node.mkdir(default_remote_workdir) 
                  and await node.put_file_s(
-                     self.local_script, default_remote_workdir + "/")):
+                     self.local_script, remote_path)):
             return
+        # make sure the remote script is executable - chmod 755
+        print("Setting permissions")
+        permissions = 0o755
+        foo = await node.sftp_client.chmod(remote_path, permissions)
+        print("Got foo")
+        
         if self.includes:
             # sequential is good enough
             for include in self.includes:
@@ -168,11 +175,12 @@ class StringScript(AbstractCommand):
 
     async def co_prepare(self, node):
         """we need the node to be connected by ssh and SFTP"""
+        remote_path = default_remote_workdir + "/" + self.remote_name
         if not ( await node.sftp_connect_lazy() 
                  and await node.mkdir(default_remote_workdir) 
                  and await node.put_string_script(
                      self.script_body,
-                     default_remote_workdir + "/" + self.remote_name)):
+                     remote_path)):
             return
         if self.includes:
             # sequential is good enough

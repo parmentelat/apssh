@@ -11,16 +11,24 @@ At least temporarily, we will refer to this approach as **`nepi-ng`**, `nepi` be
 ## `asynciojobs`
 `asynciojobs` is a microscopic orchestration engine for asyncio-based jobs - [see this link for details](https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb). This is the part that handles the temporal relationships.
 
-## `apss.sshjobs.SshJob`
+## `apssh.SshJob`
 
 `apssh` ships with a few classes that allow you to write jobs in the `asynciojobs`  sense, that will actually run on ssh. 
 
 At this early stage, these classes for now are limited to
 
 * `SshNode` : describe how to reach a node (possible through a gateway)
-* `SshJob` : to run a remote command
-* `SshJobScript` : to push a local script remotely and run it
-* `SshJobCollector` : to retrieve one or several files from the remote end
+* `SshJob` : to run one or several remote commands; each of these can be
+  * `Command` : that is designed to run a command readily available on the taget node
+  * `LocalScript` : when you have a local script file to run remotely, so there is a need to push it over there prior to running it
+  * `StringScript` : same idea, but you do not even have a local file, it's just a python string in memory; useful to embed your shell code inside a python code
+* `SshJobCollector` and `SshJobPusher` : to transfer files back and forth
+
+As the names may suggest:
+
+* `SshJob`, `SshJobCollector` and `SshJobPusher` are suitable to run as `asynciojobs's` jobs, i.e. inside an engine.
+* instances of each of these 3 classes must be created attached to a `SshNode` instance, that contains the details of the target node (hostname, username, gateway if relevant, etc...)
+* An `SshJob` instance can contain a list of actual commands to run, of either of the 3 supported types, i.e. `Command`, `LocalScript` or `StringScript`
 
 ## example
 

@@ -18,6 +18,8 @@ from .window import gather_window
 from .keys import import_private_key, load_agent_keys
 from .version import version as apssh_version
 
+from .commands import Command, LocalScript
+
 class Apssh:
     """
     Main class for apssh utility
@@ -319,7 +321,7 @@ class Apssh:
 
         if not args.script:
             command = " ".join(args.commands)
-            tasks = [ proxy.connect_run(command) for proxy in proxies ]
+            tasks = [ Command(command).co_run(proxy) for proxy in proxies ]
         else:
             ### an executable is provided on the command line
             script, r_args = args.commands[0], args.commands[1:]
@@ -330,7 +332,7 @@ class Apssh:
             # xxx could also check it's executable
             
             # in this case a first pass is required to push the code
-            tasks = [ proxy.connect_put_run(script, includes=args.includes, *r_args) for proxy in proxies ]
+            tasks = [ LocalScript(script, includes=args.includes, *r_args).co_run(proxy) for proxy in proxies ]
 
 
         loop = asyncio.get_event_loop()

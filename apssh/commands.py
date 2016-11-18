@@ -102,7 +102,6 @@ class LocalScript(AbstractCommand):
                      self.local_script, remote_path)):
             return
         # make sure the remote script is executable - chmod 755
-        print("Setting permissions")
         permissions = 0o755
         await node.sftp_client.chmod(remote_path, permissions)
         

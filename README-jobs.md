@@ -1,6 +1,6 @@
 # Intro - what is `nepi-ng` ?
 
-As much as `apssh` comes with a standalone binary that sysadmins might find useful for their routine jobs, an alternative usage of `apssh` is to create **`SshJob`** objects in conjunction with an `asyncio`'s **`Engine`** for **orchestrating** them.
+As much as `apssh` comes with a standalone binary that sysadmins might find useful for their routine jobs, an alternative usage of `apssh` is to create **`SshJob`** objects in conjunction with an `asyncio`'s **`Scheduler`** for **orchestrating** them.
 
 Originally, the idea presented here addresses the needs of experimental research, where an experiment often boils down to running jobs like preparing a set of nodes, initializing them, running some bash script, collecting results, all of them having temporal relationships.
 
@@ -9,7 +9,7 @@ At least temporarily, we will refer to this approach as **`nepi-ng`**, `nepi` be
 # `apssh` and `asynciojobs`
 
 ## `asynciojobs`
-`asynciojobs` is a microscopic orchestration engine for asyncio-based jobs - [see this link for details](https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb). This is the part that handles the temporal relationships.
+`asynciojobs` is a microscopic orchestration scheduler for asyncio-based jobs - [see this link for details](https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb). This is the part that handles the temporal relationships.
 
 ## `apssh.SshJob`
 
@@ -26,7 +26,7 @@ At this early stage, these classes for now are limited to
 
 As the names may suggest:
 
-* `SshJob`, `SshJobCollector` and `SshJobPusher` are suitable to run as `asynciojobs's` jobs, i.e. inside an engine.
+* `SshJob`, `SshJobCollector` and `SshJobPusher` are suitable to run as `asynciojobs's` jobs, i.e. inside an scheduler.
 * instances of each of these 3 classes must be created attached to a `SshNode` instance, that contains the details of the target node (hostname, username, gateway if relevant, etc...)
 * An `SshJob` instance can contain a list of actual commands to run, of either of the 3 supported types, i.e. `Run`, `RunScript` or `RunString`
 

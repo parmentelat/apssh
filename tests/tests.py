@@ -3,7 +3,7 @@ import unittest
 import string
 import random
 
-from asynciojobs import Engine, Job, Sequence
+from asynciojobs import Scheduler, Job, Sequence
 
 from apssh import SshNode, SshJob
 from apssh import Run, RunScript, RunString, Push, Pull
@@ -25,9 +25,9 @@ class Tests(unittest.TestCase):
     ########## all the ways to create a simple command
 
     def run_one_job(self, job):
-        engine = Engine(job, verbose=True)
-        orchestration = engine.orchestrate()
-        engine.list()
+        scheduler = Scheduler(job, verbose=True)
+        orchestration = scheduler.orchestrate()
+        scheduler.list()
         self.assertTrue(orchestration)
         self.assertEqual(job.result(), 0)
 
@@ -154,9 +154,8 @@ class Tests(unittest.TestCase):
                       commands = [ Run("true"),
                                    Run("false") ],
                       label = "should fail")
-        e = Engine(todo, verbose=True)
-        r = e.orchestrate()
-        self.assertFalse(r)
+        sched = Scheduler(todo, verbose=True)
+        self.assertFalse(sched.orchestrate())
 
     ##########
     def test_file_loopback(self, size=20):

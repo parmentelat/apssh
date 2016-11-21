@@ -1,4 +1,9 @@
-# 0.3.1 - 2016 Nov 18 28
+# 0.4.0 - 2016 Nov 21
+
+* align on asynciojobs 0.4.0
+* that is to say, rename engine into scheduler
+
+# 0.3.1 - 2016 Nov 18
 
 * Redesigned interface
 * a single AbstrctJob class SshJob

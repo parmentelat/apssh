@@ -60,7 +60,7 @@ class SshJob(AbstractJob):
         # use command or commands
         if command is None and commands is None:
             print("WARNING: SshJob requires either command or commands")
-            commands = [ Run("echo misformed SshJob") ]
+            commands = [ Run("echo misformed SshJob - no commands nor commands") ]
         elif command and commands:
             print("WARNING: SshJob created with command and commands - keeping the latter")
             commands = commands
@@ -73,7 +73,7 @@ class SshJob(AbstractJob):
         if not commands:
             # cannot tell which case in (1) (2) (3) (4)
             print("WARNING: SshJob requires a meaningful commands")
-            self.commands = [ Run("echo misformed SshJob") ]
+            self.commands = [ Run("echo misformed SshJob - empty commands") ]
         elif isinstance(commands, str):
             # print("case (4)")
             self.commands = [ Run(commands) ]
@@ -84,8 +84,7 @@ class SshJob(AbstractJob):
             # allows to insert None as a command
             commands = [ c for c in commands if c]
             if not commands:
-                print("WARNING: SshJob requires at least one non-void command")
-                commands = [ Run("echo misformed SshJob") ]
+                commands = [ Run("echo misformed SshJob - need at least one non-void command") ]
             elif isinstance(commands[0], AbstractCommand):
                 # print("case (1)")
                 # check the list is homogeneous
@@ -99,7 +98,7 @@ class SshJob(AbstractJob):
                 self.commands = [ Run (*command_args) ]
         else:
             print("WARNING: SshJob could not make sense of commands")
-            self.commands = [ Run("echo misformed SshJob") ]
+            self.commands = [ Run("echo misformed SshJob - could not make sense of commands") ]
 
         assert(len(self.commands) >= 1)
         assert(all(isinstance(c, AbstractCommand) for c in self.commands))

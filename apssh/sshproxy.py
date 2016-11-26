@@ -123,7 +123,8 @@ class SshProxy:
     """
     def __init__(self, hostname, username=None, known_hosts=None, keys=None, port=22,
                  gateway=None, # if another SshProxy is given, it is used as an ssh gateway
-                 formatter=None, debug=False, timeout=30):
+                 formatter=None, verbose=None, 
+                 debug=False, timeout=30):
         self.hostname = hostname
         self.username = username
         self.known_hosts = known_hosts
@@ -132,6 +133,8 @@ class SshProxy:
         self.gateway = gateway
         # if not specified we use a totally dummy and mostly silent formatter
         self.formatter = formatter or ColonFormatter("")
+        if verbose is not None:
+            self.formatter.verbose = verbose
         self.debug = debug
         self.timeout = timeout
         #

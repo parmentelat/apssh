@@ -1,3 +1,10 @@
+# 0.4.1 - 2016 Nov 26
+
+* add verbose flag to SshProxy/SshNode
+  useful to see when a connection fails
+* add verbose flag to Run* classes
+  useful to see commands details when running remotely
+
 # 0.4.0 - 2016 Nov 21
 
 * align on asynciojobs 0.4.0

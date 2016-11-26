@@ -41,7 +41,7 @@ setup(
     download_url     = "http://github/build.onelab.eu/apssh/apssh-{v}.tar.gz".format(v=apssh_version),
     url              = "https://github.com/parmentelat/fitsophia/tree/master/apssh",
     platforms        = "Linux",
-    packages         = [ 'apssh', 'apssh.jobs' ],
+    packages         = [ 'apssh' ],
     scripts          = [ 'bin/apssh'],
     install_requires = required_modules,
 )

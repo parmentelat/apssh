@@ -7,6 +7,8 @@
 import os.path
 import random
 
+from asyncssh import EXTENDED_DATA_STDERR
+
 from apssh.sshproxy import SshProxy
 from apssh import load_agent_keys
 from apssh.config import default_remote_workdir
@@ -38,12 +40,20 @@ class AbstractCommand:
 ##### The usual
 class Run(AbstractCommand):
 
-    def __init__(self, *argv):
+    def __init__(self, *argv,
+                 # if this is set, run bash -x
+                 verbose = False):
         """
         Example         Run("tail", "-n", 1, "/etc/lsb-release")
         or equivalently Run("tail -n 1 /etc/lsb-release")
+
+        The actual command run remotely is obtained by 
+        concatenating the string representation of each argv
+        and separating them with a space
+
         """
         self.argv = argv
+        self.verbose = verbose
         
     def details(self):
         return self.command()
@@ -53,6 +63,10 @@ class Run(AbstractCommand):
         return " ".join( str(x) for x in self.argv )
 
     async def co_run(self, node):
+        if self.verbose:
+            node.formatter.line("Run.verbose: {}".format(self.command()),
+                                EXTENDED_DATA_STDERR,
+                                node.hostname)
         # need an ssh connection
         connected = await node.connect_lazy()
         if not connected:
@@ -64,7 +78,9 @@ class Run(AbstractCommand):
 class RunScript(AbstractCommand):
     def __init__(self, local_script, *args, includes = None,
                  # when copying the script and includes over
-                 preserve = True, follow_symlinks = True):
+                 preserve = True, follow_symlinks = True,
+                 # if this is set, run bash -x
+                 verbose = False):
         """
         Example
         run a local script located in ../foo.sh with specified args:
@@ -78,13 +94,20 @@ class RunScript(AbstractCommand):
         self.includes = includes
         self.follow_symlinks = follow_symlinks
         self.preserve = preserve
+        self.verbose = verbose
         self.args = args
         ###
         self.basename = os.path.basename(local_script)
 
     def command(self, with_path=False):
         simple = self.basename + " " + " ".join('"{}"'.format(x) for x in self.args)
-        return default_remote_workdir + "/" + simple if with_path else simple
+        # without path is for details() and similar
+        if not with_path:
+            return simple
+        actual = default_remote_workdir + "/" + simple
+        if self.verbose:
+            actual = "bash -x " + actual
+        return actual
 
     def details(self):
         return self.command() + " (local script pushed and executed)" 
@@ -129,7 +152,9 @@ class RunString(AbstractCommand):
     
     def __init__(self, script_body, *args, includes = None,
                  # the name under which the remote command will be installed
-                 remote_name = None):
+                 remote_name = None,
+                 # if this is set, run bash -x
+                 verbose = False):
         """
         run a script provided as a python string script_body
 
@@ -150,8 +175,8 @@ class RunString(AbstractCommand):
         self.script_body = script_body
         self.includes = includes
         self.args = args
-        ###
         self.remote_name = remote_name or self.random_id()
+        self.verbose = verbose
         # just in case
         self.remote_name = os.path.basename(self.remote_name)
 
@@ -168,7 +193,13 @@ class RunString(AbstractCommand):
     
     def command(self, with_path=False):
         simple = self.remote_name + " " + " ".join('"{}"'.format(x) for x in self.args)
-        return default_remote_workdir + "/" + simple if with_path else simple
+        # without path is for details() and similar
+        if not with_path:
+            return simple
+        actual = default_remote_workdir + "/" + simple if with_path else simple
+        if self.verbose:
+            actual = "bash -x " + actual
+        return actual
 
     async def co_run(self, node):
         """we need the node to be connected by ssh and SFTP"""

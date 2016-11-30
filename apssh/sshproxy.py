@@ -10,7 +10,7 @@ from .config import default_remote_workdir
 # a dummy formatter
 from .formatters import Formatter, ColonFormatter
 
-class LineBasedSession(asyncssh.SSHClientSession):
+class _LineBasedSession(asyncssh.SSHClientSession):
     """
     a session that records both outputs (out and err) in its internal attributes
     it also may have an associated formatter (through its proxy reference)
@@ -118,8 +118,17 @@ class VerboseClient(asyncssh.SSHClient):
 class SshProxy:
     """
     a proxy that can connect to a remote, and then can run
-    several commands - a.k.a. sessions
-    formatter - see formatters.py 
+    several commands in the most general sense, i.e. including file transfers
+
+    its attached formatter is in charge of capturing the output of these commands.
+    default is to use a `ColonFormatter` that displays hostname:actual-output
+
+    also the verbose flag allows to get some user-level feedback on ssh negociation
+    permission denied messages and similar won't show up unless verbose is set
+
+    The gateway parameter, when set, is another `SshProxy` instance, that is then used
+    as a proxy for tunnelling a 2-leg ssh connection.
+    
     """
     def __init__(self, hostname, username=None, known_hosts=None, keys=None, port=22,
                  gateway=None, # if another SshProxy is given, it is used as an ssh gateway
@@ -233,6 +242,11 @@ class SshProxy:
         return self.sftp_client is not None
 
     async def sftp_connect_lazy(self):
+        """
+        Initializes SFTP connection if needed
+        Returns True if sftp client is ready to be used, False otherwise
+        """
+        
         await self.connect_lazy()
         with (await self._connect_lock):
             if self.sftp_client is None:
@@ -240,10 +254,6 @@ class SshProxy:
             return self.sftp_client
             
     async def _sftp_connect(self):
-        """
-        Initializes SFTP connection
-        Returns True if sftp client is ready to be used, False otherwise
-        """
         if self.conn is None:
             return False
         self.sftp_client = await self.conn.start_sftp_client()
@@ -295,11 +305,11 @@ class SshProxy:
         Run a command, outputs it on the fly according to self.formatter
         and returns remote status - or None if nothing could be run at all
         """
-        # this closure is a LineBasedSession with a .proxy attribute that points back here
-        class session_closure(LineBasedSession):
+        # this closure is a _LineBasedSession with a .proxy attribute that points back here
+        class session_closure(_LineBasedSession):
             # not using 'self' because 'self' is the SshProxy instance already
             def __init__(session_self, *args, **kwds):
-                LineBasedSession.__init__(session_self, self, command, *args, **kwds)
+                _LineBasedSession.__init__(session_self, self, command, *args, **kwds)
 
         chan, session = \
             await asyncio.wait_for(
@@ -328,9 +338,11 @@ class SshProxy:
         """
         if needed, opens the ssh connection and SFTP subsystem
         put a local file - or files - as a remote
+
+        args and kwds are passed along to the underlying asyncssh's sftp client
+        typically: preserve, recurse and follow_symlinks are honored like in 
+
         http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
-        * preserve, recurse and follow_symlinks are honored like in 
-          asyncssh's sftp client
 
         returns True if all went well, or raise exception
         """
@@ -348,6 +360,8 @@ class SshProxy:
         """
         identical to put_file_s but the other way around
         can use asyncssh's SFTP client get options as well
+
+        http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.get
         """
         sftp_connected = await self.sftp_connect_lazy()
         try:

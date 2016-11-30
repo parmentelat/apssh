@@ -23,6 +23,7 @@ import asyncssh
 def import_private_key(filename):
     """
     Attempts to import a private key from file
+
     Prompts for a password if needed
     """
     sshkey = None
@@ -53,6 +54,7 @@ def import_private_key(filename):
 def load_agent_keys(loop=None, agent_path=None):
     """
     returns a list of keys from the agent
+
     agent_path defaults to env. variable $SSH_AUTH_SOCK
     """
     async def co_load_agent_keys(loop, agent_path):

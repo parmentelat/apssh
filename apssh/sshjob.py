@@ -17,6 +17,10 @@ from apssh.commands import AbstractCommand, Run
 class SshNode(SshProxy):
     """
     essentially similar to SshProxy but under a more meaningful name
+
+    single difference is that private keys are being loaded from the ssh agent 
+    if none are passed to the constructor
+
     """ 
     def __init__(self, *args, keys=None, **kwds):
         keys = keys if keys is not None else load_agent_keys()
@@ -36,6 +40,7 @@ class SshJob(AbstractJob):
     run a command, or list of commands, remotely
     
     commands can be set as either
+
     * (1) a list/tuple of AbstractCommands
       e.g.     commands = [ Run(..), RunScript(...), ..]
     * (2) a single instance of AbstractCommand

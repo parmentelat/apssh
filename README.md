@@ -1,22 +1,24 @@
-# Purpose
+# The `apssh` binary
+
+## Purpose
 
 `apssh` is a tool that aims at running commands remotely using `ssh` on a large number of target nodes at once. It is thus comparable to [parallel-ssh](https://code.google.com/p/parallel-ssh/), except that it is written on top of `asyncio` and `asyncssh`.
 
 In addition, `apssh` comes with a class `SshJob` that can be used in conjunction with `asynciojobs` to write scenarios that are more elaborate than just sending the same command on a bunch of hosts. This is presented in more details in `README-jobs.md`.
 
-# How to get it
+## How to get it
 
-## Requirement
+### Requirement
 `apssh` requires python-3.5, as it uses the latest syntax constructions `async def` and `await` instead of the former `@asyncio.coroutine` and `yield from` idioms.
 
-## Installation
+### Installation
 ```
 [sudo] pip3 install apssh
 ```
 
-# 2 major modes : well-known commands, or local script
+## 2 major modes : well-known commands, or local script
 
-## Usual mode
+### Usual mode
 
 * The usual way to run a command that is **already present on the remote systems**, is to do e.g. this (we'll see the `-t` option right away)
 
@@ -24,7 +26,7 @@ In addition, `apssh` comes with a class `SshJob` that can be used in conjunction
 apssh -t host1 -t host2 hostname
 ```
 
-## Script mode : using a local script that gets copied over
+### Script mode : using a local script that gets copied over
 
 * Now if you need to run a more convoluted command, you can of course quote meta characters as `;` and the like, and struggle your way using the same technique.
 *  There is however an other way to achieve this, by writing a **local script** - usually a shell script, but that can be any file that can run on the target nodes - in association with the `-s` a.k.a. `--script` option, like e.g.
@@ -55,13 +57,13 @@ Note that in this mode:
 * the remote file will be created in mode o755
 * the command executed remotely has its *cwd* set to the remote home directory
 
-## Global return code
+### Global return code
 
 `apssh` returns 0 if and only if all remote commands complete and return 0 themselves; otherwise it returns 1.    
     
-# Scope selection
+## Scope selection
 
-## Adding names : the `-t` or `--target` option
+### Adding names : the `-t` or `--target` option
 
 * to run the command `true` on hosts `host1` and `host2` as well on all hostnames contained in file `hosts.list`, do this:
 
@@ -86,7 +88,7 @@ then if you run
 
 will run `true` on hosts `host1`, `host2`, `host3`, `foo`, `bar`, `toto` and `tutu`.
 
-## Excluding names : the `-x` or `--exclude` option    
+### Excluding names : the `-x` or `--exclude` option    
 
 * you can specify exclusions, the logic is exactly the same; exclusions are parsed first, and then hostnames from `--target` will be actually added only if they are not excluded. Which means the order in which you define targets and excludes does not matter.
 
@@ -98,7 +100,7 @@ $ apssh -u root -t PLE.nodes -x PLE.dns-unknown cat /etc/fedora-release
 $ apssh -u root -x PLE.dns-unknown -t PLE.nodes cat /etc/fedora-release
 ```
 
-## Max connections: the `-w` or `--window` option
+### Max connections: the `-w` or `--window` option
 
 By default there is no limit on the number of simultaneous connections, which is likely to be a problem as soon as you go for several tens of hosts, as you would then run into limitations on open connections in your OS or network. Use `w` or `--window` to run at most 50 connections at a time
 
@@ -106,9 +108,9 @@ By default there is no limit on the number of simultaneous connections, which is
 $ apssh -w 50 -t tons-of-nodes true
 ```
 
-# Users and keys
+## Users and keys
 
-## Running under a different user       
+### Running under a different user       
 use ` --user` to specify a specific username globally; or give a specific user on a given hostname with `@`
   * so e.g. to run as `user` on `host1`, but as `root` on `host2` and `host3`
 
@@ -116,20 +118,20 @@ use ` --user` to specify a specific username globally; or give a specific user o
 $ apssh -u root -t user@host1 -t host2 -t host3 -- true
 ```
 
-## Keys
+### Keys
 
 Here's how `apssh` locates private keys:
 
-### If no keys are specified using the `-i` command line option 
+#### If no keys are specified using the `-i` command line option 
 
 * (A) if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable, and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent (**NOTE:** use `ssh-add` for managing the keys known to the agent)
 * (B) otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
 
-### If keys are specified on the command line
+#### If keys are specified on the command line
 
 * (C) That exact list is used for loading private keys
 
-### In both cases
+#### In both cases
 
 Note that when loading keys from a file - i.e. in cases (B) and (C) above, a passphrase will be prompted at the terminal for each key that is passphrase-protected. Each passphrase gets prompted once for all the target hosts of course. 
 
@@ -137,7 +139,7 @@ It results from all this that passphrase-protected keys can be used in `apssh` w
 
 This behaviour might not be optimal - for example with this logic there is no way to use agent-loaded keys **and** additional keys. I am eager to receive feedback from users for possible improvements in this area.
     
-# Gateway a.k.a. Bouncing a.k.a. Tunnelling 
+## Gateway a.k.a. Bouncing a.k.a. Tunnelling 
 
 In some cases, the target nodes are not directly addressable from the box that runs `apssh`, and the ssh traffic needs to go through a gateway. This typically occurs with testbeds where nodes only have private addresses. 
 
@@ -159,9 +161,9 @@ fit03:fit03
 
 Note that in this case there is a single ssh connection created to the gateway.
 
-# Output formats
+## Output formats
 
-## Default : on the fly, annotated with hostname
+### Default : on the fly, annotated with hostname
 Default is to output every line as they come back, prefixed with associated hostname. As you might expect, stdout goes to stdout and stderr to stderr. Additionally, error messages issued by apssh itself, like e.g. when a host cannot be reached, also goes on stderr.
 
 ```
@@ -176,14 +178,14 @@ planetlab2.xeno.cl.cam.ac.uk:VERSION_ID=23
 In the above trasnscript, there were 5 target hostnames, one of which being unreachable. 
 The line with `Permission denied` goes on *stderr*, the other ones on *stdout*.
     
-## Your own format
+### Your own format
 
 You can specify a format with the `--format` option (see `apssh --help`); there also are a few predefined formats for convenience:
 
 * `-r/--raw` (equivalent to `--format '@line@'`) output is produced as it comes from the host, with no annotation as to which node the line is originating from.
 * `-tc/--time-colon-format` is equivalent to `--format '%H-%M-%S:@host@:@line@'`
 
-## Subdir : store outputs individually in a dedicated dir
+### Subdir : store outputs individually in a dedicated dir
 
 Alternatively, the `-o` or `-d` options allow to select a specific subdir and to store results in files named after each hostname. In this case, *stdout* is expected to contain a single line that says in which directory results are to be found (this is useful mostly with `-d`, since with `-o` you can predict this in advance)
 
@@ -229,7 +231,7 @@ None
 Fedora release 18 (Spherical Cow)
 ```
 
-## Good practices
+### Good practices
 
 * First off, **options order matters**; `apssh` will stop interpreting options on your command line at the beginning of the remote command. That is to say, in the following example
 
@@ -266,7 +268,7 @@ $ apssh -u root -t PLE.alive.5 -tc uname -r \; hostname
 16-47-40:planetlab-2.research.netlab.hut.fi:planetlab-2.research.netlab.hut.fi
 ```
 
-# TODO
+## TODO
 
 * current output system can only properly handle commands output that are **text-based**; if your remote command produces binary data instead, you must redirect its output on the remote system, and fetch the results by other means; note that the binary command `apssh` has no option for doing that, but the library has 2 objects `Pull` and `Push` for doing this in a more elaborate scenario (see README-jobs.md).
 * it would seem trivial to implement the `apssh` tool on `asynciojobs`.

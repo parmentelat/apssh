@@ -16,10 +16,8 @@ from apssh.config import default_remote_workdir
 from asynciojobs.job import AbstractJob
 
 ####################
+# The base class for items that make a SshJob's commands
 class AbstractCommand:
-    """
-    The base class for items that make a SshJob's commands
-    """
 
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, self.command())
@@ -39,19 +37,21 @@ class AbstractCommand:
 
 ##### The usual
 class Run(AbstractCommand):
+    """
+    The most basic form of a command is to .. run a remote command
+        
+    Example         `Run("tail", "-n", 1, "/etc/lsb-release")`
+    or equivalently `Run("tail -n 1 /etc/lsb-release")`
 
-    def __init__(self, *argv,
-                 # if this is set, run bash -x
-                 verbose = False):
-        """
-        Example         Run("tail", "-n", 1, "/etc/lsb-release")
-        or equivalently Run("tail -n 1 /etc/lsb-release")
+    The actual command run remotely is obtained by 
+    concatenating the string representation of each argv
+    and separating them with a space
 
-        The actual command run remotely is obtained by 
-        concatenating the string representation of each argv
-        and separating them with a space
+    If verbose is set, the actual command being run is printed out
 
-        """
+    """
+
+    def __init__(self, *argv, verbose = False):
         self.argv = argv
         self.verbose = verbose
         
@@ -59,7 +59,7 @@ class Run(AbstractCommand):
         return self.command()
 
     def command(self):
-        """build the (remote) command to invoke"""
+        # build the (remote) command to invoke
         return " ".join( str(x) for x in self.argv )
 
     async def co_run(self, node):
@@ -76,20 +76,31 @@ class Run(AbstractCommand):
 
 ##### same but using a script that is available as a local file
 class RunScript(AbstractCommand):
+    """
+    A class to run a **local script file** on the remote system, 
+    but with arguments passed exactly like with `Run`
+
+    Example:
+
+    run a local script located in ../foo.sh with specified args:
+        RunScript("../foo.sh", "arg1", 2, "arg3")
+
+    includes allows to specify a list of local files 
+    that need to be copied over at the same location as the local script
+    i.e. typically in ~/.apssh-remote
+    
+    if verbose is set, the remote script is run through `bash -x`
+
+    preserve and follow_symlinks are accessories to file transfer 
+    (when local script gets pushed over), see this page for their meaning
+
+    http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
+    """
     def __init__(self, local_script, *args, includes = None,
                  # when copying the script and includes over
                  preserve = True, follow_symlinks = True,
                  # if this is set, run bash -x
                  verbose = False):
-        """
-        Example
-        run a local script located in ../foo.sh with specified args:
-                        RunScript("../foo.sh", "arg1", 2, "arg3")
-
-        includes allows to specify a list of local files 
-        that need to be copied over at the same location as the local script
-        i.e. typically in ~/.apssh-remote
-        """
         self.local_script = local_script
         self.includes = includes
         self.follow_symlinks = follow_symlinks
@@ -144,6 +155,25 @@ class RunScript(AbstractCommand):
 
 #####
 class RunString(AbstractCommand):
+    """
+    Much like RunScript, but the script to run remotely is expected to be passed in the first argument as **a python string** this time.
+
+    remote_name, if provided, will tell how the created script
+    should be named on the remote node - it is randomly generated if not specified
+
+    includes allows to specify a list of local files 
+    that need to be copied over at the same location as the local script
+    i.e. typically in ~/.apssh-remote
+
+    if verbose is set, the remote script is run through `bash -x`
+
+    Example:
+
+    myscript = "#!/bin/bash\nfor arg in "$@"; do echo arg=$arg; done"
+    RunString(myscript, "foo", "bar", 2, "arg3",
+                    remote_name = "echo-all-args.sh")
+    
+    """
 
     @staticmethod
     def random_id():
@@ -155,23 +185,6 @@ class RunString(AbstractCommand):
                  remote_name = None,
                  # if this is set, run bash -x
                  verbose = False):
-        """
-        run a script provided as a python string script_body
-
-        remote_name, if provided, will tell how the created script
-        should be named on the remote node - it is randomly generated if not specified
-
-        includes allows to specify a list of local files 
-        that need to be copied over at the same location as the local script
-        i.e. typically in ~/.apssh-remote
-
-        Example:
-
-        myscript = "#!/bin/bash\nfor arg in "$@"; do echo arg=$arg; done"
-        RunString(myscript, "foo", "bar", 2, "arg3",
-                     remote_name = "echo-all-args.sh")
-
-        """
         self.script_body = script_body
         self.includes = includes
         self.args = args

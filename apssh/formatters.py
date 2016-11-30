@@ -204,9 +204,15 @@ class CaptureFormatter(VerboseFormatter):
         self.start_capture()
 
     def start_capture(self):
+        """
+        as the name suggests, mark the current capture as void
+        """
         self._capture = ""
 
     def get_capture(self):
+        """
+        return the lines captured since last `start_capture()`
+        """
         return self._capture
 
     def line(self, line, datatype, hostname):

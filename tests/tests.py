@@ -5,11 +5,11 @@ import random
 
 from asynciojobs import Scheduler, Job, Sequence
 
-from apssh import SshNode, SshJob
+from apssh import SshNode, SshJob, LocalNode
 from apssh import Run, RunScript, RunString, Push, Pull
 from apssh import load_agent_keys
 
-from apssh.formatters import ColonFormatter, CaptureFormatter
+from apssh import ColonFormatter, CaptureFormatter
 
 class Tests(unittest.TestCase):
 
@@ -24,10 +24,10 @@ class Tests(unittest.TestCase):
         
     ########## all the ways to create a simple command
 
-    def run_one_job(self, job):
+    def run_one_job(self, job, details=False):
         scheduler = Scheduler(job, verbose=True)
         orchestration = scheduler.orchestrate()
-        scheduler.list()
+        scheduler.list(details = details)
         self.assertTrue(orchestration)
         self.assertEqual(job.result(), 0)
 
@@ -195,4 +195,15 @@ class Tests(unittest.TestCase):
             self.assertEqual(s1, s3)
                          
             
+    def test_run_local_command(self):
+        self.run_one_job(# details = True,
+                         job = SshJob(
+                             node = LocalNode(),
+                             commands = [
+                                 Run("head < /dev/random > RANDOM", "-c", 2**20),
+                                 Run("ls -l RANDOM"),
+                                 Run("shasum RANDOM"),
+                             ]))                         
+
+
 unittest.main()    

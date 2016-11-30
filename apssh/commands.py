@@ -23,7 +23,7 @@ class AbstractCommand:
         return "<{}: {}>".format(type(self).__name__, self.command())
 
     ### 
-    async def co_run(self, node):
+    async def co_run_remote(self, node):
         """
         needs to be redefined
         should return 0 if everything is fine
@@ -62,7 +62,7 @@ class Run(AbstractCommand):
         # build the (remote) command to invoke
         return " ".join( str(x) for x in self.argv )
 
-    async def co_run(self, node):
+    async def co_run_remote(self, node):
         if self.verbose:
             node.formatter.line("Run.verbose: {}".format(self.command()),
                                 EXTENDED_DATA_STDERR,
@@ -73,6 +73,10 @@ class Run(AbstractCommand):
             return 
         node_run = await node.run(self.command())
         return node_run
+
+    async def co_run_local(self, localnode):
+        retcod = await localnode.run(self.command())
+        return retcod
 
 ##### same but using a script that is available as a local file
 class RunScript(AbstractCommand):
@@ -123,7 +127,7 @@ class RunScript(AbstractCommand):
     def details(self):
         return self.command() + " (local script pushed and executed)" 
 
-    async def co_run(self, node):
+    async def co_run_remote(self, node):
         # we need the node to be connected by ssh and SFTP
         remote_path =  default_remote_workdir + "/" + self.basename
         if not os.path.exists(self.local_script):
@@ -214,7 +218,7 @@ class RunString(AbstractCommand):
             actual = "bash -x " + actual
         return actual
 
-    async def co_run(self, node):
+    async def co_run_remote(self, node):
         """we need the node to be connected by ssh and SFTP"""
         remote_path = default_remote_workdir + "/" + self.remote_name
         if not ( await node.sftp_connect_lazy() 
@@ -262,7 +266,7 @@ class Pull(AbstractCommand):
         return "Pull {} into {}".\
             format(self.remote_path(), self.localpath)
 
-    async def co_run(self, node):
+    async def co_run_remote(self, node):
         await node.sftp_connect_lazy()
         await node.get_file_s(self.remotepaths, self.localpath,
                               *self.args, **self.kwds)
@@ -296,7 +300,7 @@ class Push(AbstractCommand):
         return "push {} onto {}".\
             format(self.local_path(), self.remotepath)
         
-    async def co_run(self, node):
+    async def co_run_remote(self, node):
         await node.sftp_connect_lazy()
         await node.put_file_s(self.localpaths, self.remotepath,
                               *self.args, **self.kwds)

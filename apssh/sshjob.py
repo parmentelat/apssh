@@ -6,10 +6,12 @@
 
 from asynciojobs.job import AbstractJob
 
-from apssh.sshproxy import SshProxy
-from apssh import load_agent_keys
+from .sshproxy import SshProxy
+from .keys import load_agent_keys
 
-from apssh.commands import AbstractCommand, Run
+from .commands import AbstractCommand, Run
+
+from .localnode import LocalNode
 
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context
@@ -25,9 +27,6 @@ class SshNode(SshProxy):
     def __init__(self, *args, keys=None, **kwds):
         keys = keys if keys is not None else load_agent_keys()
         SshProxy.__init__(self, *args, keys=keys, **kwds)
-
-    def user_host(self):
-        return "{}@{}".format(self.username, self.hostname)
 
 ########## a single kind of job
 # that can involve several sorts of commands
@@ -124,7 +123,10 @@ class SshJob(AbstractJob):
         last_command = self.commands[-1]
         result = None
         for command in self.commands:
-            result = await command.co_run(self.node)
+            if isinstance(self.node, LocalNode):
+                result = await command.co_run_local(self.node)
+            else:
+                result = await command.co_run_remote(self.node)
             # XXX not clear if we should not ALWAYS raise
             # here, at least if self.critical 
             if command is last_command and result != 0:

@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.4.2 - 2016 Nov 30
+
+* comes with a sphinx documentation ready to publish on
+  nepi-ng.inria.fr/apssh
+
 ## 0.4.1 - 2016 Nov 26
 
 * add verbose flag to SshProxy/SshNode

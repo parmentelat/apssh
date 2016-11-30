@@ -335,7 +335,7 @@ class Apssh:
 
         if not args.script:
             command = " ".join(args.commands)
-            tasks = [ Run(command).co_run(proxy) for proxy in proxies ]
+            tasks = [ Run(command).co_run_remote(proxy) for proxy in proxies ]
         else:
             ### an executable is provided on the command line
             script, r_args = args.commands[0], args.commands[1:]
@@ -344,7 +344,8 @@ class Apssh:
                 if args.verbose:
                     print("Warning: file not found '{}'\n => Using RunString instead".format(script))
                 command_class = RunString
-            tasks = [ command_class(script, includes=args.includes, *r_args).co_run(proxy) for proxy in proxies ]
+            tasks = [ command_class(script, includes=args.includes, *r_args)
+                      .co_run_remote(proxy) for proxy in proxies ]
 
 
         loop = asyncio.get_event_loop()

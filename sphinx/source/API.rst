@@ -24,6 +24,8 @@ Jobs classes for asynciojobs
 
 .. automodule:: apssh.sshjob
 		:members:
+.. automodule:: apssh.localnode
+		:members:
 
 Tools to deal with keys 
 ------------------------------

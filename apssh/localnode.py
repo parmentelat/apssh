@@ -15,6 +15,10 @@ class LocalNode:
     So you would create a SshJob like always, but would pass
     it an instance of LocalNode() - that is otherwise pretty dumb
 
+    The `formatter` and `verbose` parameters apply like for `SshNode`:
+    a `ColonFormatter` is created for you unless you give one, and
+    the formatter's `verbose` is set from the LocalNode's `verbose` if you give one
+
     Allows you to create local commands using `Run`
 
     `RunScript` et `RunString` are not yet implemented, 
@@ -23,8 +27,6 @@ class LocalNode:
     `Push` and `Pull` on the other hand are not supported
     """
 
-    # xxx this clearly should use a Formatter thingy to
-    # render commands outputs
     def __init__(self, formatter = None, verbose = None):
         self.formatter = formatter or ColonFormatter()
         if verbose is not None:

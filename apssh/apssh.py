@@ -43,10 +43,12 @@ class Apssh:
     def analyze_target(self, target):
         """
         A target can be specified as either
+
         * a filename
           Searched also in ~/.apssh
           If the provided filename exists and could be parsed, returned object will be
             True, [ hostname1, ...]
+
         * a directory name
           This is for use together with the --mark option, so that one can easily select reachable nodes only, 
           or just as easily exclude failing nodes
@@ -54,10 +56,12 @@ class Apssh:
           XXX it would make sense to check there is at least one dot in their name, but I'm not sure about that yet
           Here again if things work out we return
             True, [ hostname1, ...]
+
         * otherwise
           the target is then expected a string passed to -t on the command line,
           so it is simply split according to white spaces before being returned as
             True, [ hostname1, ...]
+
         * If anything goes wrong, return code is 
             False, []
           e.g. the file exists but cannot be parsed
@@ -172,16 +176,17 @@ class Apssh:
         """
         Here's how `apssh` locates private keys:
 
-        ### If no keys are specified using the `-k` command line option 
+        * 1. If no keys are specified using the `-k` command line option 
 
-        * (A) if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable,
+        1.a if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable,
           and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent
           (**NOTE:** use `ssh-add` for managing the keys known to the agent)
-        * (B) otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
 
-        ### If keys are specified on the command line
+        1.b otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
 
-        * (C) That exact list is used for loading private keys
+        * 2. If keys are specified on the command line
+
+        2.c That exact list is used for loading private keys
         """
         filenames = []
         if self.parsed_args.keys is None:

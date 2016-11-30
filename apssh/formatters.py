@@ -23,11 +23,16 @@ class Formatter:
     and then passed to SshProxy
 
     Examples:
-    . VerboseFormatter:  prints out ssh-details based on verbose flag
-    . TerminalFormatter: prints out line based on a format (time, hostname, actual line...)
-    . RawFormatter:      TerminalFormatter("@line@")
-    . ColonFormatter:    TerminalFormatter("@host@:@line@")
-    . SubdirFormatter:   stores in <subdir>/<hostname> all outputs from that host
+
+    * VerboseFormatter:  prints out ssh-details based on verbose flag
+
+    * TerminalFormatter: prints out line based on a format (time, hostname, actual line...)
+
+    * RawFormatter:      TerminalFormatter("@line@")
+
+    * ColonFormatter:    TerminalFormatter("@host@:@line@")
+
+    * SubdirFormatter:   stores in <subdir>/<hostname> all outputs from that host
     """
 
     time_format = "%H-%M-%S"
@@ -115,9 +120,10 @@ class VerboseFormatter(Formatter):
 class TerminalFormatter(VerboseFormatter):
     """
     print raw lines as they come
-    (*) regular stdout goes to stdout
-    (*) regular stderr, plus event-based annotations like connection open, 
-        go on stderr
+
+    * regular stdout goes to stdout
+
+    * regular stderr, plus event-based annotations like connection open, go on stderr
     """
 
     def line(self, line, datatype, hostname):

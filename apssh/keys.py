@@ -7,7 +7,6 @@ import asyncssh
 
 # this code for now simply handles the prompting of a key if specified on the
 # command line but cannot be loaded without a psasphrase
-# xxx it still does not properly manage when the user screws up and mistypes her password..
 #
 # what the actual code should do is
 # (*) try to reach an agent; if it can be found, use the keys it has in store

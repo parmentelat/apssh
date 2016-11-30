@@ -156,22 +156,22 @@ class RunScript(AbstractCommand):
 #####
 class RunString(AbstractCommand):
     """
-    Much like RunScript, but the script to run remotely is expected to be passed in the first argument as **a python string** this time.
+    Much like RunScript, but the script to run remotely is expected
+    to be passed in the first argument as **a python string** this time.
 
-    remote_name, if provided, will tell how the created script
+    `remote_name`, if provided, will tell how the created script
     should be named on the remote node - it is randomly generated if not specified
 
-    includes allows to specify a list of local files 
+    `includes` allows to specify a list of local files 
     that need to be copied over at the same location as the local script
     i.e. typically in ~/.apssh-remote
 
-    if verbose is set, the remote script is run through `bash -x`
+    if `verbose` is set, the remote script is run through `bash -x`
 
     Example:
 
     myscript = "#!/bin/bash\nfor arg in "$@"; do echo arg=$arg; done"
-    RunString(myscript, "foo", "bar", 2, "arg3",
-                    remote_name = "echo-all-args.sh")
+    RunString(myscript, "foo", "bar", 2, "arg3", remote_name = "echo-args.sh")
     
     """
 

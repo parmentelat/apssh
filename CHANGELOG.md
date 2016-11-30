@@ -1,10 +1,11 @@
 # ChangeLog
 
-## 0.4.3 - 2016 Nov 30
+## 0.4.4 - 2016 Nov 30
 
 * welcome to the LocalNode class for running local commands
 * big room for improvements, but at least we get a decent way
   to write the C1 tutorial in r2lab
+* 0.4.3 is broken
 
 ## 0.4.2 - 2016 Nov 30
 

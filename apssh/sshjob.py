@@ -37,6 +37,13 @@ class SshJob(AbstractJob):
     """
     A asynciojobs Job object that is set to 
     run a command, or list of commands, remotely
+
+    As a subclass of `AbstractJob`, this allows you to
+    set the `forever` and `critical` flags
+
+    If `verbose` is set to a non-None value, it is used to 
+    set - and possibly override - the verbose value in all the
+    `commands` in the job
     
     commands can be set as either
 
@@ -50,7 +57,7 @@ class SshJob(AbstractJob):
       e.g.     commands = "uname -a"
 
     For convenience, you can set commands = or command = 
-    (make sure to give exactly one)
+    (but make sure to give exactly one of both)
     """
 
     def __init__(self, node, command=None, commands=None,
@@ -58,6 +65,8 @@ class SshJob(AbstractJob):
                  forever = None,
                  # set to True if not set explicitly here
                  critical = None,
+                 # if set, propagate to all commands
+                 verbose = None,
                  *args, **kwds):
         self.node = node
 
@@ -107,7 +116,11 @@ class SshJob(AbstractJob):
         assert(len(self.commands) >= 1)
         assert(all(isinstance(c, AbstractCommand) for c in self.commands))
 
-        # set defaults to pass to upper level
+        # propagate the verbose flag on all commands if set
+        if verbose is not None:
+            for command in self.commands:
+                command.verbose = verbose
+        # set defaults to pass to mother class
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
         AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)

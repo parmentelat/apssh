@@ -123,7 +123,7 @@ class SshProxy:
     its attached formatter is in charge of capturing the output of these commands.
     default is to use a `ColonFormatter` that displays hostname:actual-output
 
-    also the verbose flag allows to get some user-level feedback on ssh negociation
+    the verbose flag allows to get some user-level feedback on ssh negociation
     permission denied messages and similar won't show up unless verbose is set
 
     The gateway parameter, when set, is another `SshProxy` instance, that is then used

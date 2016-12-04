@@ -1,10 +1,11 @@
 # ChangeLog
 
-## 0.4.5 - 2016 Dec 2
+## 0.4.6 - 2016 Dec 2
 
 * it is possible to set `verbose` when creating a `SshJob` object
 * in this case, this value is used to set/override `verbose` in
   all the `commands` that are part of that `SshJob`
+* 0.4.5 is broken (commands verbosity is always on)
 
 ## 0.4.4 - 2016 Nov 30
 

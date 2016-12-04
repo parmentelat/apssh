@@ -37,6 +37,8 @@ class AbstractCommand:
 
     # extra messages go to stderr and are normally formatted
     def _verbose_message(self, node, message):
+        if not hasattr(self, 'verbose') or not self.verbose:
+            return
         if not message.endswith("\n"):
             message += "\n"
         node.formatter.line(message, EXTENDED_DATA_STDERR, node.hostname)

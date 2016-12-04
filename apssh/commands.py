@@ -35,6 +35,12 @@ class AbstractCommand:
         "used by SshJob to conveniently show the inside of a Job"
         return "AbstractCommand.details needs to be redefined"
 
+    # extra messages go to stderr and are normally formatted
+    def _verbose_message(self, node, message):
+        if not message.endswith("\n"):
+            message += "\n"
+        node.formatter.line(message, EXTENDED_DATA_STDERR, node.hostname)
+
 ##### The usual
 class Run(AbstractCommand):
     """
@@ -63,19 +69,19 @@ class Run(AbstractCommand):
         return " ".join( str(x) for x in self.argv )
 
     async def co_run_remote(self, node):
-        if self.verbose:
-            node.formatter.line("Run.verbose: {}".format(self.command()),
-                                EXTENDED_DATA_STDERR,
-                                node.hostname)
+        self._verbose_message(node, "Run: -> {}".format(self.command()))
         # need an ssh connection
         connected = await node.connect_lazy()
         if not connected:
             return 
         node_run = await node.run(self.command())
+        self._verbose_message(node, "Run: {} <- {}".format(node_run, self.command()))
         return node_run
 
     async def co_run_local(self, localnode):
+        self._verbose_message(localnode, "Run: -> {}".format(self.command()))
         retcod = await localnode.run(self.command())
+        self._verbose_message(localnode, "Run: {} <- {}".format(retcod, self.command()))
         return retcod
 
 ##### same but using a script that is available as a local file
@@ -134,6 +140,7 @@ class RunScript(AbstractCommand):
             print("RunScript : {} not found - bailing out"
                   .format(self.local_script))
             return
+        self._verbose_message(node, "RunScript: pushing script into {}".format(remote_path))
         if not ( await node.sftp_connect_lazy() 
                  and await node.mkdir(default_remote_workdir) 
                  and await node.put_file_s(
@@ -149,12 +156,17 @@ class RunScript(AbstractCommand):
                 if not os.path.exists(include):
                     print("include file {} not found -- skipped".format(include))
                     continue
+                self._verbose_message(node, "RunScript: pushing include {} in {}"
+                                      .format(include, default_remote_workdir))
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/",
                         follow_symlinks = self.follow_symlinks,
                         preserve = self.preserve):
                     return
-        node_run = await node.run(self.command(with_path=True))
+        command = self.command(with_path=True)
+        self._verbose_message(node, "RunScript: -> {}".format(command))
+        node_run = await node.run(command)
+        self._verbose_message(node, "RunScript: {} <- {}".format(node_run, command))
         return node_run
 
 #####
@@ -221,6 +233,7 @@ class RunString(AbstractCommand):
     async def co_run_remote(self, node):
         """we need the node to be connected by ssh and SFTP"""
         remote_path = default_remote_workdir + "/" + self.remote_name
+        self._verbose_message(node, "RunString: pushing script into {}".format(remote_path))
         if not ( await node.sftp_connect_lazy() 
                  and await node.mkdir(default_remote_workdir) 
                  and await node.put_string_script(
@@ -232,11 +245,16 @@ class RunString(AbstractCommand):
             for include in self.includes:
                 if not os.path.exists(include):
                     print("include file {} not found -- skipped".format(include))
+                self._verbose_message(node, "RunString: pushing include {} in {}"
+                                      .format(include, default_remote_workdir))
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/"):
                     return
 
-        node_run = await node.run(self.command(with_path=True))
+        command = self.command(with_path=True)
+        self._verbose_message(node, "RunString: -> {}".format(command))
+        node_run = await node.run(command)
+        self._verbose_message(node, "RunString: {} <- {}".format(node_run, command))
         return node_run
 
 ####
@@ -246,10 +264,12 @@ class Pull(AbstractCommand):
     """
 
     def __init__(self, remotepaths, localpath,
+                 verbose = False,
                  # asyncssh's SFTP client get options
                  *args, **kwds):
         self.remotepaths = remotepaths
         self.localpath = localpath
+        self.verbose = verbose
         self.args = args
         self.kwds = kwds
 
@@ -267,9 +287,12 @@ class Pull(AbstractCommand):
             format(self.remote_path(), self.localpath)
 
     async def co_run_remote(self, node):
+        self._verbose_message(node, "Pull: remotepaths={}, localpath={}"
+                              .format(self.remotepaths, self.localpath))
         await node.sftp_connect_lazy()
         await node.get_file_s(self.remotepaths, self.localpath,
                               *self.args, **self.kwds)
+        self._verbose_message(node, "Pull done")
         return 0
 
 
@@ -280,10 +303,12 @@ class Push(AbstractCommand):
     """
 
     def __init__(self, localpaths, remotepath,
+                 verbose = False,
                  # asyncssh's SFTP client put option
                  *args, **kwds):
         self.localpaths = localpaths
         self.remotepath = remotepath
+        self.verbose = verbose
         self.args = args
         self.kwds = kwds
 
@@ -301,7 +326,10 @@ class Push(AbstractCommand):
             format(self.local_path(), self.remotepath)
         
     async def co_run_remote(self, node):
+        self._verbose_message(node, "Push: localpaths={}, remotepath={}"
+                             .format(self.localpaths, self.remotepath))
         await node.sftp_connect_lazy()
         await node.put_file_s(self.localpaths, self.remotepath,
                               *self.args, **self.kwds)
+        self._verbose_message(node, "Push done")
         return 0

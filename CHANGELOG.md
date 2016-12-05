@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.4.7 - 2016 Dec 5
+
+* LocalNode.username is defined - used in details
+
 ## 0.4.6 - 2016 Dec 2
 
 * it is possible to set `verbose` when creating a `SshJob` object

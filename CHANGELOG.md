@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.4.8 - 2016 Dec 5
+
+* Do not automatically add any quotes to commands run remotely
+  with Run{String,Script}, this is the caller's responsability
+
 ## 0.4.7 - 2016 Dec 5
 
 * LocalNode.username is defined - used in details

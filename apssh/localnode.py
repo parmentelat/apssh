@@ -1,5 +1,7 @@
 import asyncio
 
+import os
+
 from subprocess import PIPE
 
 from asyncssh import EXTENDED_DATA_STDERR
@@ -33,6 +35,7 @@ class LocalNode:
             self.formatter.verbose = verbose
         # xxx could be improved
         self.hostname = "LOCALNODE"
+        self.username = os.getlogin()
 
     def lines(self, bytes_chunk, datatype):
         # xxx encoding should not be hard-wired

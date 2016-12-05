@@ -123,7 +123,7 @@ class RunScript(AbstractCommand):
         self.basename = os.path.basename(local_script)
 
     def command(self, with_path=False):
-        simple = self.basename + " " + " ".join('"{}"'.format(x) for x in self.args)
+        simple = self.basename + " " + " ".join(str(x) for x in self.args)
         # without path is for details() and similar
         if not with_path:
             return simple
@@ -223,7 +223,7 @@ class RunString(AbstractCommand):
             return result
     
     def command(self, with_path=False):
-        simple = self.remote_name + " " + " ".join('"{}"'.format(x) for x in self.args)
+        simple = self.remote_name + " " + " ".join(str(x) for x in self.args)
         # without path is for details() and similar
         if not with_path:
             return simple

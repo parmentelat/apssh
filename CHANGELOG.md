@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.5.0 - 2016 Dec 5
+
+* windowing now performed with asynciojobs
+
 ## 0.4.8 - 2016 Dec 5
 
 * Do not automatically add any quotes to commands run remotely

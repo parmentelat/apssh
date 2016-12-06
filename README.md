@@ -276,7 +276,5 @@ $ apssh -u root -t PLE.alive.5 -tc uname -r \; hostname
 
 * brewing something like `appush` and `appull` sounds pretty straightforward, and could turn out most useful; some day probably
 * current output system can only properly handle commands output that are **text-based**; if your remote command produces binary data instead, you must redirect its output on the remote system, and fetch the results later on; note that the binary command `apssh` has no option for doing that, but the library has 2 objects `Pull` and `Push` for doing this in a more elaborate scenario (see README-jobs.md).
-* it would seem trivial to implement the `apssh` tool on `asynciojobs`.
-  However at this point the way `apssh`'s `--window` (`window.py`) works might be a little trickier with an `Scheduler` than with `gather`, so for now we stick to this initial `gather`-based implementation
 * better tests coverage would not hurt !?!
 * probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*

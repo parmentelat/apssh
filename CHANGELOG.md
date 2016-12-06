@@ -1,8 +1,9 @@
 # ChangeLog
 
-## 0.5.0 - 2016 Dec 5
+## 0.5.1 - 2016 Dec 5
 
 * windowing now performed with asynciojobs
+* -u/--user is now -l/--login like in vanilla `ssh`
 
 ## 0.4.8 - 2016 Dec 5
 

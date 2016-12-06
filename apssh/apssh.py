@@ -8,13 +8,13 @@
 import os, os.path
 import time
 import argparse
-import asyncio
+
+from asynciojobs import Scheduler, Job
 
 from .util import print_stderr
 from .config import default_time_name, default_timeout, default_username, default_private_keys, default_remote_workdir, local_config_dir
 from .sshproxy import SshProxy
 from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, SubdirFormatter, TerminalFormatter
-from .window import gather_window
 from .keys import import_private_key, load_agent_keys
 from .version import version as apssh_version
 
@@ -107,7 +107,7 @@ class Apssh:
             user, hostname = target.split('@')
             return user, hostname
         except:
-            return self.parsed_args.username, target
+            return self.parsed_args.login, target
 
     def create_proxies(self, gateway):
         # start with parsing excludes if any
@@ -239,7 +239,7 @@ class Apssh:
                             type=float, default=default_timeout,
                             help="specify connection timeout, default is {}s".format(default_timeout))
         # ssh settings
-        parser.add_argument("-u", "--username", default=default_username,
+        parser.add_argument("-l", "--login", default=default_username,
                             help="remote user name - default is {}".format(default_username))
         parser.add_argument("-k", "--key", dest='keys',
                             default=None, action='append', type=str,
@@ -333,9 +333,11 @@ class Apssh:
         if args.verbose:
             print("Working on {} nodes".format(len(proxies)))
 
+        window = self.parsed_args.window
+
         if not args.script:
             command = " ".join(args.commands)
-            tasks = [ Run(command).co_run_remote(proxy) for proxy in proxies ]
+            todos = [ Run(command).co_run_remote(proxy) for proxy in proxies ]
         else:
             ### an executable is provided on the command line
             script, r_args = args.commands[0], args.commands[1:]
@@ -344,32 +346,27 @@ class Apssh:
                 if args.verbose:
                     print("Warning: file not found '{}'\n => Using RunString instead".format(script))
                 command_class = RunString
-            tasks = [ command_class(script, includes=args.includes, *r_args)
+            todos = [ command_class(script, includes=args.includes, *r_args)
                       .co_run_remote(proxy) for proxy in proxies ]
 
+        # populate and run scheduler
+        scheduler = Scheduler()
+        for todo in todos:
+            scheduler.add(Job(todo))
 
-        loop = asyncio.get_event_loop()
-        window = self.parsed_args.window
-        if not window:
-            if self.parsed_args.debug:
-                print("No window limit")
-            results = loop.run_until_complete(asyncio.gather(*tasks,
-                                                             return_exceptions = True))
-        else:
-            if self.parsed_args.debug:
-                print("Window limit={}".format(window))
-            results = loop.run_until_complete(gather_window(*tasks, window=window,
-                                                            debug=args.debug,
-                                                            return_exceptions = True))
+        ok = scheduler.orchestrate(jobs_window = window)
+        results = [job.result() for job in scheduler.jobs]
 
-        ### print on stdout the name of the output directory
+        ##########
+        # print on stdout the name of the output directory
         # useful mostly with -d : 
         subdir = self.get_formatter().run_name \
                  if isinstance(self.get_formatter(), SubdirFormatter) \
                     else None
         if subdir:
             print(subdir)
-        ### details on the individual retcods - a bit rough
+
+        # details on the individual retcods - a bit hacky 
         if self.parsed_args.debug:
             for p, s in zip(proxies, results):
                 print("PROXY {} -> {}".format(p.hostname, s))

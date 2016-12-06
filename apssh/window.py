@@ -44,7 +44,7 @@ async def gather_window(*futures, window=1, loop=None, debug=False, **kwds):
     return overall
 
 ############################## a basic test for gather_window
-def wintest():
+def test_gather_window():
     """
     a simple tool for testing gather_window
     """
@@ -71,10 +71,12 @@ def wintest():
 
     if args.window:
         print("Using window={}".format(args.window))
-        results = asyncio.get_event_loop().run_until_complete(gather_window(*ticks, window=args.window))
+        results = asyncio.get_event_loop().run_until_complete(
+            gather_window(*ticks, window=args.window))
     else:
         print("Using regular gather")
-        results = asyncio.get_event_loop().run_until_complete(asyncio.gather(*ticks))
+        results = asyncio.get_event_loop().run_until_complete(
+            asyncio.gather(*ticks))
 
         print(results)
 

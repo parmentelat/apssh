@@ -99,9 +99,9 @@ will run `true` on hosts `host1`, `host2`, `host3`, `foo`, `bar`, `toto` and `tu
 * so for example if you have all the known nodes in PLE in file `PLE.nodes`, and in a separate file `PLE.dns-unknown` the subset of the PLE nodes that are actually unknown to DNS, you can skip them by doing
 
 ```
-$ apssh -u root -t PLE.nodes -x PLE.dns-unknown cat /etc/fedora-release
+$ apssh -l root -t PLE.nodes -x PLE.dns-unknown cat /etc/fedora-release
 -- or, equivalently
-$ apssh -u root -x PLE.dns-unknown -t PLE.nodes cat /etc/fedora-release
+$ apssh -l root -x PLE.dns-unknown -t PLE.nodes cat /etc/fedora-release
 ```
 
 ### Max connections: the `-w` or `--window` option
@@ -115,11 +115,11 @@ $ apssh -w 50 -t tons-of-nodes true
 ## Users and keys
 
 ### Running under a different user       
-use ` --user` to specify a specific username globally; or give a specific user on a given hostname with `@`
+use `-l` or `--login` to specify a specific username globally; or give a specific user on a given hostname with `@`
   * so e.g. to run as `user` on `host1`, but as `root` on `host2` and `host3`
 
 ```
-$ apssh -u root -t user@host1 -t host2 -t host3 -- true
+$ apssh -l root -t user@host1 -t host2 -t host3 -- true
 ```
 
 ### Keys
@@ -157,7 +157,7 @@ fit02
 In such cases, you can specify the gateway username and hostname through the `-g` or `--gateway` option. For example for running the above command on several R2lab nodes in one `apssh` invokation:
 
 ```
-$ apssh -g onelab.inria.r2lab.admin@faraday.inria.fr --user root -t "fit02 fit03 fit04" hostname
+$ apssh -g onelab.inria.r2lab.admin@faraday.inria.fr --login root -t "fit02 fit03 fit04" hostname
 fit04:fit04
 fit02:fit02
 fit03:fit03
@@ -171,7 +171,7 @@ Note that in this case there is a single ssh connection created to the gateway.
 Default is to output every line as they come back, prefixed with associated hostname. As you might expect, stdout goes to stdout and stderr to stderr. Additionally, error messages issued by apssh itself, like e.g. when a host cannot be reached, also goes on stderr.
 
 ```
-$ apssh -u root -t alive -- grep VERSION_ID /etc/os-release
+$ apssh -l root -t alive -- grep VERSION_ID /etc/os-release
 root@host4.planetlab.informatik.tu-darmstadt.de:22 - Connection failed Disconnect Error: Permission denied
 host2.planetlab.informatik.tu-darmstadt.de:VERSION_ID=23
 host3.planetlab.informatik.tu-darmstadt.de:VERSION_ID=23
@@ -199,7 +199,7 @@ Alternatively, the `-o` or `-d` options allow to select a specific subdir and to
 
 ```
 $ rm -rf alive.results/
-$ apssh -o alive.results -u root -t alive cat /etc/fedora-release
+$ apssh -o alive.results -l root -t alive cat /etc/fedora-release
 alive.results
 $ grep . alive.results/*
 alive.results/mars.planetlab.haw-hamburg.de:Fedora release 14 (Laughlin)
@@ -218,7 +218,7 @@ In the example below, we try to talk to two nodes, one of which is not reachable
 
 
 ```
-$ subdir=$(apssh --mark -d -u root -t planetlab2.tlm.unavarra.es -t uoepl2.essex.ac.uk cat /etc/fedora-release)
+$ subdir=$(apssh --mark -d -l root -t planetlab2.tlm.unavarra.es -t uoepl2.essex.ac.uk cat /etc/fedora-release)
 root@uoepl2.essex.ac.uk[22]:Connection failed:[Errno 8] nodename nor servname provided, or not known
 
 $ echo $subdir
@@ -248,7 +248,7 @@ the `-aq` option is meant for the remote `rpm` command, and that's fine because 
 * Also note in the example above that you can pass shell specials, like `|`, `<`, `>`, `;` and the like, by backslashing them, like this:
 
 ```
-$ apssh -u root -t faraday.inria.fr -t r2lab.inria.fr uname -a \; cat /etc/fedora-release /etc/lsb-release 2\> /dev/null
+$ apssh -l root -t faraday.inria.fr -t r2lab.inria.fr uname -a \; cat /etc/fedora-release /etc/lsb-release 2\> /dev/null
 r2lab.inria.fr:Linux r2lab.pl.sophia.inria.fr 4.6.4-201.fc23.x86_64 #1 SMP Tue Jul 12 11:43:59 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
 r2lab.inria.fr:Fedora release 24 (Twenty Four)
 faraday.inria.fr:Linux faraday 4.4.0-36-generic #55-Ubuntu SMP Thu Aug 11 18:01:55 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
@@ -259,7 +259,7 @@ faraday.inria.fr:DISTRIB_DESCRIPTION="Ubuntu 16.04.1 LTS"
 ```
 
 ```
-$ apssh -u root -t PLE.alive.5 -tc uname -r \; hostname
+$ apssh -l root -t PLE.alive.5 -tc uname -r \; hostname
 16-47-40:mars.planetlab.haw-hamburg.de:2.6.32-36.onelab.i686
 16-47-40:merkur.planetlab.haw-hamburg.de:2.6.32-36.onelab.i686
 16-47-40:mars.planetlab.haw-hamburg.de:mars.planetlab.haw-hamburg.de

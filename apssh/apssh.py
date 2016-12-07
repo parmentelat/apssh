@@ -17,6 +17,7 @@ from .sshproxy import SshProxy
 from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, SubdirFormatter, TerminalFormatter
 from .keys import import_private_key, load_agent_keys
 from .version import version as apssh_version
+from .sshjob import SshJob
 
 from .commands import Run, RunScript, RunString
 
@@ -331,28 +332,30 @@ class Apssh:
 
         proxies = self.create_proxies(gateway)
         if args.verbose:
-            print("Working on {} nodes".format(len(proxies)))
+            print_stderr("apssh is working on {} nodes".format(len(proxies)))
 
         window = self.parsed_args.window
 
+        # populate scheduler
+        scheduler = Scheduler()
         if not args.script:
-            command = " ".join(args.commands)
-            todos = [ Run(command).co_run_remote(proxy) for proxy in proxies ]
+            command_class = Run
+            extra_kwds_args = {}
         else:
-            ### an executable is provided on the command line
-            script, r_args = args.commands[0], args.commands[1:]
+            # try RunScript
             command_class = RunScript
+            extra_kwds_args = { 'includes' : args.includes }
+            # but if the filename is not found then use RunString
+            script = args.commands[0]
             if not os.path.exists(script):
                 if args.verbose:
                     print("Warning: file not found '{}'\n => Using RunString instead".format(script))
                 command_class = RunString
-            todos = [ command_class(script, includes=args.includes, *r_args)
-                      .co_run_remote(proxy) for proxy in proxies ]
 
-        # populate and run scheduler
-        scheduler = Scheduler()
-        for todo in todos:
-            scheduler.add(Job(todo))
+        jobs = [ SshJob(node = proxy,
+                        scheduler = scheduler,
+                        critical = False,
+                        command = command_class(*args.commands, **extra_kwds_args)) for proxy in proxies ]
 
         ok = scheduler.orchestrate(jobs_window = window)
         results = [job.result() for job in scheduler.jobs]

@@ -87,16 +87,28 @@ class VerboseFormatter(Formatter):
     def connection_made(self, hostname, username, direct):
         if self.verbose:
             msg = "direct" if direct else "tunnelled"
-            line = sep + " Connected ({})".format(msg)
+            line = sep + " Connecting ({}) to {}@{}"\
+                   .format(msg, username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
     def connection_lost(self, hostname, exc, username):
+        # exception being not None means something went wrong
+        # so always notify in this case
+        if exc:
+            adjective = "failed"
+            print_stderr("Connection failed to {}@{} : {}"
+                         .format(username, hostname, exc.reason))
+#            print("code =", exc.code, "reason=", exc.reason)
+        else:
+            adjective = "closed"            
         if self.verbose:
-            line = sep + " Connection lost {}".format(exc)
+            line = sep + " Connection {} to {}@{}"\
+                   .format(adjective, username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
 
     def auth_completed(self, hostname, username):
         if self.verbose:
-            line = sep + " Authorization OK with user {}".format(username)
+            line = sep + " Authorization OK {}@{}"\
+                   .format(username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
 
     def session_start(self, hostname, command):

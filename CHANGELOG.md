@@ -1,5 +1,20 @@
 # ChangeLog
 
+## 0.5.2 - 2016 Dec 8
+
+* better feedback for connecting/disconnections
+  * write error messages on stderr for serious errors
+    even if not verbose
+  * show username in most cases
+* add support for x11 forwarding with Run(x11=True)
+  * also available on RunString and RunScript
+  * requires apssh > 1.7.3, which is not yet out though
+* bugfix: both RunScript and RunString add a random part
+  at the end of remote command name - to allow for multiple
+  simulataneous runs
+* use proper SshJob's instead of individual Run commands
+* use setuptools instead of disutils
+
 ## 0.5.1 - 2016 Dec 5
 
 * windowing now performed with asynciojobs

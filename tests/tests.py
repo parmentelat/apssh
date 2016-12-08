@@ -10,7 +10,7 @@ from apssh import SshNode, SshJob, LocalNode
 from apssh import Run, RunScript, RunString, Push, Pull
 from apssh import load_agent_keys
 
-from apssh import ColonFormatter, CaptureFormatter
+from apssh import TimeColonFormatter, ColonFormatter, CaptureFormatter
 
 class Tests(unittest.TestCase):
 
@@ -18,10 +18,9 @@ class Tests(unittest.TestCase):
         formatter = ColonFormatter() if not capture else CaptureFormatter()
         return SshNode(hostname = 'faraday.inria.fr',
                        username = 'root',
-# that's the default anyway
-#                       keys=load_agent_keys(),
-                       formatter = formatter,
-                   )
+                       # this is the default in fact
+                       keys=load_agent_keys(),
+                       formatter = formatter)
         
     ########## all the ways to create a simple command
 
@@ -119,21 +118,21 @@ class Tests(unittest.TestCase):
     # we are cheating here, and open tests/script-with-args.sh
     # for reading a string that has a script...
 
-    def test_string_script(self):
+    def test_local_string(self):
         with open("tests/script-with-args.sh") as reader:
             my_script = reader.read()
         self.run_one_job(SshJob(node = self.gateway(),
                                 command = RunString(my_script, "foo", "bar", "tutu"),
-                                label = "test_string_script"))
+                                label = "test_local_string"))
     
-    def test_string_script_includes(self):
+    def test_local_string_includes(self):
         with open("tests/needsinclude.sh") as reader:
             my_script = reader.read()
         self.run_one_job(SshJob(node = self.gateway(),
                                 command = RunString(my_script, "some", "'more text'",
-                                                       remote_name = "string-script-sample.sh",
-                                                       includes = [ "tests/inclusion.sh" ]),
-                                label = "test_string_script"))
+                                                    remote_name = "run-script-sample.sh",
+                                                    includes = [ "tests/inclusion.sh" ]),
+                                label = "test_local_string"))
     
     ########## 
     def test_capture(self):
@@ -233,7 +232,30 @@ class Tests(unittest.TestCase):
         ok = scheduler.orchestrate()
         ok or scheduler.debrief()
         self.assertTrue(ok)
-        
 
+    def test_x11(self):
+        self.run_one_job(
+            job = SshJob(
+                node = self.gateway(),
+                command = [Run("echo $DISPLAY", x11=True),
+                           Run("xlsfonts | head -5", x11=True),
+                           RunString("""#!/bin/bash
+echo tail this time
+xlsfonts | tail -5
+""", x11=True)]))
+
+
+    # same but with xterm, so it will hang, so don't call it test_*
+    # fit01 must be turned on 
+    def xeyes(self):
+        node = SshNode(hostname="faraday.inria.fr",
+                       username="root",
+                       gateway = self.gateway())
+        self.run_one_job(
+            job = SshJob(
+                node = node,
+                command = [Run("echo without X11 $DISPLAY"),
+                           Run("echo with X11 $DISPLAY", x11=True),
+                           Run("xeyes", x11=True)]))
 
 unittest.main()    

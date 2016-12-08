@@ -140,7 +140,7 @@ class SshProxy:
         self.keys = keys if keys is not None else []
         self.port = int(port)
         self.gateway = gateway
-        # if not specified we use a totally dummy and mostly silent formatter
+        # if not specified we use a basic colon formatter 
         self.formatter = formatter or ColonFormatter("")
         if verbose is not None:
             self.formatter.verbose = verbose
@@ -300,10 +300,13 @@ class SshProxy:
             await self._close_ssh()
 
     ##############################
-    async def run(self, command):
+    async def run(self, command, **x11_kwds):
         """
         Run a command, outputs it on the fly according to self.formatter
         and returns remote status - or None if nothing could be run at all
+        
+        x11_kwds are optional keyword args that will be passed to create_session
+        like typically x11_forwarding=True
         """
         # this closure is a _LineBasedSession with a .proxy attribute that points back here
         class session_closure(_LineBasedSession):
@@ -311,9 +314,17 @@ class SshProxy:
             def __init__(session_self, *args, **kwds):
                 _LineBasedSession.__init__(session_self, self, command, *args, **kwds)
 
+        if x11_kwds:
+            asyncssh_version_str = asyncssh.version.__version__
+            asyncssh_version = [ int(x) for x in asyncssh_version_str.split('.') ]
+            if asyncssh_version > [1, 7, 3]:
+                session_kwd_args = x11_kwds
+            else:
+                print("apssh: WARNING : need asyncssh >= 1.7.3 to activate x11 forwarding - ignored")
+                session_kwd_args = {}
         chan, session = \
             await asyncio.wait_for(
-                self.conn.create_session(session_closure, command),
+                self.conn.create_session(session_closure, command, **session_kwd_args),
                 timeout=self.timeout)
         await chan.wait_closed()
         return session._status

@@ -55,13 +55,22 @@ class Run(AbstractCommand):
     concatenating the string representation of each argv
     and separating them with a space
 
+    setting `x11=True` enables X11 forwarding, so a X11 program
+    running remotely ends on the local DISPLAY
+
     If verbose is set, the actual command being run is printed out
 
     """
 
-    def __init__(self, *argv, verbose = False):
+    # it was tempting to use x11_forwarding as the name here, but
+    # first it's definitely too long, given the usage of Run
+    # plus, maybe some day we'll need to add other keywords
+    # to create_connection than just x11_forwarding,
+    # so, it feels about right to call this just like x11
+    def __init__(self, *argv, verbose = False, x11 = False):
         self.argv = argv
         self.verbose = verbose
+        self.x11 = x11
         
     def details(self):
         return self.command()
@@ -75,8 +84,8 @@ class Run(AbstractCommand):
         # need an ssh connection
         connected = await node.connect_lazy()
         if not connected:
-            return 
-        node_run = await node.run(self.command())
+            return
+        node_run = await node.run(self.command(), x11_forwarding = self.x11)
         self._verbose_message(node, "Run: {} <- {}".format(node_run, self.command()))
         return node_run
 
@@ -103,11 +112,12 @@ class RunLocalStuff(AbstractCommand):
 
     fit26:bash: .apssh-remote/B3-wireless.sh: /bin/bash: bad interpreter: Text file busy
     """
-    def __init__(self, args, includes, verbose, remote_basename):
+    def __init__(self, args, includes, verbose, remote_basename, x11):
         self.args = args
         self.includes = includes
         self.verbose = verbose
         self.remote_basename = remote_basename
+        self.x11 = x11
 
     def _random_id(self):
         """
@@ -160,7 +170,7 @@ class RunLocalStuff(AbstractCommand):
                 if not os.path.exists(include):
                     print("include file {} not found -- skipped".format(include))
                     continue
-                self._verbose_message(node, "RunScript: pushing include {} in {}"
+                self._verbose_message(node, "RunLocalStuff: pushing include {} in {}"
                                       .format(include, default_remote_workdir))
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/",
@@ -169,9 +179,9 @@ class RunLocalStuff(AbstractCommand):
 
         # trigger it
         command = self.command()
-        self._verbose_message(node, "RunScript: -> {}".format(command))
-        node_run = await node.run(command)
-        self._verbose_message(node, "RunScript: {} <- {}".format(node_run, command))
+        self._verbose_message(node, "RunLocalStuff: -> {}".format(command))
+        node_run = await node.run(command, x11_forwarding=self.x11)
+        self._verbose_message(node, "RunLocalStuff: {} <- {}".format(node_run, command))
         return node_run
         
     
@@ -190,17 +200,19 @@ class RunScript(RunLocalStuff):
     that need to be copied over at the same location as the local script
     i.e. typically in ~/.apssh-remote
     
+    setting `x11=True` enables X11 forwarding
+
     if verbose is set, the remote script is run through `bash -x`
 
     """
-    def __init__(self, local_script, *args, includes = None,
+    def __init__(self, local_script, *args, includes = None, x11=False,                 
                  # if this is set, run bash -x
                  verbose = False):
         self.local_script = local_script
         local_basename = os.path.basename(local_script)
         remote_basename = local_basename + '-' + self._random_id()
 
-        RunLocalStuff.__init__(self, args, includes, verbose, remote_basename)
+        super().__init__(args, includes, verbose, remote_basename, x11)
 
     def details(self):
         return "*** RunScript " + self.local_basename + " " + self._args_line()
@@ -227,6 +239,8 @@ class RunString(RunLocalStuff):
     that need to be copied over at the same location as the local script
     i.e. typically in ~/.apssh-remote
 
+    setting `x11=True` enables X11 forwarding
+
     if `verbose` is set, the remote script is run through `bash -x`
 
     Example:
@@ -236,7 +250,7 @@ class RunString(RunLocalStuff):
     
     """
 
-    def __init__(self, script_body, *args, includes = None,
+    def __init__(self, script_body, *args, includes = None, x11=False,
                  # the name under which the remote command will be installed
                  remote_name = None,
                  # if this is set, run bash -x
@@ -250,7 +264,7 @@ class RunString(RunLocalStuff):
         else:
             self.remote_name = ''
             remote_basename = self._random_id()
-        RunLocalStuff.__init__(self, args, includes, verbose, remote_basename)
+        super().__init__(args, includes, verbose, remote_basename, x11)
 
     # if it's small let's show it all
     def details(self):

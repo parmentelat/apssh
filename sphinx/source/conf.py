@@ -39,6 +39,7 @@ from apssh.version import version as apssh_version
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.asyncio',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

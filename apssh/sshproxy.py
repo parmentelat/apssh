@@ -314,7 +314,15 @@ class SshProxy:
             def __init__(session_self, *args, **kwds):
                 _LineBasedSession.__init__(session_self, self, command, *args, **kwds)
 
-        if x11_kwds:
+        # the idea here is to show a visible message in case someone
+        # tries to use x11=True but has a too old version of apssh
+        # OTOH we do not want this to trigger all the time..
+        regular_mode = (not x11_kwds) \
+                       or (len(x11_kwds) == 1 and 'x11_forwarding' in x11_kwds and
+                           x11_kwds['x11_forwarding'])
+        if regular_mode:
+            session_kwd_args = {}
+        else:
             asyncssh_version_str = asyncssh.version.__version__
             asyncssh_version = [ int(x) for x in asyncssh_version_str.split('.') ]
             if asyncssh_version > [1, 7, 3]:
@@ -322,6 +330,7 @@ class SshProxy:
             else:
                 print("apssh: WARNING : need asyncssh > 1.7.3 to activate x11 forwarding - ignored")
                 session_kwd_args = {}
+        # 
         chan, session = \
             await asyncio.wait_for(
                 self.conn.create_session(session_closure, command, **session_kwd_args),

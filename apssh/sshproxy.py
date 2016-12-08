@@ -320,7 +320,7 @@ class SshProxy:
             if asyncssh_version > [1, 7, 3]:
                 session_kwd_args = x11_kwds
             else:
-                print("apssh: WARNING : need asyncssh >= 1.7.3 to activate x11 forwarding - ignored")
+                print("apssh: WARNING : need asyncssh > 1.7.3 to activate x11 forwarding - ignored")
                 session_kwd_args = {}
         chan, session = \
             await asyncio.wait_for(

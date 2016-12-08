@@ -2,4 +2,5 @@
 
 from apssh.apssh import Apssh
 
-exit(Apssh().main())
+def main():
+    exit(Apssh().main())

@@ -319,7 +319,7 @@ class SshProxy:
         # OTOH we do not want this to trigger all the time..
         regular_mode = (not x11_kwds) \
                        or (len(x11_kwds) == 1 and 'x11_forwarding' in x11_kwds and
-                           x11_kwds['x11_forwarding'])
+                           not x11_kwds['x11_forwarding'])
         if regular_mode:
             session_kwd_args = {}
         else:

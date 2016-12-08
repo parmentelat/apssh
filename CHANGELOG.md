@@ -1,8 +1,9 @@
 # ChangeLog
 
-## 0.5.3 - 2016 Dec 8
+## 0.5.4 - 2016 Dec 8
 
 # warning about asyncssh and 1.7.3 to appear only when actually using x11
+# 0.5.3 had that still wrong
 
 ## 0.5.2 - 2016 Dec 8
 

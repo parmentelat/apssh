@@ -33,9 +33,15 @@ class LocalNode:
         self.formatter = formatter or ColonFormatter()
         if verbose is not None:
             self.formatter.verbose = verbose
-        # xxx could be improved
+        # could be improved
         self.hostname = "LOCALNODE"
-        self.username = os.getlogin()
+        # some users reported issues with this so
+        # given that it's really only for convenience
+        # let's do this best effort
+        try:
+            self.username = os.getlogin()
+        except:
+            self.username = "LOCALUSER"
 
     def lines(self, bytes_chunk, datatype):
         # xxx encoding should not be hard-wired

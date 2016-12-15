@@ -209,8 +209,8 @@ class RunScript(RunLocalStuff):
                  # if this is set, run bash -x
                  verbose = False):
         self.local_script = local_script
-        local_basename = os.path.basename(local_script)
-        remote_basename = local_basename + '-' + self._random_id()
+        self.local_basename = os.path.basename(local_script)
+        remote_basename = self.local_basename + '-' + self._random_id()
 
         super().__init__(args, includes, verbose, remote_basename, x11)
 

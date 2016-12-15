@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.5.6 - 2016 Dec 15
+
+* bugfix - RunScript and details()
+
 ## 0.5.5 - 2016 Dec 12
 
 * protect os.getlogin()

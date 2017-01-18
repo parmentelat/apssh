@@ -67,8 +67,10 @@ class SshJob(AbstractJob):
                  critical = None,
                  # if set, propagate to all commands
                  verbose = None,
+                 keep_connection = False,
                  *args, **kwds):
         self.node = node
+        self.keep_connection = keep_connection
 
         # use command or commands
         if command is None and commands is None:
@@ -152,7 +154,8 @@ class SshJob(AbstractJob):
         don't bother to terminate all the commands separately
         all that matters is to terminate the ssh connection to that node
         """
-        await self.node.close()
+        if not self.keep_connection:
+            await self.node.close()
 
 
     def details(self):

@@ -70,6 +70,8 @@ class SshJob(AbstractJob):
                  keep_connection = False,
                  *args, **kwds):
         self.node = node
+        if not isinstance(node, SshProxy):
+            print("WARNING: SshJob node field must be an instance of SshProxy (or a subclass like SshNode)")
         self.keep_connection = keep_connection
 
         # use command or commands

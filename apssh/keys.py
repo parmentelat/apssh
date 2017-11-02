@@ -57,15 +57,15 @@ def load_agent_keys(loop=None, agent_path=None):
     agent_path defaults to env. variable $SSH_AUTH_SOCK
     """
     async def co_load_agent_keys(loop, agent_path):
-        agent_client = asyncssh.SSHAgentClient(loop, agent_path)
+        # make sure to return an empty list when something goes wrong
         try:
+            agent_client = asyncssh.SSHAgentClient(loop, agent_path)
             return await agent_client.get_keys()
         except Exception as e:
             # not quite sure which exceptions to expect here
-            print("Scaffolding code : exception when fetching agent keys")
-            import traceback
-            traceback.print_exc()
+            print("When fetching agent keys: ignored exception {}".format(e))
             return []
+            
 
     agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
     if agent_path is None:

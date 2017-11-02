@@ -152,6 +152,18 @@ class SshProxy:
         self._connect_lock = asyncio.Lock()
         self._disconnect_lock = asyncio.Lock()
 
+    # make this an asynchroneous context manager
+    # async with SshProxy(...) as ssh:
+    #    
+    async def __aenter__(self):
+        await self.connect_lazy()
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        # xxx this might be a little harsh, in the case
+        # where an exception did occur
+        await self.close()
+
     def __user_host__(self):
         return "{}@{}".format(self.username, self.hostname) if self.username \
             else "@" + self.hostname

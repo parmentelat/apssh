@@ -194,7 +194,7 @@ class SshProxy:
         Connect if needed - uses a lock to ensure only one connection will 
         take place even if several calls are done at the same time
         """
-        with (await self._connect_lock):
+        async with self._connect_lock:
             if self.conn is None:
                 await self._connect()
             return self.conn
@@ -260,7 +260,7 @@ class SshProxy:
         """
         
         await self.connect_lazy()
-        with (await self._connect_lock):
+        async with self._connect_lock:
             if self.sftp_client is None:
                 await self._sftp_connect()
             return self.sftp_client
@@ -307,7 +307,7 @@ class SshProxy:
         # beware that when used with asynciojobs, we often have several jobs
         # sharing the same proxy, and so there might be several calls to
         # close() sent to the same object at the same time...
-        with (await self._disconnect_lock):
+        assync with self._disconnect_lock:
             await self._close_sftp()
             await self._close_ssh()
 

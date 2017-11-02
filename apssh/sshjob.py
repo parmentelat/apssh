@@ -138,18 +138,24 @@ class SshJob(AbstractJob):
         result = None
         # the commands are of course sequential, so we wait for one before we run the next
         last_command = self.commands[-1]
-        result = None
+        overall = None
         for command in self.commands:
             if isinstance(self.node, LocalNode):
                 result = await command.co_run_local(self.node)
             else:
                 result = await command.co_run_remote(self.node)
-            # XXX not clear if we should not ALWAYS raise
-            # here, at least if self.critical 
-            if command is last_command and result != 0:
-                raise Exception("command {} returned {} on {}"
-                                .format(command.command(), result, self.node))
-        return result
+            # one command has failed
+            if result != 0:
+                if self.critical:
+                    # if job is critical, let's raise an exception
+                    # so the scheduler will stop
+                    raise Exception("command {} returned {} on {}"
+                                    .format(command.command(), result, self.node))
+                else:
+                    # not critical; let's proceed, but let's remember the
+                    # overall result is wrong
+                    overall = result
+        return overall
         
     async def co_shutdown(self):
         """
@@ -167,4 +173,5 @@ class SshJob(AbstractJob):
     def default_label(self):
         first_details = self.commands[0].details()
         first_line = first_details.split("\n")[0]
-        return first_line if len(self.commands) == 1 else first_line + " + {} others...".format(len(self.commands)-1)
+        return first_line if len(self.commands) == 1 \
+            else first_line + " + {} others...".format(len(self.commands)-1)

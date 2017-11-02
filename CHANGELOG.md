@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.6.1 - 2017 Nov 2
+
+* bugfix
+
 ## 0.6.0 - 2017 Nov 2
 
 * can create SshJob with keep_connection=True

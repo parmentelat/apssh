@@ -135,7 +135,7 @@ class SshJob(AbstractJob):
         if the last command does not return 0, then an exception is raised
         so if this job is critical it will abort orchestration 
         """
-        result = None
+        result = 0
         # the commands are of course sequential, so we wait for one before we run the next
         last_command = self.commands[-1]
         overall = None

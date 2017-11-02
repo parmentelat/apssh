@@ -135,10 +135,9 @@ class SshJob(AbstractJob):
         if the last command does not return 0, then an exception is raised
         so if this job is critical it will abort orchestration 
         """
-        result = None
         # the commands are of course sequential, so we wait for one before we run the next
         last_command = self.commands[-1]
-        overall = None
+        overall = 0
         for command in self.commands:
             if isinstance(self.node, LocalNode):
                 result = await command.co_run_local(self.node)

@@ -307,7 +307,7 @@ class SshProxy:
         # beware that when used with asynciojobs, we often have several jobs
         # sharing the same proxy, and so there might be several calls to
         # close() sent to the same object at the same time...
-        assync with self._disconnect_lock:
+        async with self._disconnect_lock:
             await self._close_sftp()
             await self._close_ssh()
 

@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.6.2 - 2017 Nov 2
+
+* bugfix again - running multiple commands returned None in case of success
+
 ## 0.6.1 - 2017 Nov 2
 
 * bugfix

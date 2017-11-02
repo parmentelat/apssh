@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.6.0 - 2017 Nov 2
+
+* can create SshJob with keep_connection=True
+* check a node object is an instance of SshProxy
+* more robust load_agent_keys - return [] if cannot reach
+* SshJob - change logic of failed commands - exception only raised if critical
+
 ## 0.5.6 - 2016 Dec 15
 
 * bugfix - RunScript and details()

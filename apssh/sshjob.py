@@ -25,7 +25,7 @@ class SshNode(SshProxy):
 
     """ 
     def __init__(self, *args, keys=None, **kwds):
-        keys = keys if keys is not None else load_agent_keys()
+        keys = keys if keys is not None else load_private_keys()
         SshProxy.__init__(self, *args, keys=keys, **kwds)
 
 ########## a single kind of job

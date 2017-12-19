@@ -21,7 +21,7 @@ class Tests(unittest.TestCase):
     def test_agent(self):
 #        loop = asyncio.get_event_loop()
         
-        for key in load_agent_keys():
+        for key in load_private_keys():
             print("Found in agent: {}".format(key))
 
 

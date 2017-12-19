@@ -8,7 +8,7 @@ from asynciojobs import Scheduler, Job, Sequence
 
 from apssh import SshNode, SshJob, LocalNode
 from apssh import Run, RunScript, RunString, Push, Pull
-from apssh import load_agent_keys
+from apssh import load_private_keys
 
 from apssh import TimeColonFormatter, ColonFormatter, CaptureFormatter
 
@@ -19,7 +19,7 @@ class Tests(unittest.TestCase):
         return SshNode(hostname = 'faraday.inria.fr',
                        username = 'root',
                        # this is the default in fact
-                       keys=load_agent_keys(),
+                       keys=load_private_keys(),
                        formatter = formatter)
         
     ########## all the ways to create a simple command
@@ -145,6 +145,7 @@ class Tests(unittest.TestCase):
 
     def test_logic1(self):
         self.run_one_job(SshJob(node = self.gateway(),
+                                critical=False,
                                 commands = [ Run("false"),
                                              Run("true") ],
                                 label = "should succeed"))

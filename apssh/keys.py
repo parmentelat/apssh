@@ -5,25 +5,16 @@ from getpass import getpass
 import asyncio
 import asyncssh
 
-# this code for now simply handles the prompting of a key if specified on the
-# command line but cannot be loaded without a psasphrase
-#
-# what the actual code should do is
-# (*) try to reach an agent; if it can be found, use the keys it has in store
-# (*) otherwise: use the current algorithm, i.e.
-#  (**) use the keys specified on the command line - and only them
-#  (**) or use ~/.ssh/id_rsa and/or ~/id_dsa otherwise
-#  (**) and in any case use the following method to prompt for a passphrase
-#
-# it does not feel like a cache filename -> key-object is required but well...
-# we must remember that it's an SshProxy object that requires a list of keys,
-# so it's not quite clear yet if this caching will be needed or not
+from .config import default_private_keys
+
 
 def import_private_key(filename):
     """
     Attempts to import a private key from file
 
     Prompts for a password if needed
+
+    Returns a (asyncssh) key object if successful, or None
     """
     sshkey = None
     basename = os.path.basename(filename)
@@ -36,7 +27,8 @@ def import_private_key(filename):
             sshkey = asyncssh.import_private_key(data)
         except asyncssh.KeyImportError:
             while True:
-                passphrase = getpass("Enter passphrase for key {} : ".format(basename))
+                passphrase = getpass(
+                    "Enter passphrase for key {} : ".format(basename))
                 if not passphrase:
                     print("Ignoring key {}".format(filename))
                     break
@@ -49,6 +41,7 @@ def import_private_key(filename):
             import traceback
             traceback.print_exc()
         return sshkey
+
 
 def load_agent_keys(loop=None, agent_path=None):
     """
@@ -65,10 +58,52 @@ def load_agent_keys(loop=None, agent_path=None):
             # not quite sure which exceptions to expect here
             print("When fetching agent keys: ignored exception {}".format(e))
             return []
-            
 
     agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
     if agent_path is None:
         return []
     loop = loop or asyncio.get_event_loop()
     return loop.run_until_complete(co_load_agent_keys(loop, agent_path))
+
+
+def load_private_keys(command_line_keys=None, verbose=False):
+    """
+    Here's how `apssh` locates private keys:
+
+    * 1. If no keys are given as the command_line_keys parameter
+         (typically through the apssh `-k` command line option)
+
+      1.a if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable,
+        and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent
+        (**NOTE:** use `ssh-add` for managing the keys known to the agent)
+
+      1.b otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
+
+    * 2. If keys are specified on the command line
+
+      2.c That exact list is used for loading private keys
+    """
+    filenames = []
+    if not command_line_keys:
+        agent_keys = load_agent_keys()
+        # agent has stuff : let's use it
+        if agent_keys:
+            if verbose:
+                print("apssh has loaded {} keys from the ssh agent"
+                      .format(len(agent_keys)))
+            return agent_keys
+        # use config to figure out what the default keys are
+        filenames = default_private_keys
+        if verbose:
+            print("apssh will try to load {} default keys".format(len(filenames)))
+    else:
+        filenames = command_line_keys
+        if verbose:
+            print("apssh will try to load {} keys from the command line".format(
+                len(filenames)))
+    keys = [import_private_key(filename) for filename in filenames]
+    valid_keys = [k for k in keys if k]
+    if verbose:
+        print("apssh has loaded {} keys"
+              .format(len(valid_keys)))
+    return valid_keys

@@ -10,7 +10,6 @@ import random
 from asyncssh import EXTENDED_DATA_STDERR
 
 from apssh.sshproxy import SshProxy
-from apssh import load_agent_keys
 from apssh.config import default_remote_workdir
 
 from asynciojobs.job import AbstractJob

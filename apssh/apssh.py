@@ -12,10 +12,12 @@ import argparse
 from asynciojobs import Scheduler, Job
 
 from .util import print_stderr
-from .config import default_time_name, default_timeout, default_username, default_private_keys, default_remote_workdir, local_config_dir
+from .config import (default_time_name, default_timeout, default_username,
+                     default_remote_workdir, local_config_dir)
 from .sshproxy import SshProxy
-from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, SubdirFormatter, TerminalFormatter
-from .keys import import_private_key, load_agent_keys
+from .formatters import (RawFormatter, ColonFormatter,
+                         TimeColonFormatter, SubdirFormatter, TerminalFormatter)
+from .keys import load_private_keys
 from .version import version as apssh_version
 from .sshjob import SshJob
 
@@ -42,8 +44,7 @@ class Apssh:
                 return in_home
 
     def analyze_target(self, target):
-        """
-        A target can be specified as either
+        """A target can be specified as either
 
         * a filename
           Searched also in ~/.apssh
@@ -51,11 +52,18 @@ class Apssh:
             True, [ hostname1, ...]
 
         * a directory name
-          This is for use together with the --mark option, so that one can easily select reachable nodes only, 
-          or just as easily exclude failing nodes
-          all the simple files that are found immediately under the specified directory are taken as hostnames
-          XXX it would make sense to check there is at least one dot in their name, but I'm not sure about that yet
-          Here again if things work out we return
+
+          This is for use together with the --mark option, so that one
+          can easily select reachable nodes only, or just as easily
+          exclude failing nodes
+
+          all the simple files that are found immediately under the
+          specified directory are taken as hostnames
+
+          XXX it would make sense to check there is at least one dot
+          in their name, but I'm not sure about that yet Here again if
+          things work out we return
+
             True, [ hostname1, ...]
 
         * otherwise
@@ -67,6 +75,7 @@ class Apssh:
             False, []
           e.g. the file exists but cannot be parsed
           not sure this truly is useful
+
         """
         names = []
         located = self.locate_file(target)
@@ -173,35 +182,6 @@ class Apssh:
                 self.formatter = ColonFormatter(verbose = verbose)
         return self.formatter
     
-    def load_private_keys(self):
-        """
-        Here's how `apssh` locates private keys:
-
-        * 1. If no keys are specified using the `-k` command line option 
-
-        1.a if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable,
-          and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent
-          (**NOTE:** use `ssh-add` for managing the keys known to the agent)
-
-        1.b otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
-
-        * 2. If keys are specified on the command line
-
-        2.c That exact list is used for loading private keys
-        """
-        filenames = []
-        if self.parsed_args.keys is None:
-            keys = load_agent_keys()
-            # agent has stuff : let's use it
-            if keys:
-                self.loaded_private_keys = keys
-                return
-            filenames = default_private_keys
-        else:
-            filenames = self.parsed_args.keys
-        keys = [ import_private_key(filename) for filename in filenames ]
-        self.loaded_private_keys = [ k for k in keys if k ]
-
     def main(self):
         self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
@@ -311,11 +291,8 @@ class Apssh:
             exit(1)
 
         ### load keys
-        self.load_private_keys()
-        if self.parsed_args.debug:
-            print("We have found {} keys".format(len(self.loaded_private_keys)))
-            for key in self.loaded_private_keys:
-                print(key)
+        self.loaded_private_keys = load_private_keys(self.parsed_args.keys,
+                                                     args.verbose or args.debug)
         if not self.loaded_private_keys:
             print("Could not find any usable key - exiting")
             exit(1)

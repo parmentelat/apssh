@@ -5,7 +5,7 @@ import asyncio
 import asyncssh
 import socket
 
-from .util import print_stderr
+from .util import print_stderr, check_arg_type
 from .config import default_remote_workdir
 # a dummy formatter
 from .formatters import Formatter, ColonFormatter
@@ -134,11 +134,15 @@ class SshProxy:
                  gateway=None, # if another SshProxy is given, it is used as an ssh gateway
                  formatter=None, verbose=None, 
                  debug=False, timeout=30):
+        # early type verifications
+        check_arg_type(hostname, str, "SshProxy.hostname")
         self.hostname = hostname
+        check_arg_type(username, (str, type(None)), "SshProxy.username")
         self.username = username
         self.known_hosts = known_hosts
         self.keys = keys if keys is not None else []
         self.port = int(port)
+        check_arg_type(gateway, (SshProxy, type(None)), "SshProxy.gateway")
         self.gateway = gateway
         # if not specified we use a basic colon formatter 
         self.formatter = formatter or ColonFormatter("")

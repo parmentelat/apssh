@@ -6,8 +6,9 @@
 
 from asynciojobs.job import AbstractJob
 
+from .util import check_arg_type
 from .sshproxy import SshProxy
-from .keys import load_agent_keys
+from .keys import load_private_keys
 
 from .commands import AbstractCommand, Run
 
@@ -69,6 +70,7 @@ class SshJob(AbstractJob):
                  verbose = None,
                  keep_connection = False,
                  *args, **kwds):
+        check_arg_type(node, SshNode, "SshJob.node")
         self.node = node
         if not isinstance(node, SshProxy):
             print("WARNING: SshJob node field must be an instance of SshProxy (or a subclass like SshNode)")

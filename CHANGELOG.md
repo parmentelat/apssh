@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.7.1 - 2017 Dec 19
+
+* add argument checking for the node part of a SshJob
+
 ## 0.7.0 - 2017 Dec 19
 
 * add type verifications when building a SshProxy instance

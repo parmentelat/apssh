@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.7.0 - 2017 Dec 19
+
+* add type verifications when building a SshProxy instance
+* new policy to locate defaut private keys: if no key can be found
+  at the ssh agent, then ~/.ssh/id_rsa and ~/.ssh/id_dsa are
+  used.
+
 ## 0.6.3 - 2017 Nov 2
 
 * bugfix

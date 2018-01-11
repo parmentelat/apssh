@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.7.3 - 2018 Jan 11
+
+* implement #6 about showing local subprocesses (LocalNode)
+  stdout and stderr on the fly
+
 ## 0.7.2 - 2018 Jan 11
 
 * bugfix - type checks were too stringent on LocalNode

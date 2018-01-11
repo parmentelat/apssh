@@ -52,17 +52,27 @@ class LocalNode:
             for line in str_chunk.split("\n"):
                 self.formatter.line(line + "\n", datatype, self.hostname)
 
+    # from this clue here
+    # https://stackoverflow.com/questions/17190221/subprocess-popen\
+    #-cloning-stdout-and-stderr-both-to-terminal-and-variables/25960956#25960956
+    async def read_and_display(self, stream, datatype):
+        """
+        read (process stdout or stderr) stream line by line
+        until EOF and dispatch lines in formatter - using self.lines(... datatype)
+        """
+        while True:
+            line = await stream.readline()
+            if not line:
+                return
+            self.lines(line, datatype)
+    
     async def run(self, command):
         try:
             process = await asyncio.create_subprocess_shell(
                 command, stdout = PIPE, stderr = PIPE)
-            # xxx big room for improvement: show stuff on the fly
-            # and not in a big batch at the end
-            stdout, stderr = await process.communicate()
-            # xxx unsure what datatype should be
-            # except that it's not EXTENDED_DATA_STDERR
-            self.lines(stdout, 0)
-            self.lines(stderr, EXTENDED_DATA_STDERR)
+            stdout, stderr = await asyncio.gather(
+                self.read_and_display(process.stdout, 0),
+                self.read_and_display(process.stderr, EXTENDED_DATA_STDERR))
             retcod = await process.wait()
             return retcod
         except Exception as e:

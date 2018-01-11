@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.7.2 - 2018 Jan 11
+
+* bugfix - type checks were too stringent on LocalNode
+
 ## 0.7.1 - 2017 Dec 19
 
 * add argument checking for the node part of a SshJob

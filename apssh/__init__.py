@@ -19,3 +19,5 @@ from .sshjob import SshNode, SshJob
 
 # localnode is helpful to add local commands in a scenario
 from .localnode import LocalNode
+
+from .version import version as __version__

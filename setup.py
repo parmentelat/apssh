@@ -3,7 +3,7 @@
 import sys
 import setuptools
 
-from apssh.version import version
+from apssh import __version__
 
 # check python version
 from sys import version_info
@@ -25,13 +25,13 @@ required_modules = [
 
 setuptools.setup(
     name             = "apssh",
-    version          = version,
+    version          = __version__,
     author           = "Thierry Parmentelat",
     author_email     = "thierry.parmentelat@inria.fr",
     description      = "Asynchroneous Parallel ssh",
     long_description = long_description,
     license          = "CC BY-SA 4.0",
-    download_url     = "http://github/build.onelab.eu/apssh/apssh-{v}.tar.gz".format(v=version),
+    download_url     = "http://github/build.onelab.eu/apssh/apssh-{v}.tar.gz".format(v=__version__),
     url              = "http://nepi-ng.inria.fr/apssh",
     packages         = [ 'apssh' ],
     install_requires = required_modules,

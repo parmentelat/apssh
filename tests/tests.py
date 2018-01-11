@@ -24,12 +24,17 @@ class Tests(unittest.TestCase):
         
     ########## all the ways to create a simple command
 
-    def run_one_job(self, job, details=False):
+    def run_one_job(self, job, *, details=False, expected=True):
         scheduler = Scheduler(job, verbose=True)
         orchestration = scheduler.orchestrate()
         scheduler.list(details = details)
+        if not orchestration:
+            scheduler.debrief()
         self.assertTrue(orchestration)
-        self.assertEqual(job.result(), 0)
+        if expected:
+            self.assertEqual(job.result(), 0)
+        else:
+            self.assertNotEqual(job.result(), 0)
 
     ########## singular command = 
     def test_s1(self):
@@ -144,11 +149,13 @@ class Tests(unittest.TestCase):
         self.assertEqual(node.formatter.get_capture(),"faraday\n")
 
     def test_logic1(self):
-        self.run_one_job(SshJob(node = self.gateway(),
-                                critical=False,
-                                commands = [ Run("false"),
-                                             Run("true") ],
-                                label = "should succeed"))
+        self.run_one_job(
+            SshJob(node = self.gateway(),
+                   critical=False,
+                   commands = [ Run("false"),
+                                Run("true") ],
+                   label = "should fail"),
+            expected = False)
         
     def test_logic2(self):
         todo = SshJob(node = self.gateway(),
@@ -207,6 +214,14 @@ class Tests(unittest.TestCase):
                                  Run("head < /dev/random > RANDOM", "-c", 2**20),
                                  Run("ls -l RANDOM"),
                                  Run("shasum RANDOM"),
+                             ]))
+
+    def test_run_local_command2(self):
+        self.run_one_job(# details = True,
+                         job = SshJob(
+                             node = LocalNode(),
+                             commands = [
+                                 Run("for i in $(seq 3); do echo line $i; sleep 1; done"),
                              ]))
 
     def test_commands_verbose(self):

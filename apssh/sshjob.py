@@ -70,9 +70,9 @@ class SshJob(AbstractJob):
                  verbose = None,
                  keep_connection = False,
                  *args, **kwds):
-        check_arg_type(node, SshNode, "SshJob.node")
+        check_arg_type(node, (SshNode, LocalNode), "SshJob.node")
         self.node = node
-        if not isinstance(node, SshProxy):
+        if not isinstance(node, (SshProxy, LocalNode)):
             print("WARNING: SshJob node field must be an instance of SshProxy (or a subclass like SshNode)")
         self.keep_connection = keep_connection
 

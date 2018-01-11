@@ -7,7 +7,10 @@ from .keys import load_private_keys, load_agent_keys, import_private_key
 from .sshproxy import SshProxy
 
 # how to format outputs
-from .formatters import RawFormatter, ColonFormatter, TimeColonFormatter, CaptureFormatter
+from .formatters import (
+    RawFormatter, TerminalFormatter,
+    ColonFormatter, TimeColonFormatter, CaptureFormatter
+)
 
 from .commands import Run, RunScript, RunString, Push, Pull
 

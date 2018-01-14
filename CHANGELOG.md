@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.7.4 - 2018 Jan 14
+
+* decidedly these type checks were botched
+
 ## 0.7.3 - 2018 Jan 11
 
 * implement #6 about showing local subprocesses (LocalNode)

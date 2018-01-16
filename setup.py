@@ -3,7 +3,9 @@
 import sys
 import setuptools
 
-from apssh import __version__
+# don't try to import the apssh package at this early point
+# as this would require asyncssh which might not be installed yet
+from apssh.version import version as __version__
 
 # check python version
 from sys import version_info

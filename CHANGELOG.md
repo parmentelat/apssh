@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.7.7 - 2018 Jan 16
+
+* defined dot_label() for nicer png graphs
+
 ## 0.7.6 - 2018 Jan 16
 
 * a second attempt to fix bogus pip install

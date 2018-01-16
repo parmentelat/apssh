@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.7.6 - 2018 Jan 16
+
+* a second attempt to fix bogus pip install
+
 ## 0.7.5 - 2018 Jan 16
 
 * an attempt to fix bogus pip install

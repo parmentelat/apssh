@@ -175,4 +175,14 @@ class SshJob(AbstractJob):
         first_details = self.commands[0].details()
         first_line = first_details.split("\n")[0]
         return first_line if len(self.commands) == 1 \
-            else first_line + " + {} others...".format(len(self.commands)-1)
+            else first_line + " + {}..".format(len(self.commands)-1)
+
+
+    def dot_label(self):
+        """
+        for producing png example files
+        multi-line output, with first nodename,
+        and then all the commands
+        """
+        lines = [self.node.hostname] + [ command.details() for command in self.commands]
+        return "\n".join(lines)

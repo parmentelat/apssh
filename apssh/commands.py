@@ -214,7 +214,7 @@ class RunScript(RunLocalStuff):
         super().__init__(args, includes, verbose, remote_basename, x11)
 
     def details(self):
-        return "*** RunScript " + self.local_basename + " " + self._args_line()
+        return "RunScript: " + self.local_basename + " " + self._args_line()
 
     async def co_install(self, node, remote_path):
         if not os.path.exists(self.local_script):
@@ -268,13 +268,13 @@ class RunString(RunLocalStuff):
     # if it's small let's show it all
     def details(self):
         if self.remote_name:
-            return "*** RunString " + self.remote_name + " " + self._args_line()
+            return "RunString: " + self.remote_name + " " + self._args_line()
         else:
             lines = self.script_body.split("\n")
             if len(lines) > 4:
-                return "*** RunString " + self.remote_basename + " " + self._args_line()
+                return "RunString: " + self.remote_basename + " " + self._args_line()
             else:
-                result  = "*** RunString: following script called with args "
+                result  = "RunString: following script called with args "
                 result += self._args_line() + "\n"
                 result += self.script_body
                 result += "***"
@@ -316,7 +316,7 @@ class Pull(AbstractCommand):
                    .format(len(self.remotepaths), self.remotepaths[0])
 
     def details(self):
-        return "Pull {} into {}".\
+        return "Pull: {} into {}".\
             format(self.remote_path(), self.localpath)
 
     async def co_run_remote(self, node):
@@ -359,7 +359,7 @@ class Push(AbstractCommand):
                    .format(len(self.localpaths), self.localpaths[0])
 
     def details(self):
-        return "push {} onto {}".\
+        return "Push: {} onto {}".\
             format(self.local_path(), self.remotepath)
         
     async def co_run_remote(self, node):

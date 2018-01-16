@@ -2,8 +2,9 @@
 
 import os.path
 import asyncio
-import asyncssh
 import socket
+
+import asyncssh
 
 from .util import print_stderr, check_arg_type
 from .config import default_remote_workdir

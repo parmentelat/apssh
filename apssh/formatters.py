@@ -1,7 +1,7 @@
 import sys
 import time
 import os
-import os.path
+from pathlib import Path
 import asyncio
 from asyncssh import EXTENDED_DATA_STDERR
 
@@ -177,9 +177,9 @@ class SubdirFormatter(VerboseFormatter):
         self._dir_checked = False
 
     def out(self, hostname):
-        return os.path.join(self.run_name, hostname)
+        return str(Path(self.run_name) / hostname)
     def err(self, hostname):
-        return os.path.join(self.run_name, "{}.err".format(hostname))
+        return str(Path(self.run_name) / "{}.err".format(hostname))
 
     def filename(self, hostname, datatype):
         return self.err(hostname) if datatype == EXTENDED_DATA_STDERR else self.out(hostname)
@@ -187,7 +187,7 @@ class SubdirFormatter(VerboseFormatter):
     def check_dir(self):
         # create directory if needed
         if not self._dir_checked:
-            if not os.path.isdir(self.run_name):
+            if not Path(self.run_name).is_dir():
                 os.makedirs(self.run_name)
             self._dir_checked = True
 

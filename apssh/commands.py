@@ -4,7 +4,7 @@
 # in particular this works fine only with remote processes whose output is text-based 
 # but well, right now I'm in a rush and would want to see stuff running...
 
-import os.path
+from pathlib import Path
 import random
 
 from asyncssh import EXTENDED_DATA_STDERR
@@ -166,7 +166,7 @@ class RunLocalStuff(AbstractCommand):
         if self.includes:
             # sequential is good enough
             for include in self.includes:
-                if not os.path.exists(include):
+                if not Path(include).exists():
                     print("include file {} not found -- skipped".format(include))
                     continue
                 self._verbose_message(node, "RunLocalStuff: pushing include {} in {}"
@@ -208,7 +208,7 @@ class RunScript(RunLocalStuff):
                  # if this is set, run bash -x
                  verbose = False):
         self.local_script = local_script
-        self.local_basename = os.path.basename(local_script)
+        self.local_basename = Path(local_script).name
         remote_basename = self.local_basename + '-' + self._random_id()
 
         super().__init__(args, includes, verbose, remote_basename, x11)
@@ -217,7 +217,7 @@ class RunScript(RunLocalStuff):
         return "RunScript: " + self.local_basename + " " + self._args_line()
 
     async def co_install(self, node, remote_path):
-        if not os.path.exists(self.local_script):
+        if not Path(self.local_script).exists():
             raise OSError("RunScript : {} not found - bailing out"\
                           .format(self.local_script))
         if not await node.put_file_s(
@@ -258,7 +258,7 @@ class RunString(RunLocalStuff):
         if remote_name:
             self.remote_name = remote_name
             # just in case
-            remote_basename = os.path.basename(self.remote_name)
+            remote_basename = Path(self.remote_name).name
             remote_basename += '-' + self._random_id()
         else:
             self.remote_name = ''

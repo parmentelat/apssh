@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
-import os.path
+import os
+from pathlib import Path
 from getpass import getpass
 import asyncio
 import asyncssh
@@ -17,11 +18,12 @@ def import_private_key(filename):
     Returns a (asyncssh) key object if successful, or None
     """
     sshkey = None
-    basename = os.path.basename(filename)
-    if not os.path.exists(filename):
+    path = Path(filename)
+    basename = path.name
+    if not path.exists():
         # print("No such key file {}".format(filename))
         return
-    with open(filename) as file:
+    with path.open() as file:
         data = file.read()
         try:
             sshkey = asyncssh.import_private_key(data)

@@ -1,6 +1,6 @@
 import unittest
 
-import os.path
+from pathlib import Path
 import string
 import random
 
@@ -111,14 +111,15 @@ class Tests(unittest.TestCase):
     ########## mixing stuff
     def test_mixed_commands(self):
         includes = [ "tests/inclusion.sh" ]
-        self.run_one_job(SshJob(node = self.gateway(),
-                                commands = [
-                                    RunScript("tests/needsinclude.sh", "run1", includes = includes),
-                                    Run("echo +++++; cat /etc/lsb-release; echo +++++"),
-                                    RunScript("tests/needsinclude.sh", "another", "run", includes = includes)
-                                ],
-                                label = 'script_commands'
-                            ))
+        self.run_one_job(
+            SshJob(node = self.gateway(),
+                   commands = [
+                       RunScript("tests/needsinclude.sh", "run1", includes = includes),
+                       Run("echo +++++; cat /etc/lsb-release; echo +++++"),
+                       RunScript("tests/needsinclude.sh", "another", "run", includes = includes)
+                   ],
+                   label = 'script_commands'
+            ))
 
     ##########
     ### NOTE
@@ -128,26 +129,29 @@ class Tests(unittest.TestCase):
     def test_local_string(self):
         with open("tests/script-with-args.sh") as reader:
             my_script = reader.read()
-        self.run_one_job(SshJob(node = self.gateway(),
-                                command = RunString(my_script, "foo", "bar", "tutu"),
-                                label = "test_local_string"))
-    
+        self.run_one_job(
+            SshJob(node = self.gateway(),
+                   command = RunString(my_script, "foo", "bar", "tutu"),
+                   label = "test_local_string"))
+        
     def test_local_string_includes(self):
         with open("tests/needsinclude.sh") as reader:
             my_script = reader.read()
-        self.run_one_job(SshJob(node = self.gateway(),
-                                command = RunString(my_script, "some", "'more text'",
-                                                    remote_name = "run-script-sample.sh",
-                                                    includes = [ "tests/inclusion.sh" ]),
-                                label = "test_local_string"))
-    
+        self.run_one_job(
+            SshJob(node = self.gateway(),
+                   command = RunString(my_script, "some", "'more text'",
+                                       remote_name = "run-script-sample.sh",
+                                       includes = [ "tests/inclusion.sh" ]),
+                   label = "test_local_string"))
+        
     ########## 
     def test_capture(self):
         node =  self.gateway(capture = True)
-        self.run_one_job(SshJob(node = node,
-                                command = "hostname",
-                                label = 'capture'))
-
+        self.run_one_job(
+            SshJob(node = node,
+                   command = "hostname",
+                   label = 'capture'))
+        
         self.assertEqual(node.formatter.get_capture(),"faraday\n")
 
     def test_logic1(self):
@@ -228,7 +232,7 @@ class Tests(unittest.TestCase):
 
     def test_commands_verbose(self):
         dummy_path = "tests/dummy-10"
-        dummy_file = os.path.basename(dummy_path)
+        dummy_file = Path(dummy_path).name
         scheduler = Scheduler()
         Sequence(
             SshJob(
@@ -305,7 +309,6 @@ xlsfonts | tail -5
         argv += [ 'hostname' ]
         self.run_apssh(argv)
         
-
     def test_targets4(self):
         filename = 'TARGETS4'
         with open(filename, 'w') as targets:
@@ -317,6 +320,8 @@ xlsfonts | tail -5
         argv += [ 'hostname' ]
         self.run_apssh(argv)
         
+    # this is one form used on r2lab, e.g. when doing map
+    # on the selected nodes
     def test_targets5(self):
         filename = 'TARGETS5'
         argv = []

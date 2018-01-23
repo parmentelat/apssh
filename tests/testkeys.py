@@ -13,7 +13,7 @@ class Tests(unittest.TestCase):
         test_names = [ 'id_rsa', 'id-pass' ]
 
         for test_name in test_names:
-            path = os.path.expanduser("~/.ssh/{}".format(test_name))
+            path = Path("~/.ssh/{}".format(test_name)).expanduser()
             print("========== importing key from {}".format(path))
             sshkey = import_private_key(path)
             print("-> got {}".format(sshkey))

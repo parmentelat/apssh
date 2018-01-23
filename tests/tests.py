@@ -12,6 +12,8 @@ from apssh import load_private_keys
 
 from apssh import TimeColonFormatter, ColonFormatter, CaptureFormatter
 
+from apssh.apssh import Apssh
+
 class Tests(unittest.TestCase):
 
     def gateway(self, capture = False):
@@ -273,5 +275,14 @@ xlsfonts | tail -5
                 command = [Run("echo without X11 $DISPLAY"),
                            Run("echo with X11 $DISPLAY", x11=True),
                            Run("xeyes", x11=True)]))
+
+    def test_targets1(self):
+        stub = Apssh()
+        argv = []
+        argv = ['-l', 'root']
+        argv += ['-t', 'faraday.inria.fr']
+        argv += [ 'hostname' ]
+        exitcode = Apssh().main(*argv)
+        self.assertEqual(exitcode, 0)
 
 unittest.main()    

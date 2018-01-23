@@ -182,7 +182,7 @@ class Apssh:
                 self.formatter = ColonFormatter(verbose = verbose)
         return self.formatter
     
-    def main(self):
+    def main(self, *test_argv):
         self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
         parser.add_argument("-s", "--script", action='store_true', default=False,
@@ -277,7 +277,10 @@ class Apssh:
                             on the local filesystem. This script is then copied over
                             to the remote system and serves as the command for remote execution""")
 
-        args = self.parsed_args = parser.parse_args()
+        if test_argv:
+            args = self.parsed_args = parser.parse_args(test_argv)
+        else:
+            args = self.parsed_args = parser.parse_args()
 
         ### helpers
         if args.version:

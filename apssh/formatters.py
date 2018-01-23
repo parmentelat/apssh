@@ -1,6 +1,7 @@
 import sys
 import time
-import os, os.path
+import os
+import os.path
 import asyncio
 from asyncssh import EXTENDED_DATA_STDERR
 
@@ -18,7 +19,7 @@ class Formatter:
     This class is an abstract class that allows to define
     how to handle the incoming line of a remote command
     plus various events pertaining to an ssh proxy
-    
+
     This object is expected to be created manually outside of SshProxy logic,
     and then passed to SshProxy
 
@@ -42,7 +43,7 @@ class Formatter:
 
     def _formatted_line(self, line, hostname=None, username=None):
         return time.strftime(self.format) \
-                   .replace("@line@",line) \
+                   .replace("@line@", line) \
                    .replace("@host@", hostname or "") \
                    .replace("@user@", "{}@".format(username) if username else "")
 
@@ -51,7 +52,7 @@ class Formatter:
         pass
 
     def connection_lost(self, hostname, exc, username):
-        pass    
+        pass
 
     def auth_completed(self, hostname, username):
         pass
@@ -60,8 +61,8 @@ class Formatter:
         pass
 
     def session_stop(self, hostname, command):
-        pass    
-    
+        pass
+
     def sftp_start(self, hostname):
         pass
     def sftp_stop(self, hostname):
@@ -70,9 +71,9 @@ class Formatter:
     # the bulk of the matter
     def line(self, line, datatype, hostname):
         pass
-        
+
 ########################################
-sep = 10*'='
+sep = 10 * '='
 
 class VerboseFormatter(Formatter):
     """
@@ -88,7 +89,7 @@ class VerboseFormatter(Formatter):
         if self.verbose:
             msg = "direct" if direct else "tunnelled"
             line = sep + " Connecting ({}) to {}@{}"\
-                   .format(msg, username, hostname)
+                .format(msg, username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
     def connection_lost(self, hostname, exc, username):
         # exception being not None means something went wrong
@@ -99,16 +100,16 @@ class VerboseFormatter(Formatter):
                          .format(username, hostname, exc.reason))
 #            print("code =", exc.code, "reason=", exc.reason)
         else:
-            adjective = "closed"            
+            adjective = "closed"
         if self.verbose:
             line = sep + " Connection {} to {}@{}"\
-                   .format(adjective, username, hostname)
+                .format(adjective, username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
 
     def auth_completed(self, hostname, username):
         if self.verbose:
             line = sep + " Authorization OK {}@{}"\
-                   .format(username, hostname)
+                .format(username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
 
     def session_start(self, hostname, command):
@@ -146,30 +147,30 @@ class RawFormatter(TerminalFormatter):
     """
     TerminalFormatter(format="@line@")
     """
-    def __init__(self, format, verbose = True):
+    def __init__(self, format, verbose=True):
         TerminalFormatter.__init__(self, "@line@", verbose)
-        
+
 class ColonFormatter(TerminalFormatter):
     """
     TerminalFormatter(format="@host@:@line@")
     """
-    def __init__(self, verbose = True):
+    def __init__(self, verbose=True):
         TerminalFormatter.__init__(self, "@user@@host@:@line@", verbose)
-        
+
 class TimeColonFormatter(TerminalFormatter):
     """
     TerminalFormatter(format="%H-%M-%S:@host@:@line@")
     """
-    def __init__(self, verbose = True):
+    def __init__(self, verbose=True):
         TerminalFormatter.__init__(self, "@time@:@host@:@line@", verbose)
-        
+
 ########################################
 class SubdirFormatter(VerboseFormatter):
     """
     Stores outputs in a subdirectory run_name, 
     in a file named after the hostname
     """
-    def __init__(self, run_name, verbose = True):
+    def __init__(self, run_name, verbose=True):
         self.verbose = verbose
         self.run_name = run_name
         Formatter.__init__(self, "@line@")
@@ -197,7 +198,8 @@ class SubdirFormatter(VerboseFormatter):
             with open(self.out(hostname), 'w') as out:
                 if self.verbose:
                     msg = "direct" if direct else "tunnelled"
-                    out.write("Connected ({}) to {}@{}\n".format(msg, username, hostname))
+                    out.write("Connected ({}) to {}@{}\n".format(
+                        msg, username, hostname))
         except OSError as e:
             print_stderr("File permission problem {}".format(e))
             exit(1)
@@ -217,7 +219,7 @@ class CaptureFormatter(VerboseFormatter):
     x=$(ssh hostname command)
     For now it just provides options to start and get capture
     """
-    def __init__(self, format = "@line@", verbose = True):
+    def __init__(self, format="@line@", verbose=True):
         VerboseFormatter.__init__(self, format, verbose)
         self.start_capture()
 

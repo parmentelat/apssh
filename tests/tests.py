@@ -276,13 +276,54 @@ xlsfonts | tail -5
                            Run("echo with X11 $DISPLAY", x11=True),
                            Run("xeyes", x11=True)]))
 
+    def run_apssh(self, command_line_as_list):
+        exitcode = Apssh().main(*command_line_as_list)
+        self.assertEqual(exitcode, 0)
+        
     def test_targets1(self):
-        stub = Apssh()
         argv = []
         argv = ['-l', 'root']
         argv += ['-t', 'faraday.inria.fr']
         argv += [ 'hostname' ]
-        exitcode = Apssh().main(*argv)
-        self.assertEqual(exitcode, 0)
+        self.run_apssh(argv)
+
+    def test_targets2(self):
+        argv = []
+        argv = ['-l', 'root']
+        argv += ['-t', 'faraday.inria.fr']
+        argv += ['-t', 'r2lab.inria.fr']
+        argv += [ 'hostname' ]
+        self.run_apssh(argv)
+
+    def test_targets3(self):
+        filename = 'TARGETS3'
+        with open(filename, 'w') as targets:
+            targets.write('root@r2lab.inria.fr\n')
+            targets.write('root@faraday.inria.fr\n')
+        argv = []
+        argv += [ '-t', filename ]
+        argv += [ 'hostname' ]
+        self.run_apssh(argv)
+        
+
+    def test_targets4(self):
+        filename = 'TARGETS4'
+        with open(filename, 'w') as targets:
+            targets.write('r2lab.inria.fr\n')
+            targets.write('faraday.inria.fr\n')
+        argv = []
+        argv += [ '-l', 'root' ]
+        argv += [ '-t', filename ]
+        argv += [ 'hostname' ]
+        self.run_apssh(argv)
+        
+    def test_targets5(self):
+        filename = 'TARGETS5'
+        argv = []
+        argv += [ '-l', 'root' ]
+        argv += [ '-t', "r2lab.inria.fr faraday.inria.fr" ]
+        argv += [ 'hostname' ]
+        self.run_apssh(argv)
+        
 
 unittest.main()    

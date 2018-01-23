@@ -9,6 +9,8 @@ from asyncssh import EXTENDED_DATA_STDERR
 from .formatters import ColonFormatter
 
 ##########
+
+
 class LocalNode:
     """
     For convenience and consistency, this class essentially
@@ -25,11 +27,11 @@ class LocalNode:
 
     `RunScript` et `RunString` are not yet implemented, 
     but would make sense of course
-    
+
     `Push` and `Pull` on the other hand are not supported
     """
 
-    def __init__(self, formatter = None, verbose = None):
+    def __init__(self, formatter=None, verbose=None):
         self.formatter = formatter or ColonFormatter()
         if verbose is not None:
             self.formatter.verbose = verbose
@@ -65,11 +67,11 @@ class LocalNode:
             if not line:
                 return
             self.lines(line, datatype)
-    
+
     async def run(self, command):
         try:
             process = await asyncio.create_subprocess_shell(
-                command, stdout = PIPE, stderr = PIPE)
+                command, stdout=PIPE, stderr=PIPE)
             stdout, stderr = await asyncio.gather(
                 self.read_and_display(process.stdout, 0),
                 self.read_and_display(process.stderr, EXTENDED_DATA_STDERR))
@@ -82,5 +84,3 @@ class LocalNode:
 
     async def close(self):
         pass
-
-

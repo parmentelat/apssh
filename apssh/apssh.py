@@ -23,6 +23,7 @@ from .sshjob import SshJob
 
 from .commands import Run, RunScript, RunString
 
+
 class Apssh:
     """
     Main class for apssh utility
@@ -295,7 +296,7 @@ class Apssh:
         parser.add_argument(
             "-V", "--version",
             action='store_true', default=False)
-        
+
         # the commands to run
         parser.add_argument(
             "commands", nargs=argparse.REMAINDER, type=str,
@@ -306,7 +307,7 @@ class Apssh:
             here should denote a (typically script) file **that must exist**
             on the local filesystem. This script is then copied over
             to the remote system and serves as the command for remote execution""")
-        
+
         if test_argv:
             args = self.parsed_args = parser.parse_args(test_argv)
         else:
@@ -397,7 +398,7 @@ class Apssh:
             for p, s in zip(proxies, results):
                 prefix = names[0] if s == 0 else names[None]
                 with (Path(subdir) / prefix / p.hostname).open("w") as mark:
-                    mark.write(s +"\n")
+                    mark.write(s + "\n")
 
         # xxx - when in gateway mode, the gateway proxy never gets disconnected
         # which probably is just fine

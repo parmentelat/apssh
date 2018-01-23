@@ -35,8 +35,13 @@ tags:
 .PHONY: tags
 
 ##########
+# xxx in theory this would do the trick
+# python3 -m unittest discover tests
+# but results in this error:
+# AttributeError: module '__main__' has no attribute 'discover'
 tests:
 	python3 tests/tests.py
+	python3 tests/testkeys.py
 
 .PHONY: tests
 

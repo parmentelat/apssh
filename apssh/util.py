@@ -1,5 +1,6 @@
 import sys
 
+
 def print_stderr(*args, **kwds):
     print(file=sys.stderr, *args, **kwds)
 
@@ -7,7 +8,7 @@ def print_stderr(*args, **kwds):
 def check_arg_type(instance, types, message):
     """
     raise ValueError of instance is not of any of the types
-    
+
     types parameter is passed to isinstance, so may be either
     a class or a tuple of classes
 

@@ -1,7 +1,7 @@
 # iteration 1 : use apssh's sshproxy as-is
 # the thing is, this implementation relies on formatters
 # which probably needs more work.
-# in particular this works fine only with remote processes whose output is text-based 
+# in particular this works fine only with remote processes whose output is text-based
 # but well, right now I'm in a rush and would want to see stuff running...
 
 from pathlib import Path
@@ -16,12 +16,14 @@ from asynciojobs.job import AbstractJob
 
 ####################
 # The base class for items that make a SshJob's commands
+
+
 class AbstractCommand:
 
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, self.command())
 
-    ### 
+    ###
     async def co_run_remote(self, node):
         """
         needs to be redefined
@@ -46,7 +48,7 @@ class AbstractCommand:
 class Run(AbstractCommand):
     """
     The most basic form of a command is to .. run a remote command
-        
+
     Example         `Run("tail", "-n", 1, "/etc/lsb-release")`
     or equivalently `Run("tail -n 1 /etc/lsb-release")`
 
@@ -66,17 +68,17 @@ class Run(AbstractCommand):
     # plus, maybe some day we'll need to add other keywords
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
-    def __init__(self, *argv, verbose = False, x11 = False):
+    def __init__(self, *argv, verbose=False, x11=False):
         self.argv = argv
         self.verbose = verbose
         self.x11 = x11
-        
+
     def details(self):
         return self.command()
 
     def command(self):
         # build the (remote) command to invoke
-        return " ".join( str(x) for x in self.argv )
+        return " ".join(str(x) for x in self.argv)
 
     async def co_run_remote(self, node):
         self._verbose_message(node, "Run: -> {}".format(self.command()))
@@ -84,23 +86,27 @@ class Run(AbstractCommand):
         connected = await node.connect_lazy()
         if not connected:
             return
-        node_run = await node.run(self.command(), x11_forwarding = self.x11)
-        self._verbose_message(node, "Run: {} <- {}".format(node_run, self.command()))
+        node_run = await node.run(self.command(), x11_forwarding=self.x11)
+        self._verbose_message(
+            node, "Run: {} <- {}".format(node_run, self.command()))
         return node_run
 
     async def co_run_local(self, localnode):
         self._verbose_message(localnode, "Run: -> {}".format(self.command()))
         retcod = await localnode.run(self.command())
-        self._verbose_message(localnode, "Run: {} <- {}".format(retcod, self.command()))
+        self._verbose_message(
+            localnode, "Run: {} <- {}".format(retcod, self.command()))
         return retcod
 
 ##### the base class for running a script provided locally
 # same as Run, but the command to run remotely is provided
 # as a local material, either a local file, or a python string
+
+
 class RunLocalStuff(AbstractCommand):
     """
     The base class for RunScript and RunString.
-    
+
     verbose = True means running the script with "bash -x" 
     which admittedly is a little hacky
 
@@ -111,6 +117,7 @@ class RunLocalStuff(AbstractCommand):
 
     fit26:bash: .apssh-remote/B3-wireless.sh: /bin/bash: bad interpreter: Text file busy
     """
+
     def __init__(self, args, includes, verbose, remote_basename, x11):
         self.args = args
         self.includes = includes
@@ -123,9 +130,9 @@ class RunLocalStuff(AbstractCommand):
         Generate a random string to avoid conflicting names 
         on the remote host
         """
-        return "".join(random.choice('abcdefghijklmnopqrstuvwxyz') 
-            for i in range(8))
-    
+        return "".join(random.choice('abcdefghijklmnopqrstuvwxyz')
+                       for i in range(8))
+
     def _args_line(self):
         return " ".join(str(x) for x in self.args)
 
@@ -142,27 +149,27 @@ class RunLocalStuff(AbstractCommand):
     async def co_run_remote(self, node):
         """
         The common behaviour for both classes is as follows
-        
+
         Method co_install(self) is invoked to push the local material
         over in default_remote_workdir/self.remote_basename
         it should raise an exception in case of failure
         """
         # we need the node to be connected by ssh and SFTP
         # and we need the remote work dir to be created
-        if not ( await node.sftp_connect_lazy()
-                 and await node.mkdir(default_remote_workdir)):
+        if not (await node.sftp_connect_lazy()
+                and await node.mkdir(default_remote_workdir)):
             # should never be here
             return
-        
-        remote_path =  default_remote_workdir + "/" + self.remote_basename
+
+        remote_path = default_remote_workdir + "/" + self.remote_basename
 
         # do the remote install - depending on the actual class
         await self.co_install(node, remote_path)
-        
+
         # make sure the remote script is executable - chmod 755
         permissions = 0o755
         await node.sftp_client.chmod(remote_path, permissions)
-        
+
         if self.includes:
             # sequential is good enough
             for include in self.includes:
@@ -173,18 +180,19 @@ class RunLocalStuff(AbstractCommand):
                                       .format(include, default_remote_workdir))
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/",
-                        follow_symlinks = True):
+                        follow_symlinks=True):
                     return
 
         # trigger it
         command = self.command()
         self._verbose_message(node, "RunLocalStuff: -> {}".format(command))
         node_run = await node.run(command, x11_forwarding=self.x11)
-        self._verbose_message(node, "RunLocalStuff: {} <- {}".format(node_run, command))
+        self._verbose_message(
+            node, "RunLocalStuff: {} <- {}".format(node_run, command))
         return node_run
-        
-    
-##### same but using a script that is available as a local file
+
+
+# same but using a script that is available as a local file
 class RunScript(RunLocalStuff):
     """
     A class to run a **local script file** on the remote system, 
@@ -198,15 +206,16 @@ class RunScript(RunLocalStuff):
     includes allows to specify a list of local files 
     that need to be copied over at the same location as the local script
     i.e. typically in ~/.apssh-remote
-    
+
     setting `x11=True` enables X11 forwarding
 
     if verbose is set, the remote script is run through `bash -x`
 
     """
-    def __init__(self, local_script, *args, includes = None, x11=False,                 
+
+    def __init__(self, local_script, *args, includes=None, x11=False,
                  # if this is set, run bash -x
-                 verbose = False):
+                 verbose=False):
         self.local_script = local_script
         self.local_basename = Path(local_script).name
         remote_basename = self.local_basename + '-' + self._random_id()
@@ -218,14 +227,16 @@ class RunScript(RunLocalStuff):
 
     async def co_install(self, node, remote_path):
         if not Path(self.local_script).exists():
-            raise OSError("RunScript : {} not found - bailing out"\
+            raise OSError("RunScript : {} not found - bailing out"
                           .format(self.local_script))
         if not await node.put_file_s(
                 self.local_script, remote_path,
-                follow_symlinks = True):
+                follow_symlinks=True):
             return
 
 #####
+
+
 class RunString(RunLocalStuff):
     """
     Much like RunScript, but the script to run remotely is expected
@@ -246,14 +257,14 @@ class RunString(RunLocalStuff):
 
     myscript = "#!/bin/bash\nfor arg in "$@"; do echo arg=$arg; done"
     RunString(myscript, "foo", "bar", 2, "arg3", remote_name = "echo-args.sh")
-    
+
     """
 
-    def __init__(self, script_body, *args, includes = None, x11=False,
+    def __init__(self, script_body, *args, includes=None, x11=False,
                  # the name under which the remote command will be installed
-                 remote_name = None,
+                 remote_name=None,
                  # if this is set, run bash -x
-                 verbose = False):
+                 verbose=False):
         self.script_body = script_body
         if remote_name:
             self.remote_name = remote_name
@@ -279,14 +290,17 @@ class RunString(RunLocalStuff):
                 result += self.script_body
                 result += "***"
                 return result
-    
+
     async def co_install(self, node, remote_path):
-        self._verbose_message(node, "RunString: pushing script into {}".format(remote_path))
+        self._verbose_message(
+            node, "RunString: pushing script into {}".format(remote_path))
         if not await node.put_string_script(
                 self.script_body, remote_path):
             return
 
 ####
+
+
 class Pull(AbstractCommand):
     """
     Retrieve remote files and stores them locally
@@ -297,7 +311,7 @@ class Pull(AbstractCommand):
     """
 
     def __init__(self, remotepaths, localpath,
-                 verbose = False,
+                 verbose=False,
                  # asyncssh's SFTP client get options
                  *args, **kwds):
         self.remotepaths = remotepaths
@@ -309,11 +323,11 @@ class Pull(AbstractCommand):
     def remote_path(self):
         paths = self.remotepaths
         if isinstance(self.remotepaths, str):
-            paths = [ paths ]
+            paths = [paths]
         return "remote path {}".format(paths[0]) \
             if len(paths) == 1 \
                else "{} remote path(s) starting with {}"\
-                   .format(len(self.remotepaths), self.remotepaths[0])
+            .format(len(self.remotepaths), self.remotepaths[0])
 
     def details(self):
         return "Pull: {} into {}".\
@@ -340,7 +354,7 @@ class Push(AbstractCommand):
     """
 
     def __init__(self, localpaths, remotepath,
-                 verbose = False,
+                 verbose=False,
                  # asyncssh's SFTP client put option
                  *args, **kwds):
         self.localpaths = localpaths
@@ -352,19 +366,19 @@ class Push(AbstractCommand):
     def local_path(self):
         paths = self.localpaths
         if isinstance(self.localpaths, str):
-            paths = [ paths ]
+            paths = [paths]
         return "local path {}".format(paths[0]) \
             if len(paths) == 1 \
                else "{} local path(s) starting with {}"\
-                   .format(len(self.localpaths), self.localpaths[0])
+            .format(len(self.localpaths), self.localpaths[0])
 
     def details(self):
         return "Push: {} onto {}".\
             format(self.local_path(), self.remotepath)
-        
+
     async def co_run_remote(self, node):
         self._verbose_message(node, "Push: localpaths={}, remotepath={}"
-                             .format(self.localpaths, self.remotepath))
+                              .format(self.localpaths, self.remotepath))
         await node.sftp_connect_lazy()
         await node.put_file_s(self.localpaths, self.remotepath,
                               *self.args, **self.kwds)

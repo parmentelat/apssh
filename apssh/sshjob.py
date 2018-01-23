@@ -1,7 +1,7 @@
 # use apssh's sshproxy mostly as-is, except for keys handling
 # the thing is, this implementation relies on formatters
 # which probably needs more work.
-# in particular this works fine only with remote processes whose output is text-based 
+# in particular this works fine only with remote processes whose output is text-based
 # but well, right now I'm in a rush and would want to see stuff running...
 
 from asynciojobs.job import AbstractJob
@@ -17,6 +17,8 @@ from .localnode import LocalNode
 ########## SshNode == SshProxy
 # it's mostly a matter of exposing a more meaningful name in this context
 # might need a dedicated formatter at some point
+
+
 class SshNode(SshProxy):
     """
     essentially similar to SshProxy but under a more meaningful name
@@ -24,14 +26,16 @@ class SshNode(SshProxy):
     single difference is that private keys are being loaded from the ssh agent 
     if none are passed to the constructor
 
-    """ 
+    """
+
     def __init__(self, *args, keys=None, **kwds):
         keys = keys if keys is not None else load_private_keys()
         SshProxy.__init__(self, *args, keys=keys, **kwds)
 
-########## a single kind of job
+# a single kind of job
 # that can involve several sorts of commands
 # as defined in command.py
+
 
 class SshJob(AbstractJob):
 
@@ -45,7 +49,7 @@ class SshJob(AbstractJob):
     If `verbose` is set to a non-None value, it is used to 
     set - and possibly override - the verbose value in all the
     `commands` in the job
-    
+
     commands can be set as either
 
     * (1) a list/tuple of AbstractCommands
@@ -63,61 +67,66 @@ class SshJob(AbstractJob):
 
     def __init__(self, node, command=None, commands=None,
                  # set to False if not set explicitly here
-                 forever = None,
+                 forever=None,
                  # set to True if not set explicitly here
-                 critical = None,
+                 critical=None,
                  # if set, propagate to all commands
-                 verbose = None,
-                 keep_connection = False,
+                 verbose=None,
+                 keep_connection=False,
                  *args, **kwds):
         check_arg_type(node, (SshProxy, LocalNode), "SshJob.node")
         self.node = node
         if not isinstance(node, (SshProxy, LocalNode)):
-            print("WARNING: SshJob node field must be an instance of SshProxy (or a subclass like SshNode)")
+            print(
+                "WARNING: SshJob node field must be an instance of SshProxy (or a subclass like SshNode)")
         self.keep_connection = keep_connection
 
         # use command or commands
         if command is None and commands is None:
             print("WARNING: SshJob requires either command or commands")
-            commands = [ Run("echo misformed SshJob - no commands nor commands") ]
+            commands = [
+                Run("echo misformed SshJob - no commands nor commands")]
         elif command and commands:
-            print("WARNING: SshJob created with command and commands - keeping the latter")
+            print(
+                "WARNING: SshJob created with command and commands - keeping the latter")
             commands = commands
         elif command:
             commands = command
         else:
             pass
-        
+
         # find out what really is meant here
         if not commands:
             # cannot tell which case in (1) (2) (3) (4)
             print("WARNING: SshJob requires a meaningful commands")
-            self.commands = [ Run("echo misformed SshJob - empty commands") ]
+            self.commands = [Run("echo misformed SshJob - empty commands")]
         elif isinstance(commands, str):
             # print("case (4)")
-            self.commands = [ Run(commands) ]
+            self.commands = [Run(commands)]
         elif isinstance(commands, AbstractCommand):
             # print("case (2)")
-            self.commands = [ commands ]
+            self.commands = [commands]
         elif isinstance(commands, (list, tuple)):
             # allows to insert None as a command
-            commands = [ c for c in commands if c]
+            commands = [c for c in commands if c]
             if not commands:
-                commands = [ Run("echo misformed SshJob - need at least one non-void command") ]
+                commands = [
+                    Run("echo misformed SshJob - need at least one non-void command")]
             elif isinstance(commands[0], AbstractCommand):
                 # print("case (1)")
                 # check the list is homogeneous
-                if not all( isinstance(c, AbstractCommand) for c in commands):
+                if not all(isinstance(c, AbstractCommand) for c in commands):
                     print("WARNING: commands must be a list of AbstractCommand objects")
                 self.commands = commands
             else:
                 # print("case (3)")
                 tokens = commands
                 command_args = (str(t) for t in tokens)
-                self.commands = [ Run (*command_args) ]
+                self.commands = [Run(*command_args)]
         else:
             print("WARNING: SshJob could not make sense of commands")
-            self.commands = [ Run("echo misformed SshJob - could not make sense of commands") ]
+            self.commands = [
+                Run("echo misformed SshJob - could not make sense of commands")]
 
         assert(len(self.commands) >= 1)
         assert(all(isinstance(c, AbstractCommand) for c in self.commands))
@@ -129,7 +138,8 @@ class SshJob(AbstractJob):
         # set defaults to pass to mother class
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
-        AbstractJob.__init__(self, forever=forever, critical=critical, *args, **kwds)
+        AbstractJob.__init__(self, forever=forever,
+                             critical=critical, *args, **kwds)
 
     async def co_run(self):
         """
@@ -157,7 +167,7 @@ class SshJob(AbstractJob):
                     # overall result is wrong
                     overall = result
         return overall
-        
+
     async def co_shutdown(self):
         """
         don't bother to terminate all the commands separately
@@ -166,17 +176,15 @@ class SshJob(AbstractJob):
         if not self.keep_connection:
             await self.node.close()
 
-
     def details(self):
         return "\n".join(["{}@{}:{}".format(self.node.username, self.node.hostname, c.details())
-                          for c in self.commands ])
+                          for c in self.commands])
 
     def default_label(self):
         first_details = self.commands[0].details()
         first_line = first_details.split("\n")[0]
         return first_line if len(self.commands) == 1 \
-            else first_line + " + {}..".format(len(self.commands)-1)
-
+            else first_line + " + {}..".format(len(self.commands) - 1)
 
     def dot_label(self):
         """
@@ -184,5 +192,6 @@ class SshJob(AbstractJob):
         multi-line output, with first nodename,
         and then all the commands
         """
-        lines = [self.node.hostname] + [ command.details() for command in self.commands]
+        lines = [self.node.hostname] + [command.details()
+                                        for command in self.commands]
         return "\n".join(lines)

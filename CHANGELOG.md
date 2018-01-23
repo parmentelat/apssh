@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.8.0 - 2018 Jan 23
+
+* replaced use of os.path with pathlib.Path
+* minor fixes
+
 ## 0.7.7 - 2018 Jan 16
 
 * defined dot_label() for nicer png graphs

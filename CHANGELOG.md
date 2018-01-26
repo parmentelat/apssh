@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.8.1 - 2018 Jan 26
+
+* bugfix - missing import os
+
 ## 0.8.0 - 2018 Jan 23
 
 * replaced use of os.path with pathlib.Path

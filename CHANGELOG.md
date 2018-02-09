@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.9.1 - 2018 Feb 9
+
+* Improved policy when using SshNode with no provided keys:
+  will first look for agent keys, and then if there is none, 
+  will look for private keys, prompting for passwords if found
+
 ## 0.8.1 - 2018 Jan 26
 
 * bugfix - missing import os

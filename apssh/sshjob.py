@@ -8,7 +8,7 @@ from asynciojobs.job import AbstractJob
 
 from .util import check_arg_type
 from .sshproxy import SshProxy
-from .keys import load_private_keys
+from .keys import load_private_keys, load_agent_keys
 
 from .commands import AbstractCommand, Run
 
@@ -29,7 +29,10 @@ class SshNode(SshProxy):
     """
 
     def __init__(self, *args, keys=None, **kwds):
-        keys = keys if keys is not None else load_private_keys()
+        if not keys:
+            keys = load_agent_keys()
+        if not keys:
+            keys = load_private_keys()
         SshProxy.__init__(self, *args, keys=keys, **kwds)
 
 # a single kind of job

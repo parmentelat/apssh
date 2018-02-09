@@ -71,7 +71,8 @@ PUBLISH-PATH = /var/www/nepi-ng/apssh
 EXCLUDES = .git
 RSYNC-EXCLUDES = $(foreach exc,$(EXCLUDES), --exclude $(exc))
 
-# invoked by restart-website.sh on r2lab
+# not used to refresh nepi-ng.inria.fr any more
+# since this website now redirects to readthedocs.io
 publish: sphinx
 	rsync -av $(RSYNC-EXCLUDES) --delete --delete-excluded ./ $(PUBLISH-PATH)/
 

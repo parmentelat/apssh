@@ -6,9 +6,7 @@
 
 In addition, `apssh` comes with a class `SshJob` that can be used in conjunction with `asynciojobs` to write scenarios that are more elaborate than just sending the same command on a bunch of hosts. This is presented in more details in `README-jobs.md`.
 
-## Full documentation
-
-This document, along with API reference doc, and changelog, is available at http://nepi-ng.inria.fr/apssh/
+This document, along with API reference doc, and changelog, is available at <https://nepi-ng.inria.fr/apssh/>
 
 ## How to get it
 

@@ -7,17 +7,18 @@ def print_stderr(*args, **kwds):
 
 def check_arg_type(instance, types, message):
     """
-    raise ValueError of instance is not of any of the types
+    raise ValueError if instance is not of any of the types
 
     types parameter is passed to isinstance, so may be either
     a class or a tuple of classes
 
     message would help identify the issue
 
-    example
-    check_arg_type("foo.bar", SshProxy, "SshProxy.gateway")
+    example:
+      check_arg_type("foo.bar", SshProxy, "SshProxy.gateway")
+
     would result in a ValueError labelled
-    SshProxy.gateway is expected to be an instance of SshProxy, got a str instead
+      SshProxy.gateway is expected to be an instance of SshProxy, got a str instead
     """
     if isinstance(instance, types):
         return

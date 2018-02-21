@@ -125,17 +125,21 @@ class VerboseClient(asyncssh.SSHClient):
 
 class SshProxy:
     """
-    a proxy that can connect to a remote, and then can run
-    several commands in the most general sense, i.e. including file transfers
+    A proxy essentially wraps an ssh connection. 
+    It can connect to a remote, and then can run several
+    commands in the most general sense, i.e. including file transfers.
 
-    its attached formatter is in charge of capturing the output of these commands.
-    default is to use a `ColonFormatter` that displays hostname:actual-output
+    The gateway parameter, when set, is another `SshProxy` instance,
+    that is then used as a proxy for tunnelling a 2-leg ssh
+    connection.
 
-    the verbose flag allows to get some user-level feedback on ssh negociation
-    permission denied messages and similar won't show up unless verbose is set
+    Its attached formatter is in charge of capturing the output of
+    these commands.  default is to use a `ColonFormatter` that
+    outputs lines like ``hostname:actual-output``
 
-    The gateway parameter, when set, is another `SshProxy` instance, that is then used
-    as a proxy for tunnelling a 2-leg ssh connection.
+    The verbose flag allows to get some user-level feedback on ssh
+    negociation. `Permission denied` messages and similar won't show up
+    unless verbose is set.
 
     """
 

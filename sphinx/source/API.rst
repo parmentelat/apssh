@@ -19,7 +19,7 @@ Formatters classes
 .. automodule:: apssh.formatters
 		:members:
 
-Jobs classes for asynciojobs
+Classes for ``nepi-ng`` (asynciojobs)
 ------------------------------
 
 .. automodule:: apssh.sshjob

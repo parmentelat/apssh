@@ -21,10 +21,20 @@ from .localnode import LocalNode
 
 class SshNode(SshProxy):
     """
-    essentially similar to SshProxy but under a more meaningful name
 
-    single difference is that private keys are being loaded from the ssh agent 
-    if none are passed to the constructor
+    Similar to the :py:obj:`apssh.sshproxy.SshProxy`; the differences
+    are in the handling of default values at construction time:
+
+    * `username` defaults to "root" if unspecified
+
+    * `keys` when not specified, this class will first try to load your
+    ssh agent keys; if no key can be found this way, `SshNode` will
+    attempt to import the default ssh keys located in ``~/.ssh/id_rsa``
+    and ``~/.ssh/id_dsa``.
+
+    An instance of `SshNode` typically is needed to create a 
+    :py:obj:`apssh.sshjob.SshJob` instance, that defines a batch of commands
+    or file transfers to run in sequence on that node.
 
     """
 

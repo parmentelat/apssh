@@ -105,9 +105,9 @@ class Run(AbstractCommand):
 
 class RunLocalStuff(AbstractCommand):
     """
-    The base class for RunScript and RunString.
+    The base class for ``RunScript`` and ``RunString``.
 
-    verbose = True means running the script with "bash -x" 
+    `verbose = True` means running the script with "bash -x" 
     which admittedly is a little hacky
 
     Both classes need to generate random names for the remote command.
@@ -255,8 +255,9 @@ class RunString(RunLocalStuff):
 
     Example:
 
-    myscript = "#!/bin/bash\nfor arg in "$@"; do echo arg=$arg; done"
-    RunString(myscript, "foo", "bar", 2, "arg3", remote_name = "echo-args.sh")
+    ``myscript = "#!/bin/bash\\nfor arg in "$@"; do echo arg=$arg; done"``
+
+    ``RunString(myscript, "foo", "bar", 2, "arg3", remote_name = "echo-args.sh")``
 
     """
 

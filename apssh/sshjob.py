@@ -38,12 +38,14 @@ class SshNode(SshProxy):
 
     """
 
-    def __init__(self, *args, keys=None, **kwds):
+    def __init__(self, hostname, *, username=None, keys=None, **kwds):
+        if username is None:
+            username = "root"
         if not keys:
             keys = load_agent_keys()
         if not keys:
             keys = load_private_keys()
-        SshProxy.__init__(self, *args, keys=keys, **kwds)
+        SshProxy.__init__(self, hostname, username=username, keys=keys, **kwds)
 
 # a single kind of job
 # that can involve several sorts of commands

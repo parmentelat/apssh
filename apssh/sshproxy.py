@@ -143,8 +143,11 @@ class SshProxy:
 
     """
 
-    def __init__(self, hostname, username=None, known_hosts=None, keys=None, port=22,
-                 gateway=None,  # if another SshProxy is given, it is used as an ssh gateway
+    def __init__(self, hostname, *, username=None,
+                 gateway=None,  # if another SshProxy is given
+                                # it is used as an ssh gateway
+                 keys=None, # this class has no smart way to guess for keys
+                 known_hosts=None, port=22,
                  formatter=None, verbose=None,
                  debug=False, timeout=30):
         # early type verifications

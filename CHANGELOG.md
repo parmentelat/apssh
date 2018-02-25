@@ -1,5 +1,13 @@
 # ChangeLog
 
+## 0.9.2 - 2018 Feb 25
+
+* SshProxy/SshNode have a modified signature
+  * single parameter hostname
+  * all the rest are now keyword-only parameters
+  * warning, this might break some scripts
+* doc uses new sphinx theme
+
 ## 0.9.1 - 2018 Feb 9
 
 * Improved policy when using SshNode with no provided keys:

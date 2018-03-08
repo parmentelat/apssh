@@ -33,9 +33,8 @@ setuptools.setup(
     description      = "Asynchroneous Parallel ssh",
     long_description = long_description,
     license          = "CC BY-SA 4.0",
-    download_url     = "http://github/build.onelab.eu/apssh/apssh-{v}.tar.gz".format(v=__version__),
-    url              = "http://nepi-ng.inria.fr/apssh",
-    packages         = [ 'apssh' ],
+    url              = "http://apssh.readthedocs.io/",
+    packages         = ['apssh'],
     install_requires = required_modules,
     classifiers = [
         "Development Status :: 4 - Beta",

@@ -288,13 +288,29 @@ class Tests(unittest.TestCase):
                 command=[Run("echo $DISPLAY", x11=True),
                          Run("xlsfonts | head -5", x11=True),
                          RunString("""#!/bin/bash
-echo tail this time
+echo tail -5 on xlsfonts
 xlsfonts | tail -5
 """, x11=True)]))
 
-    # same but with xterm, so it will hang, so don't call it test_*
+    ##########
+    # some variants involving xterm
+    # so they will hang, someone needs to type control-d to end them
+    # this is why we don't call then test_*
+
+    # on faraday 
+    def xterm_1hop(self):
+        self.run_one_job(
+            job=SshJob(
+                node=self.gateway(),
+                command=[
+                    Run("echo without x11, DISPLAY=$DISPLAY"),
+                    Run("echo with x11, DISPLAY=$DISPLAY", x11=True),
+                    RunString("""#!/bin/bash
+xterm
+""", x11=True)]))
+
     # fit01 must be turned on
-    def xeyes(self):
+    def xeyes_2hops(self):
         node = SshNode(hostname="faraday.inria.fr",
                        username="root",
                        gateway=self.gateway())
@@ -356,4 +372,5 @@ xlsfonts | tail -5
         self.run_apssh(argv)
 
 
-unittest.main()
+if __name__ == '__main__':
+    unittest.main()

@@ -285,11 +285,19 @@ class Tests(unittest.TestCase):
         self.run_one_job(
             job=SshJob(
                 node=self.gateway(),
-                command=[Run("echo $DISPLAY", x11=True),
-                         Run("xlsfonts | head -5", x11=True),
-                         RunString("""#!/bin/bash
-echo tail -5 on xlsfonts
-xlsfonts | tail -5
+                commands=[
+                    Run("echo DISPLAY=$DISPLAY", x11=True),
+                    Run("xlsfonts | head -5", x11=True),
+                ]))
+
+    def test_x11_shell(self):
+        self.run_one_job(
+            job=SshJob(
+                node=self.gateway(),
+                command=[
+                    Run("echo DISPLAY=$DISPLAY", x11=True),
+                    RunString("""#!/bin/bash
+xlsfonts | head -5
 """, x11=True)]))
 
     ##########
@@ -297,29 +305,39 @@ xlsfonts | tail -5
     # so they will hang, someone needs to type control-d to end them
     # this is why we don't call then test_*
 
-    # on faraday 
-    def xterm_1hop(self):
-        self.run_one_job(
-            job=SshJob(
-                node=self.gateway(),
-                command=[
-                    Run("echo without x11, DISPLAY=$DISPLAY"),
-                    Run("echo with x11, DISPLAY=$DISPLAY", x11=True),
-                    RunString("""#!/bin/bash
+    def _run_xterm_node_shell(self, node, shell):
+        if shell:
+            xterm_command = RunString("""#!/bin/bash
 xterm
-""", x11=True)]))
-
-    # fit01 must be turned on
-    def xeyes_2hops(self):
-        node = SshNode(hostname="faraday.inria.fr",
-                       username="root",
-                       gateway=self.gateway())
+""", x11=True)
+        else:
+            xterm_command = Run("xterm", x11=True)
         self.run_one_job(
             job=SshJob(
                 node=node,
-                command=[Run("echo without X11 $DISPLAY"),
-                         Run("echo with X11 $DISPLAY", x11=True),
-                         Run("xeyes", x11=True)]))
+                command=[
+                    Run("echo without x11, DISPLAY=$DISPLAY"),
+                    Run("echo with x11, DISPLAY=$DISPLAY", x11=True),
+                    xterm_command,
+                    ]))
+                    
+    # on faraday 
+    def xterm_1hop(self):
+        self._run_xterm_node_shell(self.gateway(), False)
+    def xterm_1hop_shell(self):
+        self._run_xterm_node_shell(self.gateway(), True)
+
+    # fit23 must be turned on
+    def node_2hops(self):
+        return SshNode(hostname="fit23",
+                       username="root",
+                       gateway=self.gateway())
+
+    def xterm_2hops(self):
+        self._run_xterm_node_shell(self.node_2hops(), False)
+    def xterm_2hops_shell(self):
+        self._run_xterm_node_shell(self.node_2hops(), True)
+
 
     def run_apssh(self, command_line_as_list):
         exitcode = Apssh().main(*command_line_as_list)

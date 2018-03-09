@@ -39,11 +39,10 @@ tags:
 # python3 -m unittest discover tests
 # but results in this error:
 # AttributeError: module '__main__' has no attribute 'discover'
-tests:
-	python3 tests/tests.py
-	python3 tests/testkeys.py
+tests test:
+	python3 -m unittest
 
-.PHONY: tests
+.PHONY: tests test
 
 # actually install
 infra:

@@ -7,11 +7,15 @@ The SshProxy class
 .. automodule:: apssh.sshproxy
 		:members:
 
+-----
+
 Commands classes
 ------------------------------
 
 .. automodule:: apssh.commands
 		:members:
+
+-----
 
 Formatters classes
 ------------------------------
@@ -19,19 +23,25 @@ Formatters classes
 .. automodule:: apssh.formatters
 		:members:
 
+-----
+
 Classes for ``nepi-ng`` (asynciojobs)
-------------------------------
+-------------------------------------
 
 .. automodule:: apssh.sshjob
 		:members:
 .. automodule:: apssh.localnode
 		:members:
 
+-----
+
 Tools to deal with keys 
 ------------------------------
 		   
 .. automodule:: apssh.keys 
 		:members: 
+
+-----
 
 The apssh binary implementation
 ----------------------------------------

@@ -28,9 +28,9 @@ class SshNode(SshProxy):
     * `username` defaults to "root" if unspecified
 
     * `keys` when not specified, this class will first try to load your
-    ssh agent keys; if no key can be found this way, `SshNode` will
-    attempt to import the default ssh keys located in ``~/.ssh/id_rsa``
-    and ``~/.ssh/id_dsa``.
+       ssh agent keys; if no key can be found this way, `SshNode` will
+       attempt to import the default ssh keys located in ``~/.ssh/id_rsa``
+       and ``~/.ssh/id_dsa``.
 
     An instance of `SshNode` typically is needed to create a 
     :py:obj:`apssh.sshjob.SshJob` instance, that defines a batch of commands
@@ -55,29 +55,36 @@ class SshNode(SshProxy):
 class SshJob(AbstractJob):
 
     """
-    A asynciojobs Job object that is set to 
+    A asynciojobs `Job` object that is set to 
     run a command, or list of commands, remotely
 
-    As a subclass of `AbstractJob`, this allows you to
-    set the `forever` and `critical` flags
+    As a subclass of ``AbstractJob``, this allows you to
+    set the ``forever`` and ``critical`` flags
 
-    If `verbose` is set to a non-None value, it is used to 
+    If ``verbose`` is set to a non-None value, it is used to 
     set - and possibly override - the verbose value in all the
     `commands` in the job
 
-    commands can be set as either
+    ``commands`` can be set as either
 
-    * (1) a list/tuple of AbstractCommands
-      e.g.     commands = [ Run(..), RunScript(...), ..]
-    * (2) a single instance of AbstractCommand
-      e.g.     commands = RunScript(...)
-    * (3) a list/tuple of strings -> a single Run object is created
-      e.g.     commands = [ "uname", "-a" ]
-    * (4) a single string
-      e.g.     commands = "uname -a"
+    * (1) a list/tuple of ``AbstractCommand`` objects e.g.::
 
-    For convenience, you can set commands = or command = 
-    (but make sure to give exactly one of both)
+    commands = [ Run(..), RunScript(...), ..]
+
+    * (2) a single instance of ``AbstractCommand``, e.g.::
+
+        commands = RunScript(...)
+
+    * (3) a list/tuple of strings, in which case a single ``Run`` object is created, e.g.::
+
+        commands = [ "uname", "-a" ]
+
+    * (4) a single string, here again a single ``Run`` object is created, e.g.::
+
+        commands = "uname -a"
+
+    For convenience, you can set either ``commands`` or ``command``, 
+    it is equivalent but make sure to give exactly one of both.
     """
 
     def __init__(self, node, command=None, commands=None,

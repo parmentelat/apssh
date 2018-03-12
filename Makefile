@@ -54,7 +54,7 @@ check:
 
 
 ########## sphinx
-sphinx:
+sphinx doc html:
 	$(MAKE) -C sphinx html
 
 sphinx-clean:
@@ -62,7 +62,7 @@ sphinx-clean:
 
 all-sphinx: readme-clean readme sphinx
 
-.PHONY: sphinx sphinx-clean all-sphinx
+.PHONY: sphinx doc html sphinx-clean all-sphinx
 
 ##########
 pep8:

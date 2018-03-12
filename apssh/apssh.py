@@ -52,8 +52,9 @@ class Apssh:
 
         * a filename
           Searched also in ~/.apssh
-          If the provided filename exists and could be parsed, returned object will be
-            True, [ hostname1, ...]
+          If the provided filename exists and could be parsed, returned object will be::
+
+              True, [ hostname1, ...]
 
         * a directory name
 
@@ -64,19 +65,22 @@ class Apssh:
           all the simple files that are found immediately under the
           specified directory are taken as hostnames
 
-          XXX it would make sense to check there is at least one dot
-          in their name, but I'm not sure about that yet Here again if
-          things work out we return
+          *Note: it would make sense to check there is at least one dot
+          in their name, but I'm not sure about that yet.* Here again if
+          things work out we return::
 
-            True, [ hostname1, ...]
+              True, [ hostname1, ...]
 
-        * otherwise
-          the target is then expected a string passed to -t on the command line,
-          so it is simply split according to white spaces before being returned as
-            True, [ hostname1, ...]
+        * otherwise, the target is then expected a string passed 
+          to -t on the command line, so it is simply split according 
+          to white spaces before being returned as::
 
-        * If anything goes wrong, return code is 
-            False, []
+              True, [ hostname1, ...]
+
+        * If anything goes wrong, return code is::
+
+              False, []
+
           e.g. the file exists but cannot be parsed
           not sure this truly is useful
 

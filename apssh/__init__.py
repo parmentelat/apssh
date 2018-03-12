@@ -1,3 +1,6 @@
+from .version import version as __version__
+
+# protect for install-time when dependencies are not yet installed
 try:
     import asyncssh
 
@@ -23,4 +26,3 @@ try:
 except:
     print("Warning: could not import module asyncssh")
 
-from .version import version as __version__

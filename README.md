@@ -6,7 +6,7 @@
 
 In addition, `apssh` comes with a class `SshJob` that can be used in conjunction with `asynciojobs` to write scenarios that are more elaborate than just sending the same command on a bunch of hosts. This is presented in more details in `README-jobs.md`.
 
-This document, along with API reference doc, and changelog, is available at <https://nepi-ng.inria.fr/apssh/>
+This document, along with API reference doc, and changelog, is available at <http://apssh.readthedocs.io/>
 
 ## How to get it
 
@@ -275,4 +275,5 @@ $ apssh -l root -t PLE.alive.5 -tc uname -r \; hostname
 * brewing something like `appush` and `appull` sounds pretty straightforward, and could turn out most useful; some day probably
 * current output system can only properly handle commands output that are **text-based**; if your remote command produces binary data instead, you must redirect its output on the remote system, and fetch the results later on; note that the binary command `apssh` has no option for doing that, but the library has 2 objects `Pull` and `Push` for doing this in a more elaborate scenario (see README-jobs.md).
 * better tests coverage would not hurt !?!
-* probably a lot more features are required for more advanced usages.. Please send suggestions to *thierry dot parmentelat at inria.fr*
+* probably a lot more features are required for more advanced usages,
+ feel free to fill in issues at <https://github.com/parmentelat/apssh>.

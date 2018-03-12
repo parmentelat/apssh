@@ -69,7 +69,7 @@ class SshJob(AbstractJob):
 
     * (1) a list/tuple of ``AbstractCommand`` objects e.g.::
 
-    commands = [ Run(..), RunScript(...), ..]
+        commands = [ Run(..), RunScript(...), ..]
 
     * (2) a single instance of ``AbstractCommand``, e.g.::
 

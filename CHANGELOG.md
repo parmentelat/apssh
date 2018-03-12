@@ -1,5 +1,14 @@
 # ChangeLog
 
+## 0.9.3 - 2018 Mar 13
+
+* *Warning*: a disruptive change in the constructor for SshProxy/SshNode
+  has been introduced; from now on, all parameters but the hostname are keyword-only parameters
+* the underlying asyncssh is now expected to support *x11_forwarding*,
+  there no longer is a fallback if not
+* adopted new doc loayout with no source/ subdir in sphinx/
+
+
 ## 0.9.2 - 2018 Feb 25
 
 * SshProxy/SshNode have a modified signature

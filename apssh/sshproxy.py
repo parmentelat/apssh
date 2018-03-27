@@ -421,7 +421,7 @@ class SshProxy:
         creates remotefile and uses script_body as its contents
         also chmod's remotefile to 755
         """
-        self.sftp_connect_lazy()
+        await self.sftp_connect_lazy()
         sftp_attrs = asyncssh.SFTPAttrs()
         sftp_attrs.permissions = 0o755
         try:

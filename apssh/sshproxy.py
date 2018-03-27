@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
 import asyncio
-import socket
 
 import asyncssh
 
 from .util import print_stderr, check_arg_type
-from .config import default_remote_workdir
 # a dummy formatter
-from .formatters import Formatter, ColonFormatter
+from .formatters import ColonFormatter
 
 
 class _LineBasedSession(asyncssh.SSHClientSession):
@@ -24,7 +22,7 @@ class _LineBasedSession(asyncssh.SSHClientSession):
         typically a session will have one Channel for stdout and one for stderr
 
         aggregates text as it comes in
-        .buffer: gathers the full contents 
+        .buffer: gathers the full contents
         .line: the current line
         """
 
@@ -125,7 +123,7 @@ class VerboseClient(asyncssh.SSHClient):
 
 class SshProxy:
     """
-    A proxy essentially wraps an ssh connection. 
+    A proxy essentially wraps an ssh connection.
     It can connect to a remote, and then can run several
     commands in the most general sense, i.e. including file transfers.
 
@@ -161,7 +159,7 @@ class SshProxy:
         check_arg_type(gateway, (SshProxy, type(None)), "SshProxy.gateway")
         self.gateway = gateway
         # if not specified we use a basic colon formatter
-        self.formatter = formatter or ColonFormatter("")
+        self.formatter = formatter or ColonFormatter()
         if verbose is not None:
             self.formatter.verbose = verbose
         self.debug = debug
@@ -213,7 +211,7 @@ class SshProxy:
 
     async def connect_lazy(self):
         """
-        Connect if needed - uses a lock to ensure only one connection will 
+        Connect if needed - uses a lock to ensure only one connection will
         take place even if several calls are done at the same time
         """
         async with self._connect_lock:
@@ -369,7 +367,7 @@ class SshProxy:
             return True
         try:
             self.debug_line("actual creation of {}".format(remotedir))
-            retcod = await self.sftp_client.mkdir(remotedir)
+            await self.sftp_client.mkdir(remotedir)
             return True
         except asyncssh.sftp.SFTPError as e:
             self.debug_line(
@@ -383,13 +381,13 @@ class SshProxy:
         put a local file - or files - as a remote
 
         args and kwds are passed along to the underlying asyncssh's sftp client
-        typically: preserve, recurse and follow_symlinks are honored like in 
+        typically: preserve, recurse and follow_symlinks are honored like in
 
         http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
 
         returns True if all went well, or raise exception
         """
-        sftp_connected = await self.sftp_connect_lazy()
+        await self.sftp_connect_lazy()
         try:
             self.debug_line(
                 "Running SFTP put with {} -> {}".format(localpaths, remotepath))
@@ -407,7 +405,7 @@ class SshProxy:
 
         http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.get
         """
-        sftp_connected = await self.sftp_connect_lazy()
+        await self.sftp_connect_lazy()
         try:
             self.debug_line(
                 "Running SFTP get with {} -> {}".format(remotepaths, localpath))
@@ -423,7 +421,7 @@ class SshProxy:
         creates remotefile and uses script_body as its contents
         also chmod's remotefile to 755
         """
-        sftp_connected = self.sftp_connect_lazy()
+        self.sftp_connect_lazy()
         sftp_attrs = asyncssh.SFTPAttrs()
         sftp_attrs.permissions = 0o755
         try:

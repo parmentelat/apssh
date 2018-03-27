@@ -1,3 +1,7 @@
+"""
+SshNode and LocalNode
+"""
+
 import asyncio
 
 import os
@@ -7,6 +11,10 @@ from subprocess import PIPE
 from asyncssh import EXTENDED_DATA_STDERR
 
 from .formatters import ColonFormatter
+
+from .sshproxy import SshProxy
+
+from .keys import load_private_keys, load_agent_keys
 
 ##########
 
@@ -25,7 +33,7 @@ class LocalNode:
 
     Allows you to create local commands using `Run`
 
-    `RunScript` et `RunString` are not yet implemented, 
+    `RunScript` et `RunString` are not yet implemented,
     but would make sense of course
 
     `Push` and `Pull` on the other hand are not supported
@@ -84,3 +92,45 @@ class LocalNode:
 
     async def close(self):
         pass
+
+
+########## SshNode == SshProxy
+
+# use apssh's sshproxy mostly as-is, except for keys handling
+# the thing is, this implementation relies on formatters
+# which probably needs more work.
+# in particular this works fine only with remote processes whose output is text-based
+# but well, right now I'm in a rush and would want to see stuff running...
+
+
+# it's mostly a matter of exposing a more meaningful name in this context
+# might need a dedicated formatter at some point
+
+
+class SshNode(SshProxy):
+    """
+
+    Similar to the :py:obj:`apssh.sshproxy.SshProxy`; the differences
+    are in the handling of default values at construction time:
+
+    * `username` defaults to "root" if unspecified
+
+    * `keys` when not specified, this class will first try to load your
+       ssh agent keys; if no key can be found this way, `SshNode` will
+       attempt to import the default ssh keys located in ``~/.ssh/id_rsa``
+       and ``~/.ssh/id_dsa``.
+
+    An instance of `SshNode` typically is needed to create a
+    :py:obj:`apssh.sshjob.SshJob` instance, that defines a batch of commands
+    or file transfers to run in sequence on that node.
+
+    """
+
+    def __init__(self, hostname, *, username=None, keys=None, **kwds):
+        if username is None:
+            username = "root"
+        if not keys:
+            keys = load_agent_keys()
+        if not keys:
+            keys = load_private_keys()
+        SshProxy.__init__(self, hostname, username=username, keys=keys, **kwds)

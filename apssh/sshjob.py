@@ -1,51 +1,11 @@
-# use apssh's sshproxy mostly as-is, except for keys handling
-# the thing is, this implementation relies on formatters
-# which probably needs more work.
-# in particular this works fine only with remote processes whose output is text-based
-# but well, right now I'm in a rush and would want to see stuff running...
-
 from asynciojobs.job import AbstractJob
 
 from .util import check_arg_type
 from .sshproxy import SshProxy
-from .keys import load_private_keys, load_agent_keys
+from .nodes import LocalNode
 
 from .commands import AbstractCommand, Run
 
-from .localnode import LocalNode
-
-########## SshNode == SshProxy
-# it's mostly a matter of exposing a more meaningful name in this context
-# might need a dedicated formatter at some point
-
-
-class SshNode(SshProxy):
-    """
-
-    Similar to the :py:obj:`apssh.sshproxy.SshProxy`; the differences
-    are in the handling of default values at construction time:
-
-    * `username` defaults to "root" if unspecified
-
-    * `keys` when not specified, this class will first try to load your
-       ssh agent keys; if no key can be found this way, `SshNode` will
-       attempt to import the default ssh keys located in ``~/.ssh/id_rsa``
-       and ``~/.ssh/id_dsa``.
-
-    An instance of `SshNode` typically is needed to create a 
-    :py:obj:`apssh.sshjob.SshJob` instance, that defines a batch of commands
-    or file transfers to run in sequence on that node.
-
-    """
-
-    def __init__(self, hostname, *, username=None, keys=None, **kwds):
-        if username is None:
-            username = "root"
-        if not keys:
-            keys = load_agent_keys()
-        if not keys:
-            keys = load_private_keys()
-        SshProxy.__init__(self, hostname, username=username, keys=keys, **kwds)
 
 # a single kind of job
 # that can involve several sorts of commands
@@ -55,13 +15,13 @@ class SshNode(SshProxy):
 class SshJob(AbstractJob):
 
     """
-    A asynciojobs `Job` object that is set to 
+    A asynciojobs `Job` object that is set to
     run a command, or list of commands, remotely
 
     As a subclass of ``AbstractJob``, this allows you to
     set the ``forever`` and ``critical`` flags
 
-    If ``verbose`` is set to a non-None value, it is used to 
+    If ``verbose`` is set to a non-None value, it is used to
     set - and possibly override - the verbose value in all the
     `commands` in the job
 
@@ -83,11 +43,11 @@ class SshJob(AbstractJob):
 
         commands = "uname -a"
 
-    For convenience, you can set either ``commands`` or ``command``, 
+    For convenience, you can set either ``commands`` or ``command``,
     it is equivalent but make sure to give exactly one of both.
     """
 
-    def __init__(self, node, command=None, commands=None,
+    def __init__(self, node, *args, command=None, commands=None,
                  # set to False if not set explicitly here
                  forever=None,
                  # set to True if not set explicitly here
@@ -95,12 +55,9 @@ class SshJob(AbstractJob):
                  # if set, propagate to all commands
                  verbose=None,
                  keep_connection=False,
-                 *args, **kwds):
+                 **kwds):
         check_arg_type(node, (SshProxy, LocalNode), "SshJob.node")
         self.node = node
-        if not isinstance(node, (SshProxy, LocalNode)):
-            print(
-                "WARNING: SshJob node field must be an instance of SshProxy (or a subclass like SshNode)")
         self.keep_connection = keep_connection
 
         # use command or commands
@@ -150,13 +107,13 @@ class SshJob(AbstractJob):
             self.commands = [
                 Run("echo misformed SshJob - could not make sense of commands")]
 
-        assert(len(self.commands) >= 1)
-        assert(all(isinstance(c, AbstractCommand) for c in self.commands))
+        assert len(self.commands) >= 1
+        assert all(isinstance(c, AbstractCommand) for c in self.commands)
 
         # propagate the verbose flag on all commands if set
         if verbose is not None:
-            for command in self.commands:
-                command.verbose = verbose
+            for propagate in self.commands:
+                propagate.verbose = verbose
         # set defaults to pass to mother class
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
@@ -167,10 +124,9 @@ class SshJob(AbstractJob):
         """
         run all commands - i.e. call co_prepare and co_exec
         if the last command does not return 0, then an exception is raised
-        so if this job is critical it will abort orchestration 
+        so if this job is critical it will abort orchestration
         """
         # the commands are of course sequential, so we wait for one before we run the next
-        last_command = self.commands[-1]
         overall = 0
         for command in self.commands:
             if isinstance(self.node, LocalNode):

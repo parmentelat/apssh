@@ -19,10 +19,11 @@ try:
     from .commands import Run, RunScript, RunString, Push, Pull
 
     # jobs for asynciojobs
-    from .sshjob import SshNode, SshJob
+    from .sshjob import SshJob
 
-    # localnode is helpful to add local commands in a scenario
-    from .localnode import LocalNode
+    # SshNode is just an SshProxy with a slightly different
+    #  default for keys management
+    # LocalNode is helpful to add local commands in a scenario
+    from .nodes import SshNode, LocalNode
 except:
     print("Warning: could not import module asyncssh")
-

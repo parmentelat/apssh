@@ -1,18 +1,9 @@
-# iteration 1 : use apssh's sshproxy as-is
-# the thing is, this implementation relies on formatters
-# which probably needs more work.
-# in particular this works fine only with remote processes whose output is text-based
-# but well, right now I'm in a rush and would want to see stuff running...
-
 from pathlib import Path
 import random
 
 from asyncssh import EXTENDED_DATA_STDERR
 
-from apssh.sshproxy import SshProxy
 from apssh.config import default_remote_workdir
-
-from asynciojobs.job import AbstractJob
 
 ####################
 # The base class for items that make a SshJob's commands
@@ -44,7 +35,10 @@ class AbstractCommand:
             message += "\n"
         node.formatter.line(message, EXTENDED_DATA_STDERR, node.hostname)
 
-##### The usual
+    def command(self):
+        return "AbstractCommand.command() needs to be redefined"
+
+
 class Run(AbstractCommand):
     """
     The most basic form of a command is to .. run a remote command
@@ -52,7 +46,7 @@ class Run(AbstractCommand):
     Example         `Run("tail", "-n", 1, "/etc/lsb-release")`
     or equivalently `Run("tail -n 1 /etc/lsb-release")`
 
-    The actual command run remotely is obtained by 
+    The actual command run remotely is obtained by
     concatenating the string representation of each argv
     and separating them with a space
 
@@ -98,7 +92,7 @@ class Run(AbstractCommand):
             localnode, "Run: {} <- {}".format(retcod, self.command()))
         return retcod
 
-##### the base class for running a script provided locally
+# the base class for running a script provided locally
 # same as Run, but the command to run remotely is provided
 # as a local material, either a local file, or a python string
 
@@ -107,7 +101,7 @@ class RunLocalStuff(AbstractCommand):
     """
     The base class for ``RunScript`` and ``RunString``.
 
-    `verbose = True` means running the script with "bash -x" 
+    `verbose = True` means running the script with "bash -x"
     which admittedly is a little hacky
 
     Both classes need to generate random names for the remote command.
@@ -125,9 +119,10 @@ class RunLocalStuff(AbstractCommand):
         self.remote_basename = remote_basename
         self.x11 = x11
 
-    def _random_id(self):
+    @staticmethod
+    def _random_id():
         """
-        Generate a random string to avoid conflicting names 
+        Generate a random string to avoid conflicting names
         on the remote host
         """
         return "".join(random.choice('abcdefghijklmnopqrstuvwxyz')
@@ -195,7 +190,7 @@ class RunLocalStuff(AbstractCommand):
 # same but using a script that is available as a local file
 class RunScript(RunLocalStuff):
     """
-    A class to run a **local script file** on the remote system, 
+    A class to run a **local script file** on the remote system,
     but with arguments passed exactly like with `Run`
 
     Example:
@@ -203,7 +198,7 @@ class RunScript(RunLocalStuff):
     run a local script located in ../foo.sh with specified args:
         RunScript("../foo.sh", "arg1", 2, "arg3")
 
-    includes allows to specify a list of local files 
+    includes allows to specify a list of local files
     that need to be copied over at the same location as the local script
     i.e. typically in ~/.apssh-remote
 
@@ -245,7 +240,7 @@ class RunString(RunLocalStuff):
     `remote_name`, if provided, will tell how the created script
     should be named on the remote node - it is randomly generated if not specified
 
-    `includes` allows to specify a list of local files 
+    `includes` allows to specify a list of local files
     that need to be copied over at the same location as the local script
     i.e. typically in ~/.apssh-remote
 
@@ -281,16 +276,14 @@ class RunString(RunLocalStuff):
     def details(self):
         if self.remote_name:
             return "RunString: " + self.remote_name + " " + self._args_line()
-        else:
-            lines = self.script_body.split("\n")
-            if len(lines) > 4:
-                return "RunString: " + self.remote_basename + " " + self._args_line()
-            else:
-                result  = "RunString: following script called with args "
-                result += self._args_line() + "\n"
-                result += self.script_body
-                result += "***"
-                return result
+        lines = self.script_body.split("\n")
+        if len(lines) > 4:
+            return "RunString: " + self.remote_basename + " " + self._args_line()
+        result = "RunString: following script called with args "
+        result += self._args_line() + "\n"
+        result += self.script_body
+        result += "***"
+        return result
 
     async def co_install(self, node, remote_path):
         self._verbose_message(
@@ -312,9 +305,10 @@ class Pull(AbstractCommand):
     """
 
     def __init__(self, remotepaths, localpath,
+                 *args,
                  verbose=False,
                  # asyncssh's SFTP client get options
-                 *args, **kwds):
+                 **kwds):
         self.remotepaths = remotepaths
         self.localpath = localpath
         self.verbose = verbose
@@ -355,9 +349,9 @@ class Push(AbstractCommand):
     """
 
     def __init__(self, localpaths, remotepath,
+                 *args,
                  verbose=False,
-                 # asyncssh's SFTP client put option
-                 *args, **kwds):
+                 **kwds):
         self.localpaths = localpaths
         self.remotepath = remotepath
         self.verbose = verbose

@@ -42,8 +42,8 @@ class Formatter:
 
     time_format = "%H-%M-%S"
 
-    def __init__(self, format):
-        self.format = format.replace("@time@", self.time_format)
+    def __init__(self, custom_format):
+        self.format = custom_format.replace("@time@", self.time_format)
 
     def _formatted_line(self, line, hostname=None, username=None):
         return time.strftime(self.format) \
@@ -79,7 +79,7 @@ class Formatter:
 
 
 ########################################
-sep = 10 * '='
+SEP = 10 * '='
 
 
 class VerboseFormatter(Formatter):
@@ -88,14 +88,14 @@ class VerboseFormatter(Formatter):
     if verbose is specified
     """
 
-    def __init__(self, format, verbose):
+    def __init__(self, custom_format, verbose):
         self.verbose = verbose
-        Formatter.__init__(self, format)
+        Formatter.__init__(self, custom_format)
 
     def connection_made(self, hostname, username, direct):
         if self.verbose:
             msg = "direct" if direct else "tunnelled"
-            line = sep + " Connecting ({}) to {}@{}"\
+            line = SEP + " Connecting ({}) to {}@{}"\
                 .format(msg, username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
 
@@ -110,34 +110,34 @@ class VerboseFormatter(Formatter):
         else:
             adjective = "closed"
         if self.verbose:
-            line = sep + " Connection {} to {}@{}"\
+            line = SEP + " Connection {} to {}@{}"\
                 .format(adjective, username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
 
     def auth_completed(self, hostname, username):
         if self.verbose:
-            line = sep + " Authorization OK {}@{}"\
+            line = SEP + " Authorization OK {}@{}"\
                 .format(username, hostname)
             print_stderr(self._formatted_line(line, hostname, username))
 
     def session_start(self, hostname, command):
         if self.verbose:
-            line = sep + " Session started for {}".format(command)
+            line = SEP + " Session started for {}".format(command)
             print_stderr(self._formatted_line(line, hostname))
 
     def session_stop(self, hostname, command):
         if self.verbose:
-            line = sep + " Session ended for {}".format(command)
+            line = SEP + " Session ended for {}".format(command)
             print_stderr(self._formatted_line(line, hostname))
 
     def sftp_start(self, hostname):
         if self.verbose:
-            line = sep + " SFTP subsystem started"
+            line = SEP + " SFTP subsystem started"
             print_stderr(self._formatted_line(line, hostname))
 
     def sftp_stop(self, hostname):
         if self.verbose:
-            line = sep + " SFTP subsystem stopped"
+            line = SEP + " SFTP subsystem stopped"
             print_stderr(self._formatted_line(line, hostname))
 
 
@@ -160,7 +160,7 @@ class RawFormatter(TerminalFormatter):
     TerminalFormatter(format="@line@")
     """
 
-    def __init__(self, format, verbose=True):
+    def __init__(self, *, verbose=True):
         TerminalFormatter.__init__(self, "@line@", verbose)
 
 
@@ -169,7 +169,7 @@ class ColonFormatter(TerminalFormatter):
     TerminalFormatter(format="@host@:@line@")
     """
 
-    def __init__(self, verbose=True):
+    def __init__(self, *, verbose=True):
         TerminalFormatter.__init__(self, "@user@@host@:@line@", verbose)
 
 
@@ -178,7 +178,7 @@ class TimeColonFormatter(TerminalFormatter):
     TerminalFormatter(format="%H-%M-%S:@host@:@line@")
     """
 
-    def __init__(self, verbose=True):
+    def __init__(self, *, verbose=True):
         TerminalFormatter.__init__(self, "@time@:@host@:@line@", verbose)
 
 ########################################
@@ -186,14 +186,13 @@ class TimeColonFormatter(TerminalFormatter):
 
 class SubdirFormatter(VerboseFormatter):
     """
-    Stores outputs in a subdirectory run_name, 
+    Stores outputs in a subdirectory run_name,
     in a file named after the hostname
     """
 
-    def __init__(self, run_name, verbose=True):
-        self.verbose = verbose
+    def __init__(self, run_name, *, verbose=True):
         self.run_name = run_name
-        Formatter.__init__(self, "@line@")
+        VerboseFormatter.__init__(self, "@line@", verbose)
         self._dir_checked = False
 
     def out(self, hostname):
@@ -243,8 +242,8 @@ class CaptureFormatter(VerboseFormatter):
     For now it just provides options to start and get capture
     """
 
-    def __init__(self, format="@line@", verbose=True):
-        VerboseFormatter.__init__(self, format, verbose)
+    def __init__(self, custom_format="@line@", verbose=True):
+        VerboseFormatter.__init__(self, custom_format, verbose)
         self.start_capture()
 
     def start_capture(self):

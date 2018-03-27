@@ -22,4 +22,5 @@ class Tests(unittest.TestCase):
             print("Found in agent: {}".format(key))
 
 
-unittest.main()
+if __name__ == '__main__':
+    unittest.main()

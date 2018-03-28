@@ -274,16 +274,8 @@ class RunString(RunLocalStuff):
 
     # if it's small let's show it all
     def details(self):
-        if self.remote_name:
-            return "RunString: " + self.remote_name + " " + self._args_line()
-        lines = self.script_body.split("\n")
-        if len(lines) > 4:
-            return "RunString: " + self.remote_basename + " " + self._args_line()
-        result = "RunString: following script called with args "
-        result += self._args_line() + "\n"
-        result += self.script_body
-        result += "***"
-        return result
+        remote_name = self.remote_name or '[no_remote_name]'
+        return "RunString: " + remote_name + " " + self._args_line()
 
     async def co_install(self, node, remote_path):
         self._verbose_message(

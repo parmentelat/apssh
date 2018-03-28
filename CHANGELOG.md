@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.9.4 - 2018 Mar 28
+
+* revisited graphical rendering of RunString
+* pylint'ed
+* code layout changed, SshNode and LocalNode in nodes.py
+
 ## 0.9.3 - 2018 Mar 13
 
 * *Warning*: a disruptive change in the constructor for SshProxy/SshNode
@@ -20,7 +26,7 @@
 ## 0.9.1 - 2018 Feb 9
 
 * Improved policy when using SshNode with no provided keys:
-  will first look for agent keys, and then if there is none, 
+  will first look for agent keys, and then if there is none,
   will look for private keys, prompting for passwords if found
 
 ## 0.8.1 - 2018 Jan 26
@@ -249,21 +255,21 @@
 
 ## 0.0.8 - 2016 Sep 8
 
-* script mode still runs in remote home directory, does not cd in .apssh 
+* script mode still runs in remote home directory, does not cd in .apssh
 
 ## 0.0.7 - 2016 Sep 7
 
 * `--target` and `--exclude` can be used with a directory
 
   This is useful in combination with `--mark`, so that the second run can easily focus on successful nodes
-  
+
 ```
 # first pass to determine nodes that are responding
 apssh -o pass1 --mark -t MYNODES hostname
 # second pass: focus on successful nodes
 apssh -o pass2 -t pass1/0ok/ -f elaborate-script.sh
 ```
-  
+
 * added the `--dry-run`/`-n` option to just see the selected nodes
 
 ## 0.0.6 - 2016 Sep 6

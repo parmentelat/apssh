@@ -6,12 +6,27 @@ wc -l /etc/passwd";
 "02: faraday.inria.fr
 ls /etc/passwd
 wc -l /etc/passwd" -> "03: faraday.inria.fr
-RunString: following script called with args 
-#!/usr/bin/env bash
-echo with RunsString on $(hostname) at $(date)***";
+RunString: [no_remote_name] ";
 "03: faraday.inria.fr
-RunString: following script called with args 
-#!/usr/bin/env bash
-echo with RunsString on $(hostname) at $(date)***" -> "04: faraday.inria.fr
+RunString: [no_remote_name] " -> "04: faraday.inria.fr
 RunScript: testbasic.sh ";
+"04: faraday.inria.fr
+RunScript: testbasic.sh " -> "05: faraday.inria.fr
+wc -l /etc/passwd
+RunString: show-host-date 
+RunScript: testbasic.sh ";
+"05: faraday.inria.fr
+wc -l /etc/passwd
+RunString: show-host-date 
+RunScript: testbasic.sh " -> "06: faraday.inria.fr
+RunString: [no_remote_name] 10";
+"06: faraday.inria.fr
+RunString: [no_remote_name] 10" -> "07: faraday.inria.fr
+RunString: short-show-args 10";
+"07: faraday.inria.fr
+RunString: short-show-args 10" -> "08: faraday.inria.fr
+RunString: [no_remote_name] 100 200 300 400";
+"08: faraday.inria.fr
+RunString: [no_remote_name] 100 200 300 400" -> "09: faraday.inria.fr
+RunString: long-show-args 1000 2000 3000 4000";
 }

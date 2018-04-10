@@ -126,7 +126,8 @@ class SshJob(AbstractJob):
         if the last command does not return 0, then an exception is raised
         so if this job is critical it will abort orchestration
         """
-        # the commands are of course sequential, so we wait for one before we run the next
+        # the commands are of course sequential,
+        # so we wait for one before we run the next
         overall = 0
         for command in self.commands:
             if isinstance(self.node, LocalNode):
@@ -155,7 +156,9 @@ class SshJob(AbstractJob):
             await self.node.close()
 
     def details(self):
-        return "\n".join(["{}@{}:{}".format(self.node.username, self.node.hostname, c.details())
+        return "\n".join(["{}@{}:{}".format(self.node.username,
+                                            self.node.hostname,
+                                            c.details())
                           for c in self.commands])
 
     def default_label(self):

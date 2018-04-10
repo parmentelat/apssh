@@ -7,10 +7,9 @@
 
 import os
 from pathlib import Path
-import time
 import argparse
 
-from asynciojobs import Scheduler, Job
+from asynciojobs import Scheduler
 
 from .util import print_stderr
 from .config import (default_time_name, default_timeout, default_username,
@@ -71,8 +70,8 @@ class Apssh:
 
               True, [ hostname1, ...]
 
-        * otherwise, the target is then expected a string passed 
-          to -t on the command line, so it is simply split according 
+        * otherwise, the target is then expected a string passed
+          to -t on the command line, so it is simply split according
           to white spaces before being returned as::
 
               True, [ hostname1, ...]
@@ -126,7 +125,7 @@ class Apssh:
         try:
             user, hostname = target.split('@')
             return user, hostname
-        except:
+        except Exception as e:
             return self.parsed_args.login, target
 
     def create_proxies(self, gateway):
@@ -201,7 +200,7 @@ class Apssh:
         # scope - on what hosts
         parser.add_argument(
             "-s", "--script", action='store_true', default=False,
-            help="""If this flag is present, the first element of the remote command 
+            help="""If this flag is present, the first element of the remote command
             is assumed to be either the name of a local script, or, if this is not found,
             the body of a local script, that will be copied over
             before being executed remotely.
@@ -210,23 +209,23 @@ class Apssh:
             """.format(default_remote_workdir))
         parser.add_argument(
             "-i", "--includes", dest='includes', default=[], action='append',
-            help="""for script mode only : a list of local files that are pushed remotely 
+            help="""for script mode only : a list of local files that are pushed remotely
             together with the local script, and in the same location; useful when you want to
             to run remotely a shell script that sources other files; remember that on the remote
             end all files (scripts and includes) end up in the same location""")
         parser.add_argument(
             "-t", "--target", dest='targets', action='append', default=[],
             help="""
-            specify targets (additive); at least one is required; each target can be either 
+            specify targets (additive); at least one is required; each target can be either
             * a space-separated list of hostnames
             * the name of a file containing hostnames
-            * the name of a directory containing files named after hostnames; 
+            * the name of a directory containing files named after hostnames;
             see e.g. the --mark option
             """)
         parser.add_argument(
             "-x", "--exclude", dest='excludes', action='append', default=[],
             help="""
-            like --target, but for specifying exclusions; 
+            like --target, but for specifying exclusions;
             for now there no wildcard mechanism is supported here;
             also the order in which --target and --exclude options are mentioned does not matter;
             use --dry-run to only check for the list of applicable hosts
@@ -263,10 +262,10 @@ class Apssh:
             help="equivalent to --format '@time@:@host@:@line@")
         parser.add_argument(
             "-f", "--format", default=None, action='store',
-            help="""specify output format, which may include 
-* `strftime` formats like e.g. %%H-%%M, and one of the following: 
-* @user@ for the remote username, 
-* @host@ for target hostname, 
+            help="""specify output format, which may include
+* `strftime` formats like e.g. %%H-%%M, and one of the following:
+* @user@ for the remote username,
+* @host@ for the target hostname,
 * @line@ for the actual line output (which contains the actual newline)
 * @time@ is a shorthand for %%H-%%M-%%S""")
 
@@ -281,7 +280,7 @@ class Apssh:
             "-m", "--mark", default=False, action='store_true',
             help="""
             available with the -d and -o options only.
-            
+
             When specified, then for all nodes there will be a file created
             in the output subdir, named either 0ok/<hostname> for successful nodes,
             or 1failed/<hostname> for the other ones.
@@ -306,8 +305,8 @@ class Apssh:
         parser.add_argument(
             "commands", nargs=argparse.REMAINDER, type=str,
             help="""
-            command to run remotely. 
-            
+            command to run remotely.
+
             If the -s or --script option is provided, the first argument
             here should denote a (typically script) file **that must exist**
             on the local filesystem. This script is then copied over
@@ -365,13 +364,15 @@ class Apssh:
             script = args.commands[0]
             if Path(script).exists():
                 if args.verbose:
-                    print("Warning: file not found '{}'\n => Using RunString instead".format(script))
+                    print("Warning: file not found '{}'\n => Using RunString instead".
+                          format(script))
                 command_class = RunString
 
         jobs = [SshJob(node=proxy,
                        scheduler=scheduler,
                        critical=False,
-                       command=command_class(*args.commands, **extra_kwds_args)) for proxy in proxies]
+                       command=command_class(*args.commands, **extra_kwds_args))
+                for proxy in proxies]
 
         ok = scheduler.orchestrate(jobs_window=window)
         results = [job.result() for job in scheduler.jobs]

@@ -27,7 +27,7 @@ class TestBasic(unittest.TestCase):
                 node=gateway,
                 commands=[
                     RunString("#!/usr/bin/env bash\n"
-                              "echo with RunsString on $(hostname) at $(date)"),
+                              "echo with RunString on $(hostname) at $(date)"),
                 ]),
             SshJob(
                 node=gateway,

@@ -24,7 +24,9 @@ class AbstractCommand:
 
     # descriptive views, required by SshJob
     def details(self):
-        "used by SshJob to conveniently show the inside of a Job"
+        """
+        used by SshJob to conveniently show the inside of a Job
+        """
         return "AbstractCommand.details needs to be redefined"
 
     # extra messages go to stderr and are normally formatted

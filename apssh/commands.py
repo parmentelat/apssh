@@ -143,6 +143,10 @@ class RunLocalStuff(AbstractCommand):
             command = "bash -x " + command
         return command
 
+    async def co_install(self, node, remote_path):
+        print("coroutine method co_install"
+              " needs to be redefined on yuor RunLocalStuff subclass")
+
     async def co_run_remote(self, node):
         """
         The common behaviour for both classes is as follows

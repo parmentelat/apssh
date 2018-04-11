@@ -1,12 +1,21 @@
+"""
+A set of helper functions for the apssh package
+"""
+
 import sys
 
 
 def print_stderr(*args, **kwds):
+    """
+    A shorthand for ``print()`` but on standard error
+    """
     print(file=sys.stderr, *args, **kwds)
 
 
 def check_arg_type(instance, types, message):
     """
+    The basic brick for explicit type checking in the apssh code
+
     raise ValueError if instance is not of any of the types
 
     types parameter is passed to isinstance, so may be either
@@ -17,16 +26,18 @@ def check_arg_type(instance, types, message):
     example:
       check_arg_type("foo.bar", SshProxy, "SshProxy.gateway")
 
-    would result in a ValueError labelled
-      SshProxy.gateway is expected to be an instance of SshProxy, got a str instead
+    would result in a ValueError labelled with string
+
+    >  SshProxy.gateway is expected to be an instance of SshProxy,
+    >  got a str instead
     """
     if isinstance(instance, types):
         return
 
-    ### build a some helpful error message
+    # build a helpful error message
 
     # expected
-    def atomic_typename(typeobj):
+    def atomic_typename(typeobj):                       # pylint: disable=c0111
         return typeobj.__name__
     if isinstance(types, tuple):
         msg_expected = " or ".join(atomic_typename(t) for t in types)

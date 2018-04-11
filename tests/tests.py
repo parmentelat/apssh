@@ -1,16 +1,22 @@
+"""
+the bulk of the tests for apssh
+"""
+
+# pylint: disable=c0111,c0103,r0201,r0904,w0106
+
 import unittest
 
 from pathlib import Path
 import string
 import random
 
-from asynciojobs import Scheduler, Job, Sequence
+from asynciojobs import Scheduler, Sequence
 
 from apssh import SshNode, SshJob, LocalNode
 from apssh import Run, RunScript, RunString, Push, Pull
 from apssh import load_private_keys
 
-from apssh import TimeColonFormatter, ColonFormatter, CaptureFormatter
+from apssh import ColonFormatter, CaptureFormatter
 
 from apssh.apssh import Apssh
 
@@ -45,87 +51,78 @@ class Tests(unittest.TestCase):
             SshJob(node=self.gateway(),
                    command=["echo", "SshJob with s1 command singular",
                             "$(hostname)"],
-                   label='s1'
-                   ))
+                   label='s1'))
 
     def test_s2(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    command=Run(
-                       "echo", "SshJob with s2 command singular", "$(hostname)"),
-                   label='s2'
-                   ))
+                       "echo", "SshJob with s2 command singular", "$(hostname)"
+                       ),
+                   label='s2'))
 
     def test_s3(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    command=[
-                       Run("echo", "SshJob with s3 command singular", "$(hostname)")],
-                   label='s3'
-                   ))
+                       Run("echo", "SshJob with s3 command singular",
+                           "$(hostname)")],
+                   label='s3'))
 
     def test_s4(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    command="echo SshJob with s4 command singular $(hostname)",
-                   label='s4'
-                   ))
+                   label='s4'))
 
     # plural commands =
     def test_p1(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    commands=[
-                       "echo", "SshJob with p1 commands plural", "$(hostname)"],
-                   label='p1'
-                   ))
+                       "echo", "SshJob p1 commands plural", "$(hostname)"],
+                   label='p1'))
 
     def test_p2(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    commands=Run(
-                       "echo", "SshJob with p2 commands plural", "$(hostname)"),
-                   label='p2'
-                   ))
+                       "echo", "SshJob p2 commands plural", "$(hostname)"),
+                   label='p2'))
 
     def test_p3(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
-                   commands=[
-                       Run("echo", "SshJob with p3 commands plural", "$(hostname)")],
-                   label='p3'
-                   ))
+                   commands=[Run(
+                       "echo", "SshJob p3 commands plural", "$(hostname)")],
+                   label='p3'))
 
     def test_p4(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    commands="echo SshJob with p4 commands plural $(hostname)",
-                   label='p4'
-                   ))
+                   label='p4'))
 
     # RunScript stuff
     def test_local_script(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    command=RunScript("tests/script.sh"),
-                   label='script'
-                   ))
+                   label='script'))
 
     def test_local_script_includes(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    command=RunScript("tests/needsinclude.sh",
                                      includes=["tests/inclusion.sh"]),
-                   label='script_includes'
-                   ))
+                   label='script_includes'))
 
     def test_local_script_args(self):
         self.run_one_job(
             SshJob(node=self.gateway(),
                    command=RunScript(
                        "tests/script-with-args.sh", "foo", "bar", "tutu"),
-                   label='script'
-                   ))
+                   label='script'))
 
     # mixing stuff
     def test_mixed_commands(self):
@@ -138,9 +135,8 @@ class Tests(unittest.TestCase):
                        Run("echo +++++; cat /etc/lsb-release; echo +++++"),
                        RunScript("tests/needsinclude.sh", "another",
                                  "run", includes=includes)
-            ],
-                label='script_commands'
-            ))
+                   ],
+                   label='script_commands'))
 
     ##########
     # NOTE
@@ -194,7 +190,7 @@ class Tests(unittest.TestCase):
 
     def random_file(self, name, size):
         with open(name, "w") as output:
-            for i in range(2**size):
+            for _ in range(2**size):
                 output.write(random.choice(string.ascii_lowercase))
 
     ##########
@@ -215,7 +211,7 @@ class Tests(unittest.TestCase):
                        Push(localpaths=p1, remotepath="apssh-tests"),
                        Pull(remotepaths="apssh-tests/" +
                             b1, localpath="tests/" + b2),
-            ]))
+                   ]))
 
         with open(p1) as f1:
             s1 = f1.read()
@@ -231,7 +227,7 @@ class Tests(unittest.TestCase):
                        Run("mkdir -p apssh-tests"),
                        Pull(remotepaths="apssh-tests/" +
                             b1, localpath="tests/" + b3),
-            ]))
+                   ]))
         with open(p3) as f3:
             s3 = f3.read()
             self.assertEqual(s1, s3)
@@ -269,7 +265,8 @@ class Tests(unittest.TestCase):
                     RunScript("tests/script-with-args.sh", "arg1", "arg2"),
                     RunString("for i in $(seq 3); do host fit0$i; done"),
                     Push(localpaths=dummy_path, remotepath="."),
-                    Pull(remotepaths=dummy_file, localpath=dummy_path + ".loop"),
+                    Pull(remotepaths=dummy_file,
+                         localpath=dummy_path + ".loop"),
                 ]),
             SshJob(
                 node=LocalNode(),
@@ -320,10 +317,11 @@ xterm
                     Run("echo with x11, DISPLAY=$DISPLAY", x11=True),
                     xterm_command,
                     ]))
-                    
-    # on faraday 
+
+    # on faraday
     def xterm_1hop(self):
         self._run_xterm_node_shell(self.gateway(), False)
+
     def xterm_1hop_shell(self):
         self._run_xterm_node_shell(self.gateway(), True)
 
@@ -335,9 +333,9 @@ xterm
 
     def xterm_2hops(self):
         self._run_xterm_node_shell(self.node_2hops(), False)
+
     def xterm_2hops_shell(self):
         self._run_xterm_node_shell(self.node_2hops(), True)
-
 
     def run_apssh(self, command_line_as_list):
         exitcode = Apssh().main(*command_line_as_list)
@@ -382,7 +380,6 @@ xterm
     # this is one form used on r2lab, e.g. when doing map
     # on the selected nodes
     def test_targets5(self):
-        filename = 'TARGETS5'
         argv = []
         argv += ['-l', 'root']
         argv += ['-t', "r2lab.inria.fr faraday.inria.fr"]

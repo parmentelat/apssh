@@ -1,3 +1,9 @@
+"""
+The SshJob class is a specialization of asynciojobs' Job class
+it allows to group operations (commands & file transfers) made in sequence
+on a given remote (and even local for convenience) node
+"""
+
 from asynciojobs.job import AbstractJob
 
 from .util import check_arg_type
@@ -35,11 +41,13 @@ class SshJob(AbstractJob):
 
         commands = RunScript(...)
 
-    * (3) a list/tuple of strings, in which case a single ``Run`` object is created, e.g.::
+    * (3) a list/tuple of strings, in which case
+      a single ``Run`` object is created, e.g.::
 
         commands = [ "uname", "-a" ]
 
-    * (4) a single string, here again a single ``Run`` object is created, e.g.::
+    * (4) a single string, here again a single ``Run``
+      object is created, e.g.::
 
         commands = "uname -a"
 
@@ -47,7 +55,8 @@ class SshJob(AbstractJob):
     it is equivalent but make sure to give exactly one of both.
     """
 
-    def __init__(self, node, *args, command=None, commands=None,
+    def __init__(self, node, *args,                     # pylint: disable=r0912
+                 command=None, commands=None,
                  # set to False if not set explicitly here
                  forever=None,
                  # set to True if not set explicitly here
@@ -67,7 +76,8 @@ class SshJob(AbstractJob):
                 Run("echo misformed SshJob - no commands nor commands")]
         elif command and commands:
             print(
-                "WARNING: SshJob created with command and commands - keeping the latter")
+                "WARNING: SshJob created with command and commands"
+                " - keeping the latter only")
             commands = commands
         elif command:
             commands = command
@@ -90,12 +100,14 @@ class SshJob(AbstractJob):
             commands = [c for c in commands if c]
             if not commands:
                 commands = [
-                    Run("echo misformed SshJob - need at least one non-void command")]
+                    Run("echo misformed SshJob"
+                        " - need at least one non-void command")]
             elif isinstance(commands[0], AbstractCommand):
                 # print("case (1)")
                 # check the list is homogeneous
                 if not all(isinstance(c, AbstractCommand) for c in commands):
-                    print("WARNING: commands must be a list of AbstractCommand objects")
+                    print("WARNING: commands must be"
+                          " a list of AbstractCommand objects")
                 self.commands = commands
             else:
                 # print("case (3)")
@@ -105,7 +117,8 @@ class SshJob(AbstractJob):
         else:
             print("WARNING: SshJob could not make sense of commands")
             self.commands = [
-                Run("echo misformed SshJob - could not make sense of commands")]
+                Run("echo misformed SshJob"
+                    " - could not make sense of commands")]
 
         assert len(self.commands) >= 1
         assert all(isinstance(c, AbstractCommand) for c in self.commands)
@@ -139,8 +152,9 @@ class SshJob(AbstractJob):
                 if self.critical:
                     # if job is critical, let's raise an exception
                     # so the scheduler will stop
-                    raise Exception("command {} returned {} on {}"
-                                    .format(command.command(), result, self.node))
+                    raise Exception(
+                        "command {} returned {} on {}"
+                        .format(command.command(), result, self.node))
                 else:
                     # not critical; let's proceed, but let's remember the
                     # overall result is wrong
@@ -156,12 +170,22 @@ class SshJob(AbstractJob):
             await self.node.close()
 
     def details(self):
+        """
+        xxx
+        This method customizes rendering of SshJobs from
+        calls to a scheduler's ``list`` or ``graph`` methods
+        """
         return "\n".join(["{}@{}:{}".format(self.node.username,
                                             self.node.hostname,
                                             c.details())
                           for c in self.commands])
 
     def default_label(self):
+        """
+        xxx
+        This method customizes rendering of SshJobs from
+        calls to a scheduler's ``list`` or ``graph`` methods
+        """
         first_details = self.commands[0].details()
         first_line = first_details.split("\n")[0]
         return first_line if len(self.commands) == 1 \

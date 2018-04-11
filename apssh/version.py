@@ -1,1 +1,5 @@
-version = "0.9.4"
+"""
+package version
+"""
+
+__version__ = "0.9.4"

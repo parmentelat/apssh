@@ -1,4 +1,12 @@
-from .version import version as __version__
+"""
+the apssh package
+
+https://github.com/parmentelat/apssh
+http://apssh.readthedocs.io/
+
+"""
+
+from .version import __version__
 
 # protect for install-time when dependencies are not yet installed
 try:
@@ -25,5 +33,5 @@ try:
     #  default for keys management
     # LocalNode is helpful to add local commands in a scenario
     from .nodes import SshNode, LocalNode
-except:
+except Exception as exc:                                # pylint: disable=W0703
     print("Warning: could not import module asyncssh")

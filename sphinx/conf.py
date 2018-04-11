@@ -27,7 +27,7 @@ for path in sys.path:
 from sys import version_info as python_version
 print("python version", python_version)
 
-from apssh.version import version as apssh_version
+from apssh.version import __version__ as apssh_version
 
 # -- General configuration -----------------------------------------------------
 

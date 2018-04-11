@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
 
+"""
+The SshProxy class models an ssh connection, and is mainly in charge
+* lazily initializing connections on a need-by-need basis
+* and reasembling lines as they come back from the remote
+"""
+
 import asyncio
 
 import asyncssh
@@ -11,9 +17,11 @@ from .formatters import ColonFormatter
 
 class _LineBasedSession(asyncssh.SSHClientSession):
     """
-    a session that records both outputs (out and err) in its internal attributes
-    it also may have an associated formatter (through its proxy reference)
-    and in that case the formatter receives a line() call each time a line is received
+    A session that records both outputs (out and err)
+    in its internal attributes.
+    It also may have an associated formatter (through its proxy reference)
+    and in that case the formatter receives a line() call
+    each time a line is received.
     """
 
     ##########
@@ -33,6 +41,7 @@ class _LineBasedSession(asyncssh.SSHClientSession):
             self.buffer = ""
             self.line = ""
 
+        # pylint: disable=c0111
         def data_received(self, data, datatype):
             # preserve it before any postprocessing occurs
             self.buffer += data
@@ -42,7 +51,7 @@ class _LineBasedSession(asyncssh.SSHClientSession):
                              format(self.proxy.hostname, data, self.name))
             chunks = [x for x in data.split("\n")]
             # len(chunks) cannot be 0
-            assert len(chunks) > 0, "unexpected data received"
+            assert chunks != [], "unexpected data received"
             # what goes in the current line, if any
             current_line = chunks.pop(0)
             self.line += current_line
@@ -58,7 +67,8 @@ class _LineBasedSession(asyncssh.SSHClientSession):
             # actually write line, if there's anything to write
             # (EOF calls flush too)
             if self.line:
-                self.proxy.formatter.line(self.line, datatype, self.proxy.hostname)
+                self.proxy.formatter.line(self.line, datatype,
+                                          self.proxy.hostname)
                 self.line = ""
 
     ##########
@@ -73,10 +83,11 @@ class _LineBasedSession(asyncssh.SSHClientSession):
 
     # this seems right only for text streams...
     def data_received(self, data, datatype):
-        channel = self.stderr if datatype == asyncssh.EXTENDED_DATA_STDERR else self.stdout
+        channel = self.stderr if datatype == asyncssh.EXTENDED_DATA_STDERR \
+            else self.stdout
         channel.data_received(data, datatype)
 
-    def connection_made(self, conn):
+    def connection_made(self, conn):               # pylint:disable=w0221,w0613
         self.proxy.formatter.session_start(self.proxy.hostname, self.command)
 
     def connection_lost(self, exc):
@@ -91,10 +102,12 @@ class _LineBasedSession(asyncssh.SSHClientSession):
         self._status = status
         self.proxy.debug_line("STATUS = {}\n".format(status))
 
+
 # VerboseClient is created through factories attached to each proxy
 
-
 class VerboseClient(asyncssh.SSHClient):
+
+    # pylint: disable=c0111
 
     def __init__(self, proxy, direct, *args, **kwds):
         self.proxy = proxy
@@ -121,7 +134,7 @@ class VerboseClient(asyncssh.SSHClient):
 ####################
 
 
-class SshProxy:
+class SshProxy:                                         # pylint: disable=r0902
     """
     A proxy essentially wraps an ssh connection.
     It can connect to a remote, and then can run several
@@ -144,7 +157,7 @@ class SshProxy:
     def __init__(self, hostname, *, username=None,
                  gateway=None,  # if another SshProxy is given
                                 # it is used as an ssh gateway
-                 keys=None, # this class has no smart way to guess for keys
+                 keys=None,     # this class has no smart way to guess for keys
                  known_hosts=None, port=22,
                  formatter=None, verbose=None,
                  debug=False, timeout=30):
@@ -198,7 +211,7 @@ class SshProxy:
             text += "<-SFTP->"
         return "<SshProxy {}>".format(text)
 
-    def debug_line(self, line):
+    def debug_line(self, line):                         # pylint: disable=c0111
         if line.endswith("\n"):
             line = line[:-1]
         line += " ((from:" + repr(self) + "))\n"
@@ -207,6 +220,10 @@ class SshProxy:
                 line, asyncssh.EXTENDED_DATA_STDERR, self.hostname)
 
     def is_connected(self):
+        """
+        Returns an asyncssh connection object if this is established,
+        and ``None`` otherwise.
+        """
         return self.conn is not None
 
     async def connect_lazy(self):
@@ -223,27 +240,31 @@ class SshProxy:
         """
         Unconditionnaly attemps to connect and raise an exception otherwise
         """
-        if not self.gateway:
-            return await self._connect_direct()
-        else:
+        if self.gateway:
             return await self._connect_tunnel()
+        return await self._connect_direct()
 
     async def _connect_direct(self):
         """
-        The code for connecting to the first ssh hop (i.e. when self.gateway is None)
+        The code for connecting to the first ssh hop
+        (i.e. when self.gateway is None)
         """
         assert self.gateway is None
 
-        class client_closure(VerboseClient):
-            def __init__(client_self, *args, **kwds):
+        # pylint: disable=c0111
+        class ClientClosure(VerboseClient):
+            # it is crucial that the first param here is *NOT* called self
+            def __init__(client_self, *args, **kwds):   # pylint: disable=e0213
                 VerboseClient.__init__(
                     client_self, self, direct=True, *args, **kwds)
 
         self.debug_line("SSH direct connecting")
-        self.conn, client = \
+        # second returned value is client, but is unused
+        self.conn, _ = \
             await asyncio.wait_for(
                 asyncssh.create_connection(
-                    client_closure, self.hostname, port=self.port, username=self.username,
+                    ClientClosure, self.hostname, port=self.port,
+                    username=self.username,
                     known_hosts=self.known_hosts, client_keys=self.keys
                 ),
                 timeout=self.timeout)
@@ -251,28 +272,36 @@ class SshProxy:
     async def _connect_tunnel(self):
         """
         The code to connect to a higher-degree hop
-        We expect gateway to have its connection open, and issue connect_ssh on that connection
+        We expect gateway to have its connection open,
+        and issue connect_ssh on that connection
         """
         # make sure the gateway has connected already
         assert self.gateway is not None
         await self.gateway.connect_lazy()
 
-        class client_closure(VerboseClient):
-            def __init__(client_self, *args, **kwds):
+        # pylint: disable=c0111
+        class ClientClosure(VerboseClient):
+            def __init__(client_self, *args, **kwds):   # pylint: disable=e0213
                 VerboseClient.__init__(
                     client_self, self, direct=False, *args, **kwds)
 
         self.debug_line("SSH tunnel connecting")
-        self.conn, client = \
+        # second returned value is client, but is unused
+        self.conn, _ = \
             await asyncio.wait_for(
                 self.gateway.conn.create_ssh_connection(
-                    client_closure, self.hostname, port=self.port, username=self.username,
+                    ClientClosure, self.hostname, port=self.port,
+                    username=self.username,
                     known_hosts=self.known_hosts, client_keys=self.keys
                 ),
                 timeout=self.timeout)
         self.debug_line("SSH tunnel connected")
 
     def is_sftp_connected(self):
+        """
+        Returns a asyncssh sftp client object if the SFTP subsystem is
+        ready to operate, and ``None`` otherwise
+        """
         return self.sftp_client is not None
 
     async def sftp_connect_lazy(self):
@@ -304,7 +333,7 @@ class SshProxy:
             self.sftp_client = None
             try:
                 preserve.exit()
-            except:
+            except Exception:                           # pylint: disable=w0703
                 pass
             await preserve.wait_closed()
             self.formatter.sftp_stop(self.hostname)
@@ -318,7 +347,7 @@ class SshProxy:
             self.conn = None
             try:
                 preserve.close()
-            except:
+            except Exception:                           # pylint: disable=w0703
                 pass
             await preserve.wait_closed()
 
@@ -339,25 +368,31 @@ class SshProxy:
         Run a command, outputs it on the fly according to self.formatter
         and returns remote status - or None if nothing could be run at all
 
-        x11_kwds are optional keyword args that will be passed to create_session
-        like typically x11_forwarding=True
+        x11_kwds are optional keyword args that will be passed
+        to create_session, like typically x11_forwarding=True
         """
-        # this closure is a _LineBasedSession with a .proxy attribute that points back here
-        class session_closure(_LineBasedSession):
+
+        # pylint: disable=c0111
+
+        # this closure is a _LineBasedSession
+        # with a .proxy attribute that points back here
+        class SessionClosure(_LineBasedSession):
             # not using 'self' because 'self' is the SshProxy instance already
-            def __init__(session_self, *args, **kwds):
+            def __init__(session_self, *args, **kwds):  # pylint: disable=e0213
                 _LineBasedSession.__init__(
                     session_self, self, command, *args, **kwds)
 
-        #
         chan, session = \
             await asyncio.wait_for(
-                self.conn.create_session(session_closure, command, **x11_kwds),
+                self.conn.create_session(SessionClosure, command, **x11_kwds),
                 timeout=self.timeout)
         await chan.wait_closed()
-        return session._status
+        return session._status                          # pylint: disable=w0212
 
     async def mkdir(self, remotedir):
+        """
+        Create a remote directory if needed
+        """
         if not await self.sftp_connect_lazy():
             return False
         exists = await self.sftp_client.isdir(remotedir)
@@ -369,10 +404,10 @@ class SshProxy:
             self.debug_line("actual creation of {}".format(remotedir))
             await self.sftp_client.mkdir(remotedir)
             return True
-        except asyncssh.sftp.SFTPError as e:
+        except asyncssh.sftp.SFTPError as exc:
             self.debug_line(
-                "Could not create {} on {}\n{}".format(remotedir, self, e))
-            raise e
+                "Could not create {} on {}\n{}".format(remotedir, self, exc))
+            raise exc
 
     async def put_file_s(self, localpaths, remotepath, *args, **kwds):
 
@@ -390,12 +425,13 @@ class SshProxy:
         await self.sftp_connect_lazy()
         try:
             self.debug_line(
-                "Running SFTP put with {} -> {}".format(localpaths, remotepath))
+                "doing SFTP put with {} -> {}".format(localpaths, remotepath))
             await self.sftp_client.put(localpaths, remotepath, *args, **kwds)
-        except asyncssh.sftp.SFTPError as e:
-            self.debug_line("Could not SFTP PUT local {} to remote {} - exception={}".
-                            format(localpaths, remotepath, e))
-            raise e
+        except asyncssh.sftp.SFTPError as exc:
+            self.debug_line(
+                "Could not SFTP PUT local {} to remote {} - exception={}".
+                format(localpaths, remotepath, exc))
+            raise exc
         return True
 
     async def get_file_s(self, remotepaths, localpath, *args, **kwds):
@@ -408,12 +444,13 @@ class SshProxy:
         await self.sftp_connect_lazy()
         try:
             self.debug_line(
-                "Running SFTP get with {} -> {}".format(remotepaths, localpath))
+                "doing SFTP get with {} -> {}".format(remotepaths, localpath))
             await self.sftp_client.get(remotepaths, localpath, *args, **kwds)
-        except asyncssh.sftp.SFTPError as e:
-            self.debug_line("Could not SFTP GET remotes {} to local {} - exception={}".
-                            format(remotepaths, localpath, e))
-            raise e
+        except asyncssh.sftp.SFTPError as exc:
+            self.debug_line(
+                "Could not SFTP GET remotes {} to local {} - exception={}".
+                format(remotepaths, localpath, exc))
+            raise exc
         return True
 
     async def put_string_script(self, script_body, remotefile, *args, **kwds):
@@ -426,10 +463,11 @@ class SshProxy:
         sftp_attrs.permissions = 0o755
         try:
             async with self.sftp_client.open(remotefile, pflags_or_mode='w',
-                                             attrs=sftp_attrs, *args, **kwds) as writer:
+                                             attrs=sftp_attrs,
+                                             *args, **kwds) as writer:
                 await writer.write(script_body)
-        except Exception as e:
+        except Exception as exc:
             self.debug_line("Could not create remotefile {} - exception={}"
-                            .format(remotefile, e))
-            raise e
+                            .format(remotefile, exc))
+            raise exc
         return True

@@ -1,5 +1,9 @@
 #!/usr/bin/python3
 
+"""
+Basic tools for loading ssh keys from the user space or the agent
+"""
+
 import os
 from pathlib import Path
 from getpass import getpass
@@ -22,7 +26,7 @@ def import_private_key(filename):
     basename = path.name
     if not path.exists():
         # print("No such key file {}".format(filename))
-        return
+        return None
     with path.open() as file:
         data = file.read()
         try:
@@ -39,7 +43,7 @@ def import_private_key(filename):
                     break
                 except asyncssh.KeyImportError:
                     print("Wrong passphrase")
-        except Exception as e:
+        except Exception:                               # pylint: disable=w0703
             import traceback
             traceback.print_exc()
         return sshkey
@@ -51,14 +55,15 @@ def load_agent_keys(loop=None, agent_path=None):
 
     agent_path defaults to env. variable $SSH_AUTH_SOCK
     """
+    # pylint: disable=c0111
     async def co_load_agent_keys(loop, agent_path):
         # make sure to return an empty list when something goes wrong
         try:
             agent_client = asyncssh.SSHAgentClient(loop, agent_path)
             return await agent_client.get_keys()
-        except Exception as e:
+        except Exception as exc:                        # pylint: disable=w0703
             # not quite sure which exceptions to expect here
-            print("When fetching agent keys: ignored exception {}".format(e))
+            print("When fetching agent keys: ignored exception {}".format(exc))
             return []
 
     agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
@@ -75,11 +80,13 @@ def load_private_keys(command_line_keys=None, verbose=False):
     * 1. If no keys are given as the command_line_keys parameter
          (typically through the apssh `-k` command line option)
 
-      1.a if an *ssh agent* can be reached using the `SSH_AUTH_SOCK` environment variable,
-        and offers a non-empty list of keys, `apssh` will use the keys loaded in the agent
-        (**NOTE:** use `ssh-add` for managing the keys known to the agent)
+      1.a if an *ssh agent* can be reached using the `SSH_AUTH_SOCK`
+          environment variable, and offers a non-empty list of keys,
+          `apssh` will use the keys loaded in the agent
+          (**NOTE:** use `ssh-add` for managing the keys known to the agent)
 
-      1.b otherwise, `apssh` will use `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
+      1.b otherwise, `apssh` will use
+         `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
 
     * 2. If keys are specified on the command line
 
@@ -97,12 +104,13 @@ def load_private_keys(command_line_keys=None, verbose=False):
         # use config to figure out what the default keys are
         filenames = default_private_keys
         if verbose:
-            print("apssh will try to load {} default keys".format(len(filenames)))
+            print("apssh will try to load {} default keys"
+                  .format(len(filenames)))
     else:
         filenames = command_line_keys
         if verbose:
-            print("apssh will try to load {} keys from the command line".format(
-                len(filenames)))
+            print("apssh will try to load {} keys from the command line".
+                  format(len(filenames)))
     keys = [import_private_key(filename) for filename in filenames]
     valid_keys = [k for k in keys if k]
     if verbose:

@@ -1,8 +1,16 @@
 #!/usr/bin/env python3
 
+"""
+Testing the keys loading features in apssh
+"""
+
+# pylint: disable=c0111,r0201
+
 import unittest
 
-from apssh.keys import *
+from pathlib import Path
+
+from apssh.keys import import_private_key, load_private_keys
 
 
 class Tests(unittest.TestCase):
@@ -12,7 +20,7 @@ class Tests(unittest.TestCase):
         test_names = ['id_rsa', 'id-pass']
 
         for test_name in test_names:
-            path = Path("~/.ssh/{}".format(test_name)).expanduser()
+            path = Path.home() / ".ssh" / test_name
             print("========== importing key from {}".format(path))
             sshkey = import_private_key(path)
             print("-> got {}".format(sshkey))

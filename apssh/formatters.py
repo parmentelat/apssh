@@ -1,4 +1,13 @@
-import sys
+"""
+Implementation of the formatter classes for apssh
+
+a formatter is a class that knows how to deal with the
+stdout/stderr lines as they come back from a ssh connection
+
+in its capture form, it allows to do retain this output
+in memory instead of printing on the fly
+"""
+
 import time
 import os
 from pathlib import Path
@@ -10,7 +19,7 @@ from .util import print_stderr
 # asyncio.TimeoutError() has a meaningful repr() but an empty str()
 
 
-def ensure_visible(exc):
+def ensure_visible(exc):                                # pylint: disable=c0111
     if isinstance(exc, asyncio.TimeoutError):
         exc = repr(exc)
     return exc
@@ -31,13 +40,15 @@ class Formatter:
 
     * VerboseFormatter:  prints out ssh-details based on verbose flag
 
-    * TerminalFormatter: prints out line based on a format (time, hostname, actual line...)
+    * TerminalFormatter: prints out line based on a format
+      (time, hostname, actual line...)
 
     * RawFormatter:      TerminalFormatter("@line@")
 
     * ColonFormatter:    TerminalFormatter("@host@:@line@")
 
-    * SubdirFormatter:   stores in <subdir>/<hostname> all outputs from that host
+    * SubdirFormatter:   stores in <subdir>/<hostname>
+      all outputs from that host
     """
 
     time_format = "%H-%M-%S"
@@ -49,7 +60,10 @@ class Formatter:
         return time.strftime(self.format) \
                    .replace("@line@", line) \
                    .replace("@host@", hostname or "") \
-                   .replace("@user@", "{}@".format(username) if username else "")
+                   .replace("@user@", "{}@".format(username)
+                            if username else "")
+
+    # pylint: disable=c0111
 
     # events
     def connection_made(self, hostname, username, direct):
@@ -147,11 +161,13 @@ class TerminalFormatter(VerboseFormatter):
 
     * regular stdout goes to stdout
 
-    * regular stderr, plus event-based annotations like connection open, go on stderr
+    * regular stderr, plus event-based annotations like connection open,
+      go on stderr
     """
 
     def line(self, line, datatype, hostname):
-        print_function = print_stderr if datatype == EXTENDED_DATA_STDERR else print
+        print_function = \
+            print_stderr if datatype == EXTENDED_DATA_STDERR else print
         print_function(self._formatted_line(line, hostname), end="")
 
 
@@ -186,8 +202,8 @@ class TimeColonFormatter(TerminalFormatter):
 
 class SubdirFormatter(VerboseFormatter):
     """
-    Stores outputs in a subdirectory run_name,
-    in a file named after the hostname
+    Stores outputs in a subdirectory ``run_name``,
+    and in a file named after the hostname
     """
 
     def __init__(self, run_name, *, verbose=True):
@@ -195,6 +211,7 @@ class SubdirFormatter(VerboseFormatter):
         VerboseFormatter.__init__(self, "@line@", verbose)
         self._dir_checked = False
 
+    # pylint: disable=c0111
     def out(self, hostname):
         return str(Path(self.run_name) / hostname)
 
@@ -202,7 +219,8 @@ class SubdirFormatter(VerboseFormatter):
         return str(Path(self.run_name) / "{}.err".format(hostname))
 
     def filename(self, hostname, datatype):
-        return self.err(hostname) if datatype == EXTENDED_DATA_STDERR else self.out(hostname)
+        return self.err(hostname) if datatype == EXTENDED_DATA_STDERR \
+            else self.out(hostname)
 
     def check_dir(self):
         # create directory if needed
@@ -220,11 +238,11 @@ class SubdirFormatter(VerboseFormatter):
                     msg = "direct" if direct else "tunnelled"
                     out.write("Connected ({}) to {}@{}\n".format(
                         msg, username, hostname))
-        except OSError as e:
-            print_stderr("File permission problem {}".format(e))
+        except OSError as exc:
+            print_stderr("File permission problem {}".format(exc))
             exit(1)
-        except Exception as e:
-            print_stderr("Unexpected error {}".format(e))
+        except Exception as exc:                        # pylint: disable=W0703
+            print_stderr("Unexpected error {}".format(exc))
             exit(1)
 
     def line(self, line, datatype, hostname):

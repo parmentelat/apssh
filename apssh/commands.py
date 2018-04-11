@@ -1,3 +1,8 @@
+"""
+Implementation of all the command classes, typically
+Run, RunScript, Pull and similar
+"""
+
 from pathlib import Path
 import random
 
@@ -11,6 +16,11 @@ from apssh.config import default_remote_workdir
 
 class AbstractCommand:
 
+    """
+    Abstract base class for all command classes, like
+    Run, RunScript, Pull, and similar
+    """
+
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, self.command())
 
@@ -22,23 +32,35 @@ class AbstractCommand:
         """
         pass
 
+    async def co_run_local(self, localnode):
+
+        """
+        may need to be redefined if the actual command class
+        is designed to run on a LocalNode() too
+        should return 0 if everything is fine
+        """
+        pass
+
     # descriptive views, required by SshJob
     def details(self):
         """
         used by SshJob to conveniently show the inside of a Job
         """
-        return "AbstractCommand.details needs to be redefined"
+        return "AbstractCommand.details needs to be redefined on {}"\
+            .format(type(self).__name__)
 
     # extra messages go to stderr and are normally formatted
     def _verbose_message(self, node, message):
-        if not hasattr(self, 'verbose') or not self.verbose:
+        if not hasattr(self, 'verbose') \
+                or not self.verbose:                    # pylint: disable=E1101
             return
         if not message.endswith("\n"):
             message += "\n"
         node.formatter.line(message, EXTENDED_DATA_STDERR, node.hostname)
 
-    def command(self):
-        return "AbstractCommand.command() needs to be redefined"
+    def command(self):                                  # pylint: disable=C0111
+        return "AbstractCommand.command() needs to be redefined on {}"\
+            .format(type(self).__name__)
 
 
 class Run(AbstractCommand):
@@ -56,7 +78,6 @@ class Run(AbstractCommand):
     running remotely ends on the local DISPLAY
 
     If verbose is set, the actual command being run is printed out
-
     """
 
     # it was tempting to use x11_forwarding as the name here, but
@@ -111,10 +132,11 @@ class RunLocalStuff(AbstractCommand):
     be at risk of one overwriting the remote command file, while the second
     tries to run it, which causes errors like this
 
-    fit26:bash: .apssh-remote/B3-wireless.sh: /bin/bash: bad interpreter: Text file busy
+    fit26:bash: .apssh-remote/B3.sh: /bin/bash: bad interpreter: Text file busy
     """
 
-    def __init__(self, args, includes, verbose, remote_basename, x11):
+    def __init__(self, args, includes,                  # pylint: disable=R0913
+                 verbose, remote_basename, x11):
         self.args = args
         self.includes = includes
         self.verbose = verbose
@@ -144,8 +166,13 @@ class RunLocalStuff(AbstractCommand):
         return command
 
     async def co_install(self, node, remote_path):
+        """
+        Abstract method to explain how to remotely install
+        a local script before we can invoke it
+        """
         print("coroutine method co_install"
-              " needs to be redefined on yuor RunLocalStuff subclass")
+              " needs to be redefined on your RunLocalStuff subclass"
+              " args are {} and {}".format(node, remote_path))
 
     async def co_run_remote(self, node):
         """
@@ -175,9 +202,11 @@ class RunLocalStuff(AbstractCommand):
             # sequential is good enough
             for include in self.includes:
                 if not Path(include).exists():
-                    print("include file {} not found -- skipped".format(include))
+                    print("include file {} not found -- skipped"
+                          .format(include))
                     continue
-                self._verbose_message(node, "RunLocalStuff: pushing include {} in {}"
+                self._verbose_message(node,
+                                      "RunLocalStuff: pushing include {} in {}"
                                       .format(include, default_remote_workdir))
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/",
@@ -244,7 +273,8 @@ class RunString(RunLocalStuff):
     to be passed in the first argument as **a python string** this time.
 
     `remote_name`, if provided, will tell how the created script
-    should be named on the remote node - it is randomly generated if not specified
+    should be named on the remote node
+    - it is randomly generated if not specified
 
     `includes` allows to specify a list of local files
     that need to be copied over at the same location as the local script
@@ -258,7 +288,8 @@ class RunString(RunLocalStuff):
 
     ``myscript = "#!/bin/bash\\nfor arg in "$@"; do echo arg=$arg; done"``
 
-    ``RunString(myscript, "foo", "bar", 2, "arg3", remote_name = "echo-args.sh")``
+    ``RunString(myscript, "foo", "bar", 2, "arg3",
+                remote_name = "echo-args.sh")``
 
     """
 
@@ -313,7 +344,7 @@ class Pull(AbstractCommand):
         self.args = args
         self.kwds = kwds
 
-    def remote_path(self):
+    def _remote_path(self):
         paths = self.remotepaths
         if isinstance(self.remotepaths, str):
             paths = [paths]
@@ -324,7 +355,7 @@ class Pull(AbstractCommand):
 
     def details(self):
         return "Pull: {} into {}".\
-            format(self.remote_path(), self.localpath)
+            format(self._remote_path(), self.localpath)
 
     async def co_run_remote(self, node):
         self._verbose_message(node, "Pull: remotepaths={}, localpath={}"
@@ -356,7 +387,7 @@ class Push(AbstractCommand):
         self.args = args
         self.kwds = kwds
 
-    def local_path(self):
+    def _local_path(self):
         paths = self.localpaths
         if isinstance(self.localpaths, str):
             paths = [paths]
@@ -367,7 +398,7 @@ class Push(AbstractCommand):
 
     def details(self):
         return "Push: {} onto {}".\
-            format(self.local_path(), self.remotepath)
+            format(self._local_path(), self.remotepath)
 
     async def co_run_remote(self, node):
         self._verbose_message(node, "Push: localpaths={}, remotepath={}"

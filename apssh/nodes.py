@@ -29,7 +29,8 @@ class LocalNode:
 
     The `formatter` and `verbose` parameters apply like for `SshNode`:
     a `ColonFormatter` is created for you unless you give one, and
-    the formatter's `verbose` is set from the LocalNode's `verbose` if you give one
+    the formatter's `verbose` is set from the LocalNode's `verbose`
+    if you give one
 
     Allows you to create local commands using `Run`
 
@@ -50,8 +51,10 @@ class LocalNode:
         # let's do this best effort
         try:
             self.username = os.getlogin()
-        except:
+        except Exception:                               # pylint: disable=w0703
             self.username = "LOCALUSER"
+
+    # pylint: disable=c0111
 
     def lines(self, bytes_chunk, datatype):
         # xxx encoding should not be hard-wired
@@ -64,11 +67,13 @@ class LocalNode:
 
     # from this clue here
     # https://stackoverflow.com/questions/17190221/subprocess-popen\
-    #-cloning-stdout-and-stderr-both-to-terminal-and-variables/25960956#25960956
+    # -cloning-stdout-and-stderr-both-to-terminal-and-variables/\
+    # 25960956#25960956
     async def read_and_display(self, stream, datatype):
         """
         read (process stdout or stderr) stream line by line
-        until EOF and dispatch lines in formatter - using self.lines(... datatype)
+        until EOF and dispatch lines in formatter
+        - using self.lines(... datatype)
         """
         while True:
             line = await stream.readline()
@@ -80,28 +85,29 @@ class LocalNode:
         try:
             process = await asyncio.create_subprocess_shell(
                 command, stdout=PIPE, stderr=PIPE)
-            stdout, stderr = await asyncio.gather(
+            # no need to refer to stdout and stderr
+            _, _ = await asyncio.gather(
                 self.read_and_display(process.stdout, 0),
                 self.read_and_display(process.stderr, EXTENDED_DATA_STDERR))
             retcod = await process.wait()
             return retcod
-        except Exception as e:
+        except Exception as exc:                        # pylint: disable=w0703
             line = "LocalNode: Could not run local command {} - {}"\
-                   .format(command, e)
+                   .format(command, exc)
             self.formatter.line(line, EXTENDED_DATA_STDERR, self.hostname)
 
     async def close(self):
         pass
 
 
-########## SshNode == SshProxy
+# ========== SshNode == SshProxy
 
 # use apssh's sshproxy mostly as-is, except for keys handling
 # the thing is, this implementation relies on formatters
 # which probably needs more work.
-# in particular this works fine only with remote processes whose output is text-based
-# but well, right now I'm in a rush and would want to see stuff running...
-
+# in particular this works fine only with remote processes
+# whose output is text-based but well,
+# right now I'm in a rush and would want to see stuff running...
 
 # it's mostly a matter of exposing a more meaningful name in this context
 # might need a dedicated formatter at some point

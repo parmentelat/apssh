@@ -169,34 +169,34 @@ class SshJob(AbstractJob):
         if not self.keep_connection:
             await self.node.close()
 
+    def text_label(self):
+        """
+        This method customizes rendering of SshJobs for
+        calls to a scheduler's ``list()`` or ``debrief()`` methods.
+
+        Relies on the first command's ``label_line()`` method
+        """
+        first_label = self.commands[0].get_label_line()
+        return first_label if len(self.commands) == 1 \
+            else first_label + ".. + {}".format(len(self.commands) - 1)
+
+    def graph_label(self):
+        """
+        This method customizes rendering of SshJobs from
+        calls to a scheduler's
+        ``graph()`` or ``export_as_dotfile()`` methods.
+
+        Relies on each command's ``label_line()`` method
+        """
+        return "\n".join(
+            ["{}@{}".format(self.node.username,
+                            self.node.hostname)]
+            + [c.get_label_line() for c in self.commands]
+        )
+
     def details(self):
         """
-        xxx
-        This method customizes rendering of SshJobs from
-        calls to a scheduler's ``list`` or ``graph`` methods
+        Used by SshJob when running list(details=True)
         """
-        return "\n".join(["{}@{}:{}".format(self.node.username,
-                                            self.node.hostname,
-                                            c.details())
-                          for c in self.commands])
-
-    def default_label(self):
-        """
-        xxx
-        This method customizes rendering of SshJobs from
-        calls to a scheduler's ``list`` or ``graph`` methods
-        """
-        first_details = self.commands[0].details()
-        first_line = first_details.split("\n")[0]
-        return first_line if len(self.commands) == 1 \
-            else first_line + " + {}..".format(len(self.commands) - 1)
-
-    def dot_label(self):
-        """
-        for producing png example files
-        multi-line output, with first nodename,
-        and then all the commands
-        """
-        lines = [self.node.hostname] + [command.details()
-                                        for command in self.commands]
-        return "\n".join(lines)
+        # tusn out the logic for graph_text is exactly right
+        return self.graph_label()

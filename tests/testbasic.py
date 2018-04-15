@@ -86,10 +86,30 @@ class TestBasic(unittest.TestCase):
                               1000, 2000, 3000, 4000,
                               remote_name='long-show-args')
                 ]),
+            SshJob(
+                node=gateway,
+                commands=[
+                    RunString("#!/usr/bin/env bash\n"
+                              "echo first arg is $1\n"
+                              "echo second arg is $2\n"
+                              "echo third arg is $3\n"
+                              "echo fourth arg is $4\n",
+                              1000, 2000, 3000, 4000,
+                              remote_name='long-show-args',
+                              label='snip')
+                ]),
             scheduler=scheduler,
         )
 
+        print("NO DETAILS")
+        scheduler.list()
+        print("WITH DETAILS")
+        scheduler.list(details=True)
+        # graph
         scheduler.export_as_dotfile('tests/testbasic.dot')
+        import os
+        os.system("dot -Tpng -o tests/testbasic.png tests/testbasic.dot")
+        print("(Over)wrote testbasic.png")
 
         ok = scheduler.run()
 

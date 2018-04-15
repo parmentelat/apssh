@@ -1,32 +1,35 @@
 digraph G {
-"01: faraday.inria.fr
-hostname" -> "02: faraday.inria.fr
+"1: root@faraday.inria.fr
+hostname" -> "2: root@faraday.inria.fr
 ls /etc/passwd
 wc -l /etc/passwd";
-"02: faraday.inria.fr
+"2: root@faraday.inria.fr
 ls /etc/passwd
-wc -l /etc/passwd" -> "03: faraday.inria.fr
+wc -l /etc/passwd" -> "3: root@faraday.inria.fr
 RunString: [no_remote_name] ";
-"03: faraday.inria.fr
-RunString: [no_remote_name] " -> "04: faraday.inria.fr
+"3: root@faraday.inria.fr
+RunString: [no_remote_name] " -> "4: root@faraday.inria.fr
 RunScript: testbasic.sh ";
-"04: faraday.inria.fr
-RunScript: testbasic.sh " -> "05: faraday.inria.fr
+"4: root@faraday.inria.fr
+RunScript: testbasic.sh " -> "5: root@faraday.inria.fr
 wc -l /etc/passwd
 RunString: show-host-date 
 RunScript: testbasic.sh ";
-"05: faraday.inria.fr
+"5: root@faraday.inria.fr
 wc -l /etc/passwd
 RunString: show-host-date 
-RunScript: testbasic.sh " -> "06: faraday.inria.fr
+RunScript: testbasic.sh " -> "6: root@faraday.inria.fr
 RunString: [no_remote_name] 10";
-"06: faraday.inria.fr
-RunString: [no_remote_name] 10" -> "07: faraday.inria.fr
+"6: root@faraday.inria.fr
+RunString: [no_remote_name] 10" -> "7: root@faraday.inria.fr
 RunString: short-show-args 10";
-"07: faraday.inria.fr
-RunString: short-show-args 10" -> "08: faraday.inria.fr
+"7: root@faraday.inria.fr
+RunString: short-show-args 10" -> "8: root@faraday.inria.fr
 RunString: [no_remote_name] 100 200 300 400";
-"08: faraday.inria.fr
-RunString: [no_remote_name] 100 200 300 400" -> "09: faraday.inria.fr
+"8: root@faraday.inria.fr
+RunString: [no_remote_name] 100 200 300 400" -> "9: root@faraday.inria.fr
 RunString: long-show-args 1000 2000 3000 4000";
+"9: root@faraday.inria.fr
+RunString: long-show-args 1000 2000 3000 4000" -> "10: root@faraday.inria.fr
+snip";
 }

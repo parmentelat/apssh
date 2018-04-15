@@ -103,9 +103,9 @@ class _LineBasedSession(asyncssh.SSHClientSession):
         self.proxy.debug_line("STATUS = {}\n".format(status))
 
 
-# VerboseClient is created through factories attached to each proxy
+# _VerboseClient is created through factories attached to each proxy
 
-class VerboseClient(asyncssh.SSHClient):
+class _VerboseClient(asyncssh.SSHClient):
 
     # pylint: disable=c0111
 
@@ -140,17 +140,21 @@ class SshProxy:                                         # pylint: disable=r0902
     It can connect to a remote, and then can run several
     commands in the most general sense, i.e. including file transfers.
 
-    The gateway parameter, when set, is another `SshProxy` instance,
-    that is then used as a proxy for tunnelling a 2-leg ssh
-    connection.
+    Parameters:
+      hostname: remote hostname
+      username: remote login name
+      gateway (SshProxy):  when set, this node is then used as a hop
+        for creating a 2-leg ssh connection.
 
-    Its attached formatter is in charge of capturing the output of
-    these commands.  default is to use a `ColonFormatter` that
-    outputs lines like ``hostname:actual-output``
+      formatter: each SshProxy instance has an attached formatter that
+        is in charge of rendering the output of the various commands.
+        The default is to use an instance of
+        :class:`~apssh.formatters.ColonFormatter`, that
+        outputs lines of the form ``hostname:actual-output``
 
-    The verbose flag allows to get some user-level feedback on ssh
-    negociation. `Permission denied` messages and similar won't show up
-    unless verbose is set.
+      verbose: allows to get some user-level feedback on ssh
+        negociation. `Permission denied` messages and similar won't show up
+        unless verbose is set.
 
     """
 
@@ -221,15 +225,18 @@ class SshProxy:                                         # pylint: disable=r0902
 
     def is_connected(self):
         """
-        Returns an asyncssh connection object if this is established,
-        and ``None`` otherwise.
+        Returns:
+           bool: whether the connection is up
         """
         return self.conn is not None
 
     async def connect_lazy(self):
         """
-        Connect if needed - uses a lock to ensure only one connection will
-        take place even if several calls are done at the same time
+        Connects if needed - uses a lock to make it safe for several coroutines
+        to simultaneously try to run commands on the same SshProxy instance.
+
+        Returns:
+          connection object
         """
         async with self._connect_lock:
             if self.conn is None:
@@ -252,10 +259,10 @@ class SshProxy:                                         # pylint: disable=r0902
         assert self.gateway is None
 
         # pylint: disable=c0111
-        class ClientClosure(VerboseClient):
+        class ClientClosure(_VerboseClient):
             # it is crucial that the first param here is *NOT* called self
             def __init__(client_self, *args, **kwds):   # pylint: disable=e0213
-                VerboseClient.__init__(
+                _VerboseClient.__init__(
                     client_self, self, direct=True, *args, **kwds)
 
         self.debug_line("SSH direct connecting")
@@ -280,9 +287,9 @@ class SshProxy:                                         # pylint: disable=r0902
         await self.gateway.connect_lazy()
 
         # pylint: disable=c0111
-        class ClientClosure(VerboseClient):
+        class ClientClosure(_VerboseClient):
             def __init__(client_self, *args, **kwds):   # pylint: disable=e0213
-                VerboseClient.__init__(
+                _VerboseClient.__init__(
                     client_self, self, direct=False, *args, **kwds)
 
         self.debug_line("SSH tunnel connecting")
@@ -299,15 +306,17 @@ class SshProxy:                                         # pylint: disable=r0902
 
     def is_sftp_connected(self):
         """
-        Returns a asyncssh sftp client object if the SFTP subsystem is
-        ready to operate, and ``None`` otherwise
+        Returns:
+          bool: whether the SFTP subsystem is up
         """
         return self.sftp_client is not None
 
     async def sftp_connect_lazy(self):
         """
         Initializes SFTP connection if needed
-        Returns True if sftp client is ready to be used, False otherwise
+
+        Returns:
+          SFTP connection object
         """
 
         await self.connect_lazy()
@@ -353,7 +362,7 @@ class SshProxy:                                         # pylint: disable=r0902
 
     async def close(self):
         """
-        close everything open
+        Close everything open, i.e. ssh connection and SFTP subsystem
         """
         # beware that when used with asynciojobs, we often have several jobs
         # sharing the same proxy, and so there might be several calls to
@@ -365,11 +374,17 @@ class SshProxy:                                         # pylint: disable=r0902
     ##############################
     async def run(self, command, **x11_kwds):
         """
-        Run a command, outputs it on the fly according to self.formatter
-        and returns remote status - or None if nothing could be run at all
+        Run a command, and write its output on the fly
+        according to instance's formatter.
 
-        x11_kwds are optional keyword args that will be passed
-        to create_session, like typically x11_forwarding=True
+        Parameters:
+          command: remote command to run
+          x11_kwds: optional keyword args that will be passed
+            to create_session, like typically ``x11_forwarding=True``
+
+        Returns:
+          remote command exit status - or None if nothing could be run at all
+
         """
 
         # pylint: disable=c0111
@@ -391,7 +406,18 @@ class SshProxy:                                         # pylint: disable=r0902
 
     async def mkdir(self, remotedir):
         """
-        Create a remote directory if needed
+        Create a remote directory if needed.
+
+        Parameters:
+          remotedir(str): remote repository to create.
+
+        Returns:
+          True if remote directory existed or could be created,
+          False if SFTP subsystem could not be set up.
+
+        Raises:
+          asyncssh.sftp.SFTPError
+
         """
         if not await self.sftp_connect_lazy():
             return False
@@ -409,43 +435,28 @@ class SshProxy:                                         # pylint: disable=r0902
                 "Could not create {} on {}\n{}".format(remotedir, self, exc))
             raise exc
 
-    async def put_file_s(self, localpaths, remotepath, *args, **kwds):
-
+    # shows up first in doc
+    async def get_file_s(self, remotepaths, localpath, **kwds):
         """
-        if needed, opens the ssh connection and SFTP subsystem
-        put a local file - or files - as a remote
+        Retrieve a collection of remote files locally into the same directory.
+        The ssh connection and SFTP subsystem are created and set up if needed.
 
-        args and kwds are passed along to the underlying asyncssh's sftp client
-        typically: preserve, recurse and follow_symlinks are honored like in
+        Parameters:
+          remotepaths(list): remote files to retrieve
+          localpath: where to store them
+          kwds: passed along to the underlying asyncssh's sftp client,
+            typically: ``preserve``, ``recurse`` and ``follow_symlinks``
+            are honored like in
+            http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.get
 
-        http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
-
-        returns True if all went well, or raise exception
-        """
-        await self.sftp_connect_lazy()
-        try:
-            self.debug_line(
-                "doing SFTP put with {} -> {}".format(localpaths, remotepath))
-            await self.sftp_client.put(localpaths, remotepath, *args, **kwds)
-        except asyncssh.sftp.SFTPError as exc:
-            self.debug_line(
-                "Could not SFTP PUT local {} to remote {} - exception={}".
-                format(localpaths, remotepath, exc))
-            raise exc
-        return True
-
-    async def get_file_s(self, remotepaths, localpath, *args, **kwds):
-        """
-        identical to put_file_s but the other way around
-        can use asyncssh's SFTP client get options as well
-
-        http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.get
+        Returns:
+          True if all went well, or raise exception
         """
         await self.sftp_connect_lazy()
         try:
             self.debug_line(
                 "doing SFTP get with {} -> {}".format(remotepaths, localpath))
-            await self.sftp_client.get(remotepaths, localpath, *args, **kwds)
+            await self.sftp_client.get(remotepaths, localpath, **kwds)
         except asyncssh.sftp.SFTPError as exc:
             self.debug_line(
                 "Could not SFTP GET remotes {} to local {} - exception={}".
@@ -453,10 +464,51 @@ class SshProxy:                                         # pylint: disable=r0902
             raise exc
         return True
 
-    async def put_string_script(self, script_body, remotefile, *args, **kwds):
+    async def put_file_s(self, localpaths, remotepath, **kwds):
+
         """
-        creates remotefile and uses script_body as its contents
-        also chmod's remotefile to 755
+        Copy a collection of local files remotely into the same directory.
+        The ssh connection and SFTP subsystem are created and set up if needed.
+
+        Parameters:
+          localpaths (list): files to copy
+          remotepath (str): where to copy
+          kwds: passed along to the underlying asyncssh's sftp client,
+            typically: ``preserve``, ``recurse`` and ``follow_symlinks``
+            are honored like in
+            http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
+
+        Returns:
+          True if all went well, or raise exception
+        """
+        await self.sftp_connect_lazy()
+        try:
+            self.debug_line(
+                "doing SFTP put with {} -> {}".format(localpaths, remotepath))
+            await self.sftp_client.put(localpaths, remotepath, **kwds)
+        except asyncssh.sftp.SFTPError as exc:
+            self.debug_line(
+                "Could not SFTP PUT local {} to remote {} - exception={}".
+                format(localpaths, remotepath, exc))
+            raise exc
+        return True
+
+    async def put_string_script(self, script_body, remotefile, **kwds):
+        """
+        A convenience for copying over a local script before remote execution.
+        The ssh connection and SFTP subsystem are created and set up if needed.
+        Resulting remote file has mode `755`.
+
+        Parameters:
+          script_body (str): the **contents** of the script to create
+            **WARNING** this is **not** a filename.
+          remotefile: filename on the remote end
+          kwds: passed along to
+            http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.open
+            i.e. for setting ``encoding`` or ``errors``.
+
+        Returns:
+          True if all went well, or raise exception
         """
         await self.sftp_connect_lazy()
         sftp_attrs = asyncssh.SFTPAttrs()
@@ -464,7 +516,7 @@ class SshProxy:                                         # pylint: disable=r0902
         try:
             async with self.sftp_client.open(remotefile, pflags_or_mode='w',
                                              attrs=sftp_attrs,
-                                             *args, **kwds) as writer:
+                                             **kwds) as writer:
                 await writer.write(script_body)
         except Exception as exc:
             self.debug_line("Could not create remotefile {} - exception={}"

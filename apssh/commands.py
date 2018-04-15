@@ -1,6 +1,6 @@
 """
-Implementation of all the command classes, typically
-Run, RunScript, Pull and similar
+The ``commands`` module implements all the command classes, typically
+:class:`Run`, :class:`RunScript`, :class:`Pull`, and similar classes.
 """
 
 from pathlib import Path
@@ -17,37 +17,35 @@ from apssh.config import default_remote_workdir
 class AbstractCommand:
 
     """
-    Abstract base class for all command classes, like
-    Run, RunScript, Pull, and similar
+    Abstract base class for all command classes.
     """
 
+    def __init__(self, *, label=None):
+        self.label = label
+
     def __repr__(self):
-        return "<{}: {}>".format(type(self).__name__, self.command())
+        return "<{}: {}>".format(type(self).__name__, self.get_label_line())
 
     ###
     async def co_run_remote(self, node):
         """
-        needs to be redefined
-        should return 0 if everything is fine
+        Needs to be redefined on actual command classes.
+
+        Returns:
+          Should return 0 if everything is fine.
         """
         pass
 
     async def co_run_local(self, localnode):
 
         """
-        may need to be redefined if the actual command class
-        is designed to run on a LocalNode() too
-        should return 0 if everything is fine
+        Needs to be redefined on actual command classes that want
+        to support running on a :class:`~apssh.nodes.LocalNode` as well.
+
+        Returns:
+          Should return 0 if everything is fine.
         """
         pass
-
-    # descriptive views, required by SshJob
-    def details(self):
-        """
-        used by SshJob to conveniently show the inside of a Job
-        """
-        return "AbstractCommand.details needs to be redefined on {}"\
-            .format(type(self).__name__)
 
     # extra messages go to stderr and are normally formatted
     def _verbose_message(self, node, message):
@@ -58,26 +56,51 @@ class AbstractCommand:
             message += "\n"
         node.formatter.line(message, EXTENDED_DATA_STDERR, node.hostname)
 
-    def command(self):                                  # pylint: disable=C0111
-        return "AbstractCommand.command() needs to be redefined on {}"\
+    # descriptive views, required by SshJob
+    def get_label_line(self):                           # pylint: disable=c0111
+        attempt = self.label
+        if attempt is not None:
+            return attempt
+        attempt = self.label_line()
+        if attempt is not None:
+            return attempt
+        return "NO-LABEL-LINE (class {})"\
             .format(type(self).__name__)
+
+    def label_line(self):
+        """
+        Used by SshJob to conveniently show the inside of a Job.
+
+        Returns:
+          str: a one-line string
+        """
+        pass
 
 
 class Run(AbstractCommand):
     """
-    The most basic form of a command is to .. run a remote command
+    The most basic form of a command is to run a remote command
 
-    Example         `Run("tail", "-n", 1, "/etc/lsb-release")`
-    or equivalently `Run("tail -n 1 /etc/lsb-release")`
+    Parameters:
+      argv: the parts of the remote command.
+        The actual command run remotely is obtained by
+        concatenating the string representation of each argv
+        and separating them with a space.
+      label: if set, is used to describe the command in scheduler graphs.
+      verbose (bool): if set, the actual command being run is printed out.
+      x11 (bool): if set, will enable X11 forwarding, so that a X11 program
+        running remotely ends on the local DISPLAY.
 
-    The actual command run remotely is obtained by
-    concatenating the string representation of each argv
-    and separating them with a space
+    Examples:
 
-    setting `x11=True` enables X11 forwarding, so a X11 program
-    running remotely ends on the local DISPLAY
+      Remotely run ``tail -n 1 /etc/lsb-release`` ::
 
-    If verbose is set, the actual command being run is printed out
+          Run("tail -n 1 /etc/lsb-release")
+
+      The following forms are exactly equivalent::
+
+          Run("tail", "-n", 1, "/etc/lsb-release")
+          Run("tail -n", 1, "/etc/lsb-release")
     """
 
     # it was tempting to use x11_forwarding as the name here, but
@@ -85,34 +108,46 @@ class Run(AbstractCommand):
     # plus, maybe some day we'll need to add other keywords
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
-    def __init__(self, *argv, verbose=False, x11=False):
+    def __init__(self, *argv, label=None, verbose=False, x11=False):
         self.argv = argv
         self.verbose = verbose
         self.x11 = x11
+        super().__init__(label=label)
 
-    def details(self):
-        return self.command()
+    def label_line(self):
+        """
+        One-line rendering is to use the ``label`` attribute if set,
+        by default it is the full remote command.
+        """
+        return self._remote_command()
 
-    def command(self):
-        # build the (remote) command to invoke
+    def _remote_command(self):
         return " ".join(str(x) for x in self.argv)
 
     async def co_run_remote(self, node):
-        self._verbose_message(node, "Run: -> {}".format(self.command()))
+        """
+        The semantics of running on a remote node.
+        """
+        command = self._remote_command()
+        self._verbose_message(node, "Run: -> {}".format(command))
         # need an ssh connection
         connected = await node.connect_lazy()
         if not connected:
             return
-        node_run = await node.run(self.command(), x11_forwarding=self.x11)
+        node_run = await node.run(command, x11_forwarding=self.x11)
         self._verbose_message(
-            node, "Run: {} <- {}".format(node_run, self.command()))
+            node, "Run: {} <- {}".format(node_run, command))
         return node_run
 
     async def co_run_local(self, localnode):
-        self._verbose_message(localnode, "Run: -> {}".format(self.command()))
-        retcod = await localnode.run(self.command())
+        """
+        The semantics of running on a local node.
+        """
+        command = self._remote_command()
+        self._verbose_message(localnode, "Run: -> {}".format(command))
+        retcod = await localnode.run(command)
         self._verbose_message(
-            localnode, "Run: {} <- {}".format(retcod, self.command()))
+            localnode, "Run: {} <- {}".format(retcod, command))
         return retcod
 
 # the base class for running a script provided locally
@@ -123,25 +158,41 @@ class Run(AbstractCommand):
 class RunLocalStuff(AbstractCommand):
     """
     The base class for ``RunScript`` and ``RunString``.
+    This class implements the common logic for a local script that
+    needs to be copied over before being executed.
 
-    `verbose = True` means running the script with "bash -x"
-    which admittedly is a little hacky
+    Parameters:
+      args: the argument list for the remote command
+      label: if set, is used to describe the command in scheduler graphs.
+      includes: a collection of local files that need to be copied over
+        as well; get copied in the same directory as the remote script.
+      verbose: print out more information if set; this additionnally causes
+        the remote script to be invoked through ``bash -x``, which admittedly
+        is totally hacky. xxx we need to remove this.
+      remote_basename: an optional name for the remote copy of the script.
 
-    Both classes need to generate random names for the remote command.
-    This is because 2 parallel runs of the same command would otherwise
-    be at risk of one overwriting the remote command file, while the second
-    tries to run it, which causes errors like this
+    Local commands are copied in a remote directory
+    - typically in ``~/.apssh-remote``.
 
-    fit26:bash: .apssh-remote/B3.sh: /bin/bash: bad interpreter: Text file busy
+    Also, all copies are done under a name that contains a random string to
+    avoid collisions. This is because two parallel runs of the same command
+    would otherwise be at risk of one overwriting the remote command file,
+    while the second tries to run it, which causes errors like this::
+
+     fit26: .apssh-remote/B3.sh: /bin/bash: bad interpreter: Text file busy
+
     """
 
-    def __init__(self, args, includes,                  # pylint: disable=R0913
-                 verbose, remote_basename, x11):
+    def __init__(self, args, *,
+                 label=None,
+                 includes=None, remote_basename=None,
+                 x11=False, verbose=False):
         self.args = args
-        self.includes = includes
-        self.verbose = verbose
+        self.includes = includes if includes is not None else []
         self.remote_basename = remote_basename
         self.x11 = x11
+        self.verbose = verbose
+        super().__init__(label=label)
 
     @staticmethod
     def _random_id():
@@ -155,10 +206,7 @@ class RunLocalStuff(AbstractCommand):
     def _args_line(self):
         return " ".join(str(x) for x in self.args)
 
-    def command(self):
-        """
-        The command to run remotely
-        """
+    def _remote_command(self):                          # pylint: disable=c0111
         command = self.remote_basename + " " + self._args_line()
         command = default_remote_workdir + "/" + command
         if self.verbose:
@@ -176,11 +224,11 @@ class RunLocalStuff(AbstractCommand):
 
     async def co_run_remote(self, node):
         """
-        The common behaviour for both classes is as follows
 
-        Method co_install(self) is invoked to push the local material
-        over in default_remote_workdir/self.remote_basename
-        it should raise an exception in case of failure
+        Implemented to satisfy the requirement of ``AbstractCommand``.
+        The common behaviour for both classes is to first invoke
+        :meth:`co_install()` to push the local material
+        over; it should raise an exception in case of failure.
         """
         # we need the node to be connected by ssh and SFTP
         # and we need the remote work dir to be created
@@ -205,16 +253,17 @@ class RunLocalStuff(AbstractCommand):
                     print("include file {} not found -- skipped"
                           .format(include))
                     continue
-                self._verbose_message(node,
-                                      "RunLocalStuff: pushing include {} in {}"
-                                      .format(include, default_remote_workdir))
+                self._verbose_message(
+                    node,
+                    "RunLocalStuff: pushing include {} in {}"
+                    .format(include, default_remote_workdir))
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/",
                         follow_symlinks=True):
                     return
 
         # trigger it
-        command = self.command()
+        command = self._remote_command()
         self._verbose_message(node, "RunLocalStuff: -> {}".format(command))
         node_run = await node.run(command, x11_forwarding=self.x11)
         self._verbose_message(
@@ -228,31 +277,43 @@ class RunScript(RunLocalStuff):
     A class to run a **local script file** on the remote system,
     but with arguments passed exactly like with `Run`
 
-    Example:
+    Parameters:
+      local_script: the local filename for the script to run remotely
+      args: the arguments for the remote script; like with :class:`Run`,
+        these are joined with a space character
+      label: if set, is used to describe the command in scheduler graphs.
+      includes: a collection of local files to be copied over in the same
+        location as the remote script, i.e. typically in ``~/.apssh-remote``
+      x11 (bool): allows to enable X11 x11_forwarding
+      verbose: more output
 
-    run a local script located in ../foo.sh with specified args:
+    Examples:
+
+      Run a local script located in ``../foo.sh`` with specified args::
+
         RunScript("../foo.sh", "arg1", 2, "arg3")
 
-    includes allows to specify a list of local files
-    that need to be copied over at the same location as the local script
-    i.e. typically in ~/.apssh-remote
+      or equivalently::
 
-    setting `x11=True` enables X11 forwarding
-
-    if verbose is set, the remote script is run through `bash -x`
+        RunScript("../foo.sh", "arg1 2", "arg3")
 
     """
 
-    def __init__(self, local_script, *args, includes=None, x11=False,
+    def __init__(self, local_script, *args,
+                 label=None, includes=None, x11=False,
                  # if this is set, run bash -x
                  verbose=False):
         self.local_script = local_script
         self.local_basename = Path(local_script).name
         remote_basename = self.local_basename + '-' + self._random_id()
 
-        super().__init__(args, includes, verbose, remote_basename, x11)
+        super().__init__(args,
+                         label=label,
+                         includes=includes,
+                         remote_basename=remote_basename,
+                         x11=x11, verbose=verbose)
 
-    def details(self):
+    def label_line(self):
         return "RunScript: " + self.local_basename + " " + self._args_line()
 
     async def co_install(self, node, remote_path):
@@ -272,28 +333,32 @@ class RunString(RunLocalStuff):
     Much like RunScript, but the script to run remotely is expected
     to be passed in the first argument as **a python string** this time.
 
-    `remote_name`, if provided, will tell how the created script
-    should be named on the remote node
-    - it is randomly generated if not specified
+    Parameters:
+      script_body(str): the **contents** of the script to run remotely.
+      args: the arguments for the remote script; like with :class:`Run`,
+        these are joined with a space character
+      label: if set, is used to describe the command in scheduler graphs.
+      includes: a collection of local files to be copied over in the same
+        location as the remote script, i.e. typically in ``~/.apssh-remote``
+      x11 (bool): allows to enable X11 x11_forwarding
+      remote_name: if provided, will tell how the created script
+        should be named on the remote node; it is randomly generated
+        if not specified by caller.
+      verbose: more output
 
-    `includes` allows to specify a list of local files
-    that need to be copied over at the same location as the local script
-    i.e. typically in ~/.apssh-remote
+    Examples:
 
-    setting `x11=True` enables X11 forwarding
+      Here's how to call a simple bash wrapper remotely::
 
-    if `verbose` is set, the remote script is run through `bash -x`
-
-    Example:
-
-    ``myscript = "#!/bin/bash\\nfor arg in "$@"; do echo arg=$arg; done"``
-
-    ``RunString(myscript, "foo", "bar", 2, "arg3",
-                remote_name = "echo-args.sh")``
+        myscript = "#!/bin/bash\\nfor arg in "$@"; do echo arg=$arg; done"
+        scheduler.add(
+          RunString(myscript, "foo", "bar", 2, "arg3",
+                    remote_name = "echo-args.sh"))
 
     """
 
-    def __init__(self, script_body, *args, includes=None, x11=False,
+    def __init__(self, script_body, *args,
+                 label=None, includes=None, x11=False,
                  # the name under which the remote command will be installed
                  remote_name=None,
                  # if this is set, run bash -x
@@ -307,10 +372,13 @@ class RunString(RunLocalStuff):
         else:
             self.remote_name = ''
             remote_basename = self._random_id()
-        super().__init__(args, includes, verbose, remote_basename, x11)
+        super().__init__(args,
+                         label=label,
+                         includes=includes,
+                         remote_basename=remote_basename,
+                         x11=x11, verbose=verbose)
 
-    # if it's small let's show it all
-    def details(self):
+    def label_line(self):
         remote_name = self.remote_name or '[no_remote_name]'
         return "RunString: " + remote_name + " " + self._args_line()
 
@@ -328,6 +396,13 @@ class Pull(AbstractCommand):
     """
     Retrieve remote files and stores them locally
 
+    Parameters:
+      remotepaths: a collection of remote paths to be retrieved.
+      localpath: the local directory where to store resulting copies.
+      label: if set, is used to describe the command in scheduler graphs.
+      verbose (bool): be verbose.
+      kwds: passed as-is to the SFTPClient get method.
+
     See also:
     http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.get
 
@@ -335,6 +410,7 @@ class Pull(AbstractCommand):
 
     def __init__(self, remotepaths, localpath,
                  *args,
+                 label=None,
                  verbose=False,
                  # asyncssh's SFTP client get options
                  **kwds):
@@ -343,6 +419,7 @@ class Pull(AbstractCommand):
         self.verbose = verbose
         self.args = args
         self.kwds = kwds
+        super().__init__(label)
 
     def _remote_path(self):
         paths = self.remotepaths
@@ -353,7 +430,7 @@ class Pull(AbstractCommand):
                else "{} remote path(s) starting with {}"\
             .format(len(self.remotepaths), self.remotepaths[0])
 
-    def details(self):
+    def label_line(self):
         return "Pull: {} into {}".\
             format(self._remote_path(), self.localpath)
 
@@ -372,6 +449,14 @@ class Push(AbstractCommand):
     """
     Put local files onto target node
 
+    Parameters:
+      localpaths: a collection of local filenames to be copied
+        over to the remote end.
+      remotepath: the directory where to store copied on the remote end.
+      label: if set, is used to describe the command in scheduler graphs.
+      verbose (bool): be verbose.
+      kwds: passed as-is to the SFTPClient put method.
+
     See also:
     http://asyncssh.readthedocs.io/en/latest/api.html#asyncssh.SFTPClient.put
 
@@ -379,6 +464,7 @@ class Push(AbstractCommand):
 
     def __init__(self, localpaths, remotepath,
                  *args,
+                 label=None,
                  verbose=False,
                  **kwds):
         self.localpaths = localpaths
@@ -386,6 +472,7 @@ class Push(AbstractCommand):
         self.verbose = verbose
         self.args = args
         self.kwds = kwds
+        super().__init__(label)
 
     def _local_path(self):
         paths = self.localpaths
@@ -396,7 +483,7 @@ class Push(AbstractCommand):
                else "{} local path(s) starting with {}"\
             .format(len(self.localpaths), self.localpaths[0])
 
-    def details(self):
+    def label_line(self):
         return "Push: {} onto {}".\
             format(self._local_path(), self.remotepath)
 

@@ -41,6 +41,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.viewcode',
     'sphinxcontrib.asyncio',
+    'sphinxcontrib.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -129,7 +130,7 @@ todo_include_todos = False
 # a list of builtin themes.
 #
 # see list at http://www.sphinx-doc.org/en/1.4.8/theming.html
-html_theme = 'sphinxdoc'
+html_theme = 'nature'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

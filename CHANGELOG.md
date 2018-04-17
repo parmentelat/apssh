@@ -1,5 +1,14 @@
 # ChangeLog
 
+## 0.10.1 - 2018 Apr 17
+
+* in line with asynciojobs 0.7 labelling system
+* command objects can have a label set on them
+  to shorten the graphical view
+* major overhaul on the documentation
+  * using the numpy style in docstrings
+* code is now totally pep8/flake8- and pylint- clean
+
 ## 0.9.4 - 2018 Mar 28
 
 * revisited graphical rendering of RunString

@@ -419,7 +419,7 @@ class Pull(AbstractCommand):
         self.verbose = verbose
         self.args = args
         self.kwds = kwds
-        super().__init__(label)
+        super().__init__(label=label)
 
     def _remote_path(self):
         paths = self.remotepaths
@@ -472,7 +472,7 @@ class Push(AbstractCommand):
         self.verbose = verbose
         self.args = args
         self.kwds = kwds
-        super().__init__(label)
+        super().__init__(label=label)
 
     def _local_path(self):
         paths = self.localpaths

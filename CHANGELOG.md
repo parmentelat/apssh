@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.10.2 - 2018 Apr 17
+
+* apssh binary was broken, searching for config files in ~/.apssh/ was not working
+
 ## 0.10.1 - 2018 Apr 17
 
 * in line with asynciojobs 0.7 labelling system

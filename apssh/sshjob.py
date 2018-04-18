@@ -1,7 +1,15 @@
 """
-The SshJob class is a specialization of asynciojobs' Job class
-it allows to group operations (commands & file transfers) made in sequence
-on a given remote (and even local for convenience) node
+The ``SshJob`` class is a specialization of ``asynciojobs``' AbstractJob_
+class. It allows to group operations (commands & file transfers)
+made in sequence on a given remote (and even local for convenience) node.
+
+.. _AbstractJob: https://asynciojobs.readthedocs.io/\
+en/latest/API.html#asynciojobs.job.AbstractJob
+
+.. _Scheduler: http://asynciojobs.readthedocs.io/\
+en/latest/API.html#module-asynciojobs.scheduler
+
+.. _asynciojobs: https://asynciojobs.readthedocs.io/
 """
 
 from asynciojobs.job import AbstractJob
@@ -12,6 +20,17 @@ from .nodes import LocalNode
 
 from .commands import AbstractCommand, Run
 
+class CommandFailedError(Exception):
+    """
+    The exception class raised when a command that is part
+    of a critical SshJob instance fails.
+
+    This is turn is designed to cause the abortion of the
+    surrounding scheduler.
+    """
+
+    pass
+
 
 # a single kind of job
 # that can involve several sorts of commands
@@ -21,49 +40,72 @@ from .commands import AbstractCommand, Run
 class SshJob(AbstractJob):
 
     """
-    A asynciojobs `Job` object that is set to
-    run a command, or list of commands, remotely
+    A subclass of asynciojobs_'s AbstractJob_ object that is set to
+    run a command, or list of commands, on a remote node specified by a
+    :class:`~apssh.nodes.SshNode` object.
 
-    As a subclass of ``AbstractJob``, this allows you to
-    set the ``forever`` and ``critical`` flags
 
-    If ``verbose`` is set to a non-None value, it is used to
-    set - and possibly override - the verbose value in all the
-    `commands` in the job
+    Parameters:
+      node: an :class:`SshNode` instance that describes the node
+        where the attached commands will run, or the host used
+        for file transfers for commands like e.g. :class:`Pull`.
+        It is possible to use a :class:`~apssh.nodes.LocalNode` instance too,
+        for running commands locally, although some types of commands,
+        like precisely file transfers, do not support this.
+      command: an alias for ``commands``
+      commands: An ordered collection of commands to run sequentially on
+        the reference node. for convenience, you can set either
+        ``commands`` or ``command``, both forms are equivalent,
+        but you need to make sure to give exactly one of both.
+        ``commands`` can be set as either in a variety of ways:
 
-    ``commands`` can be set as either
+          * (1) a list/tuple of ``AbstractCommand`` objects,
+            e.g.::
 
-    * (1) a list/tuple of ``AbstractCommand`` objects e.g.::
+              commands = [ Run(..), RunScript(...), ..]
 
-        commands = [ Run(..), RunScript(...), ..]
+          * (2) a single instance of ``AbstractCommand``,
+            e.g.::
 
-    * (2) a single instance of ``AbstractCommand``, e.g.::
+              commands = RunScript(...)
 
-        commands = RunScript(...)
+          * (3) a list/tuple of strings, in which case
+            a single ``Run`` object is created, e.g.::
 
-    * (3) a list/tuple of strings, in which case
-      a single ``Run`` object is created, e.g.::
+              commands = [ "uname", "-a" ]
 
-        commands = [ "uname", "-a" ]
+          * (4) a single string, here again a single ``Run``
+            object is created, e.g.::
 
-    * (4) a single string, here again a single ``Run``
-      object is created, e.g.::
+              commands = "uname -a"
 
-        commands = "uname -a"
+        Regardless, the commands attached internally to a ``SshJob`` objects
+        are always represented as a list of :class:`AbstractCommand`
+        instances.
 
-    For convenience, you can set either ``commands`` or ``command``,
-    it is equivalent but make sure to give exactly one of both.
+      verbose: if set to a non-None value, it is used to
+        set - and possibly override - the verbose value in all the
+        command instances in the job.
+      keep_connection: if set, this flag prevents ``co_shutdown``, when sent
+        to this job instance by the scheduler upon completion, from closing
+        the connection to the attached node.
+      forever: passed to AbstractJob_; default is ``False``, which may differ
+        from the one adopted in asynciojobs_.
+      critical : passed to AbstractJob_; default is ``True``, which may differ
+        from the one adopted in asynciojobs_.
+      kwds: passed as-is to AbstractJob_; typically useful for setting
+       ``required`` and ``scheduler`` at build-time.
     """
 
-    def __init__(self, node, *args,                     # pylint: disable=r0912
+    def __init__(self, node, *,                         # pylint: disable=r0912
                  command=None, commands=None,
+                 keep_connection=False,
+                 # if set, propagate to all commands
+                 verbose=None,
                  # set to False if not set explicitly here
                  forever=None,
                  # set to True if not set explicitly here
                  critical=None,
-                 # if set, propagate to all commands
-                 verbose=None,
-                 keep_connection=False,
                  **kwds):
         check_arg_type(node, (SshProxy, LocalNode), "SshJob.node")
         self.node = node
@@ -131,13 +173,32 @@ class SshJob(AbstractJob):
         forever = forever if forever is not None else False
         critical = critical if critical is not None else True
         AbstractJob.__init__(self, forever=forever,
-                             critical=critical, *args, **kwds)
+                             critical=critical, **kwds)
 
     async def co_run(self):
         """
-        run all commands - i.e. call co_prepare and co_exec
-        if the last command does not return 0, then an exception is raised
-        so if this job is critical it will abort orchestration
+        This method is triggered by a running scheduler as part of the
+        AbstractJob_ protocol. It simply runs all commands sequentially.
+
+        If any of the commands fail, then the behavious depends on the job's
+        ``critical`` flag:
+
+          * if the job is not critical, then all the commands
+            are triggered no matter what, and the return code reflects that
+            something went wrong by reporting the last failing code;
+          * if the job is critical on the other hand, then the first failing
+            command causes co_run to stop abruptly and to throw an exception,
+            that in turn will cause the surrounding scheduler execution to
+            abort immediately.
+
+        Returns:
+          int: 0 if everything runs fine, the faulty return code otherwise.
+
+        Raises:
+          CommandFailedError: in the case where the object instance is defined
+            as ``critical``, and if one of the commands fails, an exception is
+            raised, which leads the running scheduler to aborting abruptly.
+
         """
         # the commands are of course sequential,
         # so we wait for one before we run the next
@@ -152,8 +213,8 @@ class SshJob(AbstractJob):
                 if self.critical:
                     # if job is critical, let's raise an exception
                     # so the scheduler will stop
-                    raise Exception(
-                        "command {} returned {} on {}"
+                    raise CommandFailedError(
+                        "command {} returned {} on node {}"
                         .format(command.command(), result, self.node))
                 else:
                     # not critical; let's proceed, but let's remember the
@@ -163,18 +224,24 @@ class SshJob(AbstractJob):
 
     async def co_shutdown(self):
         """
-        don't bother to terminate all the commands separately
-        all that matters is to terminate the ssh connection to that node
+        Implemented as part of the AbstractJob_ protocol.
+
+        Default behaviour is to close the underlying ssh connection,
+        that is to say the attached `node` object, unless ``keep_connection``
+        was set, in which case no action is taken.
+
+        Returns:
+          None
         """
         if not self.keep_connection:
             await self.node.close()
 
     def text_label(self):
         """
-        This method customizes rendering of SshJobs for
-        calls to a scheduler's ``list()`` or ``debrief()`` methods.
+        This method customizes rendering of this job instance for
+        calls to its Scheduler_'s ``list()`` or ``debrief()`` methods.
 
-        Relies on the first command's ``label_line()`` method
+        Relies on the first command's ``label_line()`` method.
         """
         first_label = self.commands[0].get_label_line()
         return first_label if len(self.commands) == 1 \
@@ -182,8 +249,8 @@ class SshJob(AbstractJob):
 
     def graph_label(self):
         """
-        This method customizes rendering of SshJobs from
-        calls to a scheduler's
+        This method customizes rendering of this job instance for
+        calls to its Scheduler_'s
         ``graph()`` or ``export_as_dotfile()`` methods.
 
         Relies on each command's ``label_line()`` method
@@ -196,7 +263,7 @@ class SshJob(AbstractJob):
 
     def details(self):
         """
-        Used by SshJob when running list(details=True)
+        Used by Scheduler_ when running ``list(details=True)``
         """
-        # tusn out the logic for graph_text is exactly right
+        # turn out the logic for graph_text is exactly right
         return self.graph_label()

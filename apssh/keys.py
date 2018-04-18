@@ -15,11 +15,16 @@ from .config import default_private_keys
 
 def import_private_key(filename):
     """
-    Attempts to import a private key from file
+    This functions attempts to import a private key from its filename. It will
+    prompt for a password if needed.
 
-    Prompts for a password if needed
+    Parameters:
+      filename: the local path to the private key
 
-    Returns a (asyncssh) key object if successful, or None
+    Returns:
+      a (asyncssh) SSHKey_ object if successful, or None
+
+    .. _SSHKey: http://asyncssh.readthedocs.io/en/latest/api.html#sshkey
     """
     sshkey = None
     path = Path(filename)
@@ -49,14 +54,38 @@ def import_private_key(filename):
         return sshkey
 
 
-def load_agent_keys(loop=None, agent_path=None):
+def load_agent_keys(agent_path=None, *, loop=None):
     """
-    returns a list of keys from the agent
+    The ssh-agent is a convenience tool that aims at easying the use of
+    private keys protected with a password. In a nutshell, the agent runs on
+    your local computer, and you trust it enough to load one or several keys
+    into the agent once and for good - and you provide the password
+    at that time.
 
-    agent_path defaults to env. variable $SSH_AUTH_SOCK
+    Later on, each time an ssh connection needs to access a key,
+    the agent can act as a proxy for you and pass the key along
+    to the ssh client without the need for you to enter the password.
+
+    The ``load_agent_keys`` function allows your python code to access
+    the keys currently knwns to the agent. It is automatically called by the
+    :class:`~apssh.nodes.SshNode` class if you do not explicit the set of
+    keys that you plan to use.
+
+    Parameters:
+      agent_path: how to locate the agent;
+        defaults to env. variable $SSH_AUTH_SOCK
+      loop: an asyncio event loop, probably safer to ignore this.
+
+    Returns:
+      a list of SSHKey_ keys from the agent
+
+    .. note::
+      Use the command ``ssh-add -l`` to inspect the set of keys
+      currently present in your agent.
+
     """
     # pylint: disable=c0111
-    async def co_load_agent_keys(loop, agent_path):
+    async def co_load_agent_keys(agent_path, loop):
         # make sure to return an empty list when something goes wrong
         try:
             agent_client = asyncssh.SSHAgentClient(loop, agent_path)
@@ -70,27 +99,41 @@ def load_agent_keys(loop=None, agent_path=None):
     if agent_path is None:
         return []
     loop = loop or asyncio.get_event_loop()
-    return loop.run_until_complete(co_load_agent_keys(loop, agent_path))
+    return loop.run_until_complete(co_load_agent_keys(agent_path, loop))
 
 
 def load_private_keys(command_line_keys=None, verbose=False):
     """
-    Here's how `apssh` locates private keys:
+    A utility that implements a default policy for locating
+    private keys.
 
-    * 1. If no keys are given as the command_line_keys parameter
-         (typically through the apssh `-k` command line option)
+    Parameters:
+      command_line_keys: a collection of local filenames that should contain
+        private keys; this should correspond to keys that a user has
+        explicitly decided to use through a command-line option or similar;
+      verbose: gives more details on what is going on.
 
-      1.a if an *ssh agent* can be reached using the `SSH_AUTH_SOCK`
+    This function is used both by the apssh binary, and by the
+    :class:`~apssh.nodes.SshNode` class.
+    Here's for example how `apssh` locates private keys:
+
+    - 1. If no keys are given as the ``command_line_keys`` parameter
+         (typically through the apssh `-k` command line option), then:
+
+      - 1.a if an *ssh agent* can be reached using the `SSH_AUTH_SOCK`
           environment variable, and offers a non-empty list of keys,
-          `apssh` will use the keys loaded in the agent
-          (**NOTE:** use `ssh-add` for managing the keys known to the agent)
+          ``apssh`` will use the keys loaded in the agent
 
-      1.b otherwise, `apssh` will use
-         `~/.ssh/id_rsa` and `~/.ssh/id_dsa` if existent
+      - 1.b otherwise, `apssh` will use
+         ``~/.ssh/id_rsa`` and ``~/.ssh/id_dsa`` if they exist
 
-    * 2. If keys are specified on the command line
+    - 2. If keys are specified on the command line
 
-      2.c That exact list is used for loading private keys
+      - 2.c That exact list is used for loading private keys
+
+    .. note::
+      Use ``ssh-add`` for managing the keys known to the agent.
+
     """
     filenames = []
     if not command_line_keys:

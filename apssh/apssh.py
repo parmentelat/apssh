@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 """
-Implementation of the apssh command line utility
+The apssh binary makes a rather straightforward use of the library,
+except maybe for the way it handles the fuzzy notion of targets,
+that can be defined as either hostnames directly, or from files that contain
+hostnames, or from directories that contain files named after hostnames.
 """
 
 # allow catch-all exceptions
@@ -61,33 +64,39 @@ class Apssh:
         return None
 
     def analyze_target(self, target):
-        """A target can be specified as either
+        """
+        This function is used to guess the meaning of all the targets passed
+        to the ``apssh`` command through its ``-t/--target`` option.
 
-        * a filename
-          Searched also in ~/.apssh
-          If the provided filename exists and could be parsed,
-          returned object will be::
+        Parameters:
+          target: a string passed to ``--target``
+
+        Returns:
+          (bool, list): a tuple, whose meaning is described below.
+
+        A target can be specified as either
+
+        * a **filename**. If it is a relative filename it is also searched
+          in ``~/.apssh``. If an existing file can be located this way,
+          and it can be parsed, then the returned object will be of the form::
 
               True, [ hostname1, ...]
 
-        * a directory name
-
-          This is for use together with the --mark option, so that one
-          can easily select reachable nodes only, or just as easily
-          exclude failing nodes
-
+        * a **directory name**. Here again the search is also done in
+          ``~/.apssh``. If an existing directory can be found,
           all the simple files that are found immediately under the
-          specified directory are taken as hostnames
-
-          *Note: it would make sense to check there is at least one dot
-          in their name, but I'm not sure about that yet.* Here again if
-          things work out we return::
+          specified directory are taken as hostnames, and in this case
+          ``analyze_target`` returns::
 
               True, [ hostname1, ...]
 
-        * otherwise, the target is then expected a string passed
-          to -t on the command line, so it is simply split according
-          to white spaces before being returned as::
+          This is notably for use together with the ``--mark`` option, so that one
+          can easily select reachable nodes only, or just as easily
+          exclude failing nodes.
+
+        * otherwise, the incoming target is then expected to be a string that
+          directly contains the hostnames, and so it is simply split along
+          white spaces, and the return code is then::
 
               True, [ hostname1, ...]
 
@@ -95,8 +104,8 @@ class Apssh:
 
               False, []
 
-          e.g. the file exists but cannot be parsed
-          not sure this truly is useful
+          for example, this is the case when the file exists
+          but cannot be parsed - in which case it is probably not a hostname.
 
         """
         names = []

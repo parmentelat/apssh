@@ -22,31 +22,35 @@ Formatters classes
 
 .. automodule:: apssh.formatters
 		:members:
+		:member-order: bysource
+		:exclude-members: VerboseFormatter
 
 -----
 
-Classes for ``nepi-ng`` (asynciojobs)
+``nepi-ng`` node classes
+-------------------------------------
+
+.. automodule:: apssh.nodes
+		:members:
+
+``nepi-ng`` job classes
 -------------------------------------
 
 .. automodule:: apssh.sshjob
 		:members:
-.. automodule:: apssh.localnode
-		:members:
 
 -----
 
-Tools to deal with keys 
+Tools to deal with keys
 ------------------------------
-		   
-.. automodule:: apssh.keys 
-		:members: 
+
+.. automodule:: apssh.keys
+		:members:
 
 -----
 
 The apssh binary implementation
 ----------------------------------------
 
-.. automodule:: apssh.apssh 
-		:members: 
-
-		   
+.. automodule:: apssh.apssh
+		:members:

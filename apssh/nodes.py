@@ -1,5 +1,7 @@
 """
-SshNode and LocalNode
+The :class:`SshNode` and :class:`LocalNode` classes are designed
+as companions to the :class:`~apssh.sshjob.SshJob` class, that need
+a ``node`` attribute to describe on which node to run commands.
 """
 
 import asyncio
@@ -21,23 +23,28 @@ from .keys import load_private_keys, load_agent_keys
 
 class LocalNode:
     """
-    For convenience and consistency, this class essentially
-    allows you to describe a set of commands to run locally.
+    For convenience and consistency, this class can be used
+    as the ``node`` attribute of a :class:`~apssh.sshjob.SshJob` object,
+    so as to define a set of commands to run locally.
 
-    So you would create a SshJob like always, but would pass
-    it an instance of LocalNode() - that is otherwise pretty dumb
+    Parameters:
+      formatter: a formatter instance, default to an instance of
+        ``ColonFormatter``;
+      verbose: if provided, passed to the formatter instance
 
-    The `formatter` and `verbose` parameters apply like for `SshNode`:
-    a `ColonFormatter` is created for you unless you give one, and
-    the formatter's `verbose` is set from the LocalNode's `verbose`
-    if you give one
+    Examples:
+      To create a job that runs 2 commands locally::
 
-    Allows you to create local commands using `Run`
+        SshJob(node=LocalNode(),
+               commands = [
+                   Run("cat /etc/motd"),
+                   Run("sleep 10"),
+               ])
 
-    `RunScript` et `RunString` are not yet implemented,
-    but would make sense of course
+    .. note::
+      Not all command classes support running on a local node, essentially
+        this is only available for usual ``Run`` commands as of this writing.
 
-    `Push` and `Pull` on the other hand are not supported
     """
 
     def __init__(self, formatter=None, verbose=None):
@@ -115,20 +122,37 @@ class LocalNode:
 
 class SshNode(SshProxy):
     """
-
-    Similar to the :py:obj:`apssh.sshproxy.SshProxy`; the differences
-    are in the handling of default values at construction time:
-
-    * `username` defaults to "root" if unspecified
-
-    * `keys` when not specified, this class will first try to load your
-       ssh agent keys; if no key can be found this way, `SshNode` will
-       attempt to import the default ssh keys located in ``~/.ssh/id_rsa``
-       and ``~/.ssh/id_dsa``.
-
     An instance of `SshNode` typically is needed to create a
     :py:obj:`apssh.sshjob.SshJob` instance, that defines a batch of commands
     or file transfers to run in sequence on that node.
+
+    Examples:
+      A typical usage to create a job that runs 2 commands remotely::
+
+        remote_node = SshNode('remote.foo.com', username='tutu')
+
+        SshJob(node=remote_node,
+               commands = [
+                   Run("cat /etc/motd"),
+                   Run("sleep 10"),
+               ])
+
+    This class is a very close specialization of the
+    :class:`~apssh.sshproxy.SshProxy` class.
+    The only difference are in the handling of default values
+    at build time.
+
+    Parameters:
+      hostname: remote node's hostname
+      username: defaults to ``root`` if unspecified, note that
+        :class:`~apssh.sshproxy.SshProxy`'s default is to use
+        the local username instead
+      keys: filenames for the private keys to use when authenticating;
+        the default policy implemented in this class is to first use the
+        keys currently loaded in the ssh agent. If none can be found this
+        way, `SshNode` will attempt to import the default ssh keys located
+        in ``~/.ssh/id_rsa`` and ``~/.ssh/id_dsa``.
+      kwds: passed along to the :class:`~apssh.sshproxy.SshProxy` class.
 
     """
 

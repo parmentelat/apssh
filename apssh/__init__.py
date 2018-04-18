@@ -27,7 +27,7 @@ try:
     from .commands import Run, RunScript, RunString, Push, Pull
 
     # jobs for asynciojobs
-    from .sshjob import SshJob
+    from .sshjob import SshJob, CommandFailedError
 
     # SshNode is just an SshProxy with a slightly different
     #  default for keys management

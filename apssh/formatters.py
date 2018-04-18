@@ -1,11 +1,10 @@
 """
-Implementation of the formatter classes for apssh
+A formatter is a class that knows how to deal with the
+stdout/stderr lines as they come back from a ssh connection.
 
-a formatter is a class that knows how to deal with the
-stdout/stderr lines as they come back from a ssh connection
 
-in its capture form, it allows to do retain this output
-in memory instead of printing on the fly
+In its capture form, it allows to retain this output
+in memory instead of printing on the fly.
 """
 
 import time
@@ -29,26 +28,28 @@ def ensure_visible(exc):                                # pylint: disable=c0111
 
 class Formatter:
     """
-    This class is an abstract class that allows to define
-    how to handle the incoming line of a remote command
-    plus various events pertaining to an ssh proxy
+    This class is an abstract class that allows to describe
+    how to handle the incoming text from a remote command,
+    as well as various events pertaining to an
+    :class:`~apssh.sshproxy.SshProxy`.
 
-    This object is expected to be created manually outside of SshProxy logic,
-    and then passed to SshProxy
+    This object is expected to be created manually outside of the
+    :class:`~apssh.sshproxy.SshProxy` logic.
 
-    Examples:
+    Examples of predefined formatters:
 
-    * VerboseFormatter:  prints out ssh-details based on verbose flag
+    * ``TerminalFormatter``: prints out line based on a format
+      (time, hostname, actual line...).
 
-    * TerminalFormatter: prints out line based on a format
-      (time, hostname, actual line...)
+    * ``RawFormatter``:    shortcut for ``TerminalFormatter("@line@")``.
 
-    * RawFormatter:      TerminalFormatter("@line@")
+    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("@host@:@line@")``.
 
-    * ColonFormatter:    TerminalFormatter("@host@:@line@")
+    * ``SubdirFormatter``: stores in ``<subdir>/<hostname>``
+      all outputs from that host.
 
-    * SubdirFormatter:   stores in <subdir>/<hostname>
-      all outputs from that host
+    * ``CaptureFormatter``: stores flow in-memory
+      instead of printing on the fly.
     """
 
     time_format = "%H-%M-%S"
@@ -157,12 +158,30 @@ class VerboseFormatter(Formatter):
 
 class TerminalFormatter(VerboseFormatter):
     """
-    print raw lines as they come
+    Use ``print()`` to render raw lines as they come.
+    Remote stdout goes to stdout of course. Remote stderr goes to stderr.
+    If the ``verbose`` attribute is set, additional ssh-related
+    events, like connection open and similar, are also issued on stderr.
 
-    * regular stdout goes to stdout
+    Parameters:
+      custom_format: a string that describes the format used to print out
+        incoming lines, see below.
+      verbose: when set, additional information get issued as well,
+        typically pertaining to the establishment of the ssh connection.
 
-    * regular stderr, plus event-based annotations like connection open,
-      go on stderr
+    The ``custom_format`` attribute can contain the following keywords,
+    that are expanded when actual traffic occurs.
+
+    * ``@line@`` the raw contents as sent over the wire
+    * ``@host@@`` the remote hostname
+    * ``@user@`` the remote username
+    * ``%H`` and similar time-oriented formats, applied to the time
+      of local reception; refer to strftime_ for
+      a list of supported formats.
+    * ``@time@`` is a shortcut for ``"%H-%M-%S"``.
+
+    .. _strftime: https://docs.python.org/\
+3/library/datetime.html#strftime-and-strptime-behavior
     """
 
     def line(self, line, datatype, hostname):
@@ -202,8 +221,22 @@ class TimeColonFormatter(TerminalFormatter):
 
 class SubdirFormatter(VerboseFormatter):
     """
-    Stores outputs in a subdirectory ``run_name``,
-    and in a file named after the hostname
+    This class allows to store remote outputs on the filesystem rather
+    than on the terminal, using the remote hostname as the base for
+    the local filename.
+
+    With this class, the remote stdout, stderr, as well as ssh events
+    if requested, are all merged in a single output file,
+    named after the hostname.
+
+    Parameters:
+      run_name: the name of a local directory where to store the resulting
+        output; this directory is created if needed.
+      verbose: allows to see ssh events in the resulting file.
+
+    Examples:
+      If ``run_name`` is set to ``probing``, the session for
+      host ``foo.com`` will end up in file ``probing/foo.com``.
     """
 
     def __init__(self, run_name, *, verbose=True):
@@ -255,9 +288,26 @@ class SubdirFormatter(VerboseFormatter):
 
 class CaptureFormatter(VerboseFormatter):
     """
-    This class allows to implement something like this bash fragment
-    x=$(ssh hostname command)
-    For now it just provides options to start and get capture
+    This class allows to capture remote output in memory.
+    For now it just provides options to start and get a capture.
+
+    Examples:
+
+      To do a rough equivalent of bash's::
+
+        captured_output=$(ssh remote.foo.com cat /etc/release-notes)
+
+      You would do this::
+
+        s = Scheduler()
+        f = CaptureFormatter()
+        n = SshNode('remote.foo.com', formatter=f)
+        s.add(SshJob(node=n, command="cat /etc/release-notes"))
+
+        f.start_capture()
+        s.run()
+        captured = f.get_capture()
+
     """
 
     def __init__(self, custom_format="@line@", verbose=True):
@@ -266,13 +316,14 @@ class CaptureFormatter(VerboseFormatter):
 
     def start_capture(self):
         """
-        as the name suggests, mark the current capture as void
+        Marks the current capture as void.
         """
         self._capture = ""
 
     def get_capture(self):
         """
-        return the lines captured since last `start_capture()`
+        Returns:
+            str: the lines captured since last ``start_capture()``
         """
         return self._capture
 

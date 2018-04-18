@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.10.3 - 2018 Apr 18
+
+* still cleaner and more complete doc
+  * in particular doc now covers formatters thoroughly
+* new exception class CommandFailedError
+
 ## 0.10.2 - 2018 Apr 17
 
 * apssh binary was broken, searching for config files in ~/.apssh/ was not working

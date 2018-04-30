@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.11.1 - 2018 Apr 30
+
+* adaptation for asynciojobs v0.10: `jobs_window` now is a scheduler attribute
+  and not a parameter to run()
+
 ## 0.10.3 - 2018 Apr 18
 
 * still cleaner and more complete doc

@@ -423,7 +423,8 @@ class Apssh:
                                              **extra_kwds_args)))
 
         # pylint: disable=w0106
-        scheduler.orchestrate(jobs_window=window) or scheduler.debrief()
+        scheduler.jobs_window = window
+        scheduler.run() or scheduler.debrief()
         results = [job.result() for job in scheduler.jobs]
 
         ##########

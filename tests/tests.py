@@ -35,7 +35,7 @@ class Tests(unittest.TestCase):
 
     def run_one_job(self, job, *, details=False, expected=True):
         scheduler = Scheduler(job, verbose=True)
-        orchestration = scheduler.orchestrate()
+        orchestration = scheduler.run()
         scheduler.list(details=details)
         if not orchestration:
             scheduler.debrief()
@@ -186,7 +186,7 @@ class Tests(unittest.TestCase):
                                 Run("false")],
                       label="should fail")
         sched = Scheduler(todo, verbose=True)
-        self.assertFalse(sched.orchestrate())
+        self.assertFalse(sched.run())
 
     def random_file(self, name, size):
         with open(name, "w") as output:
@@ -274,7 +274,7 @@ class Tests(unittest.TestCase):
                 commands=Run("diff {x} {x}.loop".format(x=dummy_path),
                              verbose=True)),
             scheduler=scheduler)
-        ok = scheduler.orchestrate()
+        ok = scheduler.run()
         ok or scheduler.debrief()
         self.assertTrue(ok)
 

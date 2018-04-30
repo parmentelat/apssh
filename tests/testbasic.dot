@@ -1,34 +1,36 @@
-digraph G {
-1 [label="root@faraday.inria.fr
-hostname"]
-2 [label="root@faraday.inria.fr
+digraph asynciojobs{
+compound=true;
+graph [];
+1 [style="rounded",label="root@faraday.inria.fr
+hostname",shape="box",color="red"]
+2 [style="rounded",label="root@faraday.inria.fr
 ls /etc/passwd
-wc -l /etc/passwd"]
+wc -l /etc/passwd",shape="box",color="red"]
 1 -> 2;
-3 [label="root@faraday.inria.fr
-RunString: [no_remote_name] "]
+3 [style="rounded",label="root@faraday.inria.fr
+RunString: [no_remote_name] ",shape="box",color="red"]
 2 -> 3;
-4 [label="root@faraday.inria.fr
-RunScript: testbasic.sh "]
+4 [style="rounded",label="root@faraday.inria.fr
+RunScript: testbasic.sh ",shape="box",color="red"]
 3 -> 4;
-5 [label="root@faraday.inria.fr
+5 [style="rounded",label="root@faraday.inria.fr
 wc -l /etc/passwd
 RunString: show-host-date 
-RunScript: testbasic.sh "]
+RunScript: testbasic.sh ",shape="box",color="red"]
 4 -> 5;
-6 [label="root@faraday.inria.fr
-RunString: [no_remote_name] 10"]
+6 [style="rounded",label="root@faraday.inria.fr
+RunString: [no_remote_name] 10",shape="box",color="red"]
 5 -> 6;
-7 [label="root@faraday.inria.fr
-RunString: short-show-args 10"]
+7 [style="rounded",label="root@faraday.inria.fr
+RunString: short-show-args 10",shape="box",color="red"]
 6 -> 7;
-8 [label="root@faraday.inria.fr
-RunString: [no_remote_name] 100 200 300 400"]
+8 [style="rounded",label="root@faraday.inria.fr
+RunString: [no_remote_name] 100 200 300 400",shape="box",color="red"]
 7 -> 8;
-9 [label="root@faraday.inria.fr
-RunString: long-show-args 1000 2000 3000 4000"]
+9 [style="rounded",label="root@faraday.inria.fr
+RunString: long-show-args 1000 2000 3000 4000",shape="box",color="red"]
 8 -> 9;
-10 [label="root@faraday.inria.fr
-snip"]
+10 [style="rounded",label="root@faraday.inria.fr
+snip",shape="box",color="red"]
 9 -> 10;
 }

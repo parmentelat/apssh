@@ -9,18 +9,18 @@ Welcome to apssh's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
    API
-   README 
+   README
 
 History:
 
 .. toctree::
    :maxdepth: 1
 
-   CHANGELOG  
- 
+   CHANGELOG
+
 Indices and tables
 ==================
 

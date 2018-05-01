@@ -45,8 +45,8 @@ characters as `;` and the like, and struggle your way using the same technique.
 
 
 There is however an other way to achieve this, by writing a **local script**
-(usually a shell or python script) on the target nodes, in association with the
-`-s/--script` option, like e.g.:
+(usually a shell or python script) and use the `-s/--script` option, to have
+`apssh` copy it on the target nodes before executing it, like e.g.:
 
 
 ```

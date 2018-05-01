@@ -215,7 +215,7 @@ class SshJob(AbstractJob):
                     # so the scheduler will stop
                     raise CommandFailedError(
                         "command {} returned {} on node {}"
-                        .format(command.command(), result, self.node))
+                        .format(command.get_label_line(), result, self.node))
                 else:
                     # not critical; let's proceed, but let's remember the
                     # overall result is wrong

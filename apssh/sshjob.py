@@ -255,15 +255,17 @@ class SshJob(AbstractJob):
 
         Relies on each command's ``label_line()`` method
         """
-        return "\n".join(
-            ["{}@{}".format(self.node.username,
-                            self.node.hostname)]
-            + [c.get_label_line() for c in self.commands]
-        )
+        lines = ["{}@{}".format(self.node.username,
+                                self.node.hostname)]
+        for command in self.commands:
+            line = command.get_label_line()
+            if line:
+                lines.append(line)
+        return "\n".join(lines)
 
     def details(self):
         """
         Used by Scheduler_ when running ``list(details=True)``
         """
-        # turn out the logic for graph_text is exactly right
+        # turn out the logic for graph_label is exactly right
         return self.graph_label()

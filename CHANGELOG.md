@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.11.3 - 2018 May 4
+
+* inside an SshJob, a command that has an empty label won't show up at all,
+  not even as an empty line
+
 ## 0.11.2 - 2018 May 4
 
 * bugfix, failing SshJob tried to throw an exception using the command()

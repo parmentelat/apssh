@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.11.2 - 2018 May 4
+
+* bugfix, failing SshJob tried to throw an exception using the command()
+  mthod on the failing command, which is no longer available
+
 ## 0.11.1 - 2018 Apr 30
 
 * adaptation for asynciojobs v0.10: `jobs_window` now is a scheduler attribute

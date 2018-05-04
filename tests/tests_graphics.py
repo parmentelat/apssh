@@ -8,12 +8,13 @@ import unittest
 
 from asynciojobs import Scheduler, Sequence
 
-from apssh import SshNode, SshJob, Run, RunString, RunScript
+from apssh import SshNode, SshJob, Run, RunString, RunScript, Push, Pull
 
+from .util import produce_png
 
-class TestBasic(unittest.TestCase):
+class Tests(unittest.TestCase):
 
-    def test_basic(self):
+    def test_graphics1(self):
 
         scheduler = Scheduler()
 
@@ -98,6 +99,20 @@ class TestBasic(unittest.TestCase):
                               remote_name='long-show-args',
                               label='snip')
                 ]),
+            SshJob(
+                node=gateway,
+                commands=[
+                    Run("hostname", label="Run()"),
+                    RunScript("foobar", label="RunScript()"),
+                    RunString("foobar", label="RunString()"),
+                    Push("foobar", remotepath="remote", label="Push()"),
+                    Pull("remote", localpath="foobar", label="Pull()"),
+                    Run("hostname", label=None),
+                    RunScript("foobar", label=[]),
+                    RunString("foobar", label=0),
+                    Push("foobar", remotepath="remote", label={}),
+                    Pull("remote", localpath="foobar", label=""),
+                ]),
             scheduler=scheduler,
         )
 
@@ -105,15 +120,11 @@ class TestBasic(unittest.TestCase):
         scheduler.list()
         print("WITH DETAILS")
         scheduler.list(details=True)
-        # graph
-        scheduler.export_as_dotfile('tests/testbasic.dot')
-        import os
-        os.system("dot -Tpng -o tests/testbasic.png tests/testbasic.dot")
-        print("(Over)wrote testbasic.png")
+        produce_png(scheduler, "test_graphics1")
 
         ok = scheduler.run()
 
-        self.assertTrue(ok)
+        self.assertFalse(ok)
 
 
 if __name__ == '__main__':

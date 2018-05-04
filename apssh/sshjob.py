@@ -3,13 +3,13 @@ The ``SshJob`` class is a specialization of ``asynciojobs``' AbstractJob_
 class. It allows to group operations (commands & file transfers)
 made in sequence on a given remote (and even local for convenience) node.
 
-.. _AbstractJob: https://asynciojobs.readthedocs.io/\
+.. _AbstractJob: http://asynciojobs.readthedocs.io/\
 en/latest/API.html#asynciojobs.job.AbstractJob
 
 .. _Scheduler: http://asynciojobs.readthedocs.io/\
 en/latest/API.html#module-asynciojobs.scheduler
 
-.. _asynciojobs: https://asynciojobs.readthedocs.io/
+.. _asynciojobs: http://asynciojobs.readthedocs.io/
 """
 
 from asynciojobs.job import AbstractJob

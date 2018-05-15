@@ -69,7 +69,8 @@ class AbstractCommand:
 
     def label_line(self):
         """
-        Used by SshJob to conveniently show the inside of a Job.
+        Used by SshJob to conveniently show the inside of a Job;
+        intended to be redefined by daughter classes.
 
         Returns:
           str: a one-line string

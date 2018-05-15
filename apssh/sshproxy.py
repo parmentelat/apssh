@@ -213,7 +213,7 @@ class SshProxy:                                         # pylint: disable=r0902
             text += "<-SSH->"
         if self.sftp_client:
             text += "<-SFTP->"
-        return "<SshProxy {}>".format(text)
+        return "<{} {}>".format(type(self).__name__, text)
 
     def debug_line(self, line):                         # pylint: disable=c0111
         if line.endswith("\n"):

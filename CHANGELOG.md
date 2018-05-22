@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.12.1 - 2018 May 22
+
+* bugfix, selection between RunScript and RunString in apssh -s
+* optimize lazy connections, don't wait for the lock if connection is up
+* tweaked tests to use non-critical schedulers when it matters;
+  this is for asynciojobs 0.11
+
 ## 0.11.3 - 2018 May 4
 
 * inside an SshJob, a command that has an empty label won't show up at all,

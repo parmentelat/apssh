@@ -408,7 +408,7 @@ class Apssh:
             extra_kwds_args = {'includes': args.includes}
             # but if the filename is not found then use RunString
             script = args.commands[0]
-            if Path(script).exists():
+            if not Path(script).exists():
                 if args.verbose:
                     print("Warning: file not found '{}'\n"
                           "=> Using RunString instead".

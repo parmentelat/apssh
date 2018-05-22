@@ -90,9 +90,9 @@ class Apssh:
 
               True, [ hostname1, ...]
 
-          This is notably for use together with the ``--mark`` option, so that one
-          can easily select reachable nodes only, or just as easily
-          exclude failing nodes.
+          This is notably for use together with the ``--mark`` option,
+          so that one can easily select reachable nodes only,
+          or just as easily exclude failing nodes.
 
         * otherwise, the incoming target is then expected to be a string that
           directly contains the hostnames, and so it is simply split along
@@ -398,7 +398,7 @@ class Apssh:
         window = self.parsed_args.window
 
         # populate scheduler
-        scheduler = Scheduler()
+        scheduler = Scheduler(verbose=args.verbose)
         if not args.script:
             command_class = Run
             extra_kwds_args = {}
@@ -424,7 +424,8 @@ class Apssh:
 
         # pylint: disable=w0106
         scheduler.jobs_window = window
-        scheduler.run() or scheduler.debrief()
+        if not scheduler.run():
+            scheduler.debrief()
         results = [job.result() for job in scheduler.jobs]
 
         ##########

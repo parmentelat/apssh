@@ -238,10 +238,10 @@ class SshProxy:                                         # pylint: disable=r0902
         Returns:
           connection object
         """
-        async with self._connect_lock:
-            if self.conn is None:
+        if self.conn is None:
+            async with self._connect_lock:
                 await self._connect()
-            return self.conn
+        return self.conn
 
     async def _connect(self):
         """
@@ -320,10 +320,10 @@ class SshProxy:                                         # pylint: disable=r0902
         """
 
         await self.connect_lazy()
-        async with self._connect_lock:
-            if self.sftp_client is None:
+        if self.sftp_client is None:
+            async with self._connect_lock:
                 await self._sftp_connect()
-            return self.sftp_client
+        return self.sftp_client
 
     async def _sftp_connect(self):
         if self.conn is None:

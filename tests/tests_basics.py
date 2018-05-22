@@ -185,7 +185,7 @@ class Tests(unittest.TestCase):
                       commands=[Run("true"),
                                 Run("false")],
                       label="should fail")
-        sched = Scheduler(todo, verbose=True)
+        sched = Scheduler(todo, critical=False, verbose=True)
         self.assertFalse(sched.run())
 
     def random_file(self, name, size):

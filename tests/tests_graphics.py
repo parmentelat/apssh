@@ -16,7 +16,7 @@ class Tests(unittest.TestCase):
 
     def test_graphics1(self):
 
-        scheduler = Scheduler()
+        scheduler = Scheduler(critical=False)
 
         gateway = SshNode(hostname='faraday.inria.fr', username='root')
 

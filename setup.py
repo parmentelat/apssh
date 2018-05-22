@@ -23,28 +23,36 @@ REQUIRED_MODULES = [
     'asynciojobs',
 ]
 
-# pylint: disable=c0326
 setuptools.setup(
     name="apssh",
-    version=__version__,
-    python_requires=">=3.5",
     author="Thierry Parmentelat",
     author_email="thierry.parmentelat@inria.fr",
     description="Asynchroneous Parallel ssh",
     long_description=LONG_DESCRIPTION,
     license="CC BY-SA 4.0",
-    url="http://apssh.readthedocs.io/",
+    keywords=['asyncio', 'remote shell', 'parallel ssh'],
+
     packages=['apssh'],
-    install_requires=REQUIRED_MODULES,
-        classifiers=[
-            "Development Status :: 4 - Beta",
-            "Environment :: Console",
-            "Intended Audience :: Information Technology",
-            "Programming Language :: Python :: 3.5",
-        ],
+    version=__version__,
+    python_requires=">=3.5",
+
     entry_points={
         'console_scripts': [
             'apssh = apssh.__main__:main'
         ]
-    }
+    },
+
+    install_requires=REQUIRED_MODULES,
+
+    project_urls={
+        'source': 'http://github.com/parmentelat/apssh',
+        'documentation': 'http://apssh.readthedocs.io/',
+    },
+
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Environment :: Console",
+        "Intended Audience :: Information Technology",
+        "Programming Language :: Python :: 3.5",
+    ],
 )

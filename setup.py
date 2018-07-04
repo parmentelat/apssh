@@ -6,9 +6,16 @@ Packaging and installation for the apssh package
 
 import setuptools
 
-# don't try to import the whole apssh package at this early point
-# as this would require asyncssh which might not be installed yet
-from apssh.version import __version__
+# https://packaging.python.org/guides/single-sourcing-package-version/
+# set __version__ by read & exec of the python code
+# this is better than an import that would otherwise try to
+# import the whole package, and fail if a required module is not yet there
+from pathlib import Path
+VERSION_FILE = Path(__file__).parent / "apssh" / "version.py"
+ENV = {}
+with VERSION_FILE.open() as f:
+    exec(f.read(), ENV)
+__version__ = ENV['__version__']
 
 LONG_DESCRIPTION = \
     "See README at https://github.com/parmentelat/apssh/blob/master/README.md"

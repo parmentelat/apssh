@@ -89,7 +89,9 @@ def load_agent_keys(agent_path=None, *, loop=None):
         # make sure to return an empty list when something goes wrong
         try:
             agent_client = asyncssh.SSHAgentClient(loop, agent_path)
-            return await agent_client.get_keys()
+            keys = await agent_client.get_keys()
+            agent_client.close()
+            return keys
         except Exception as exc:                        # pylint: disable=w0703
             # not quite sure which exceptions to expect here
             print("When fetching agent keys: ignored exception {}".format(exc))

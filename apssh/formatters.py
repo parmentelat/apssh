@@ -92,6 +92,8 @@ class Formatter:
     def line(self, line, datatype, hostname):
         pass
 
+    def stderr_line(self, line, hostname):
+        return self.line(line + "\n", EXTENDED_DATA_STDERR, hostname)
 
 ########################################
 SEP = 10 * '='

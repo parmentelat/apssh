@@ -294,15 +294,22 @@ class SshProxy:                                         # pylint: disable=r0902
 
         self.debug_line("SSH tunnel connecting")
         # second returned value is client, but is unused
-        self.conn, _ = \
-            await asyncio.wait_for(
-                self.gateway.conn.create_ssh_connection(
-                    ClientClosure, self.hostname, port=self.port,
-                    username=self.username,
-                    known_hosts=self.known_hosts, client_keys=self.keys
-                ),
-                timeout=self.timeout)
-        self.debug_line("SSH tunnel connected")
+        try:
+            self.conn, _ = \
+                await asyncio.wait_for(
+                    self.gateway.conn.create_ssh_connection(
+                        ClientClosure, self.hostname, port=self.port,
+                        username=self.username,
+                        known_hosts=self.known_hosts, client_keys=self.keys
+                    ),
+                    timeout=self.timeout)
+            self.debug_line("SSH tunnel connected")
+        except asyncssh.misc.ChannelOpenError:
+            self.formatter.stderr_line(
+                "Cannot open channel to {}@{}"
+                .format(self.username, self.hostname),
+                self.hostname)
+            raise
 
     def is_sftp_connected(self):
         """
@@ -328,8 +335,15 @@ class SshProxy:                                         # pylint: disable=r0902
     async def _sftp_connect(self):
         if self.conn is None:
             return False
-        self.sftp_client = await self.conn.start_sftp_client()
-        self.formatter.sftp_start(self.hostname)
+        try:
+            self.sftp_client = await self.conn.start_sftp_client()
+            self.formatter.sftp_start(self.hostname)
+        except asyncssh.sftp.SFTPError:
+            self.formatter.stderr_line(
+                "Cannot start STFP subsystem".format(),
+                self.hostname,
+            )
+            raise
 
     async def _close_sftp(self):
         """

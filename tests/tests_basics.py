@@ -20,13 +20,14 @@ from apssh import ColonFormatter, CaptureFormatter
 
 from apssh.apssh import Apssh
 
+from .util import localuser, localhostname
 
 class Tests(unittest.TestCase):
 
     def gateway(self, capture=False):
         formatter = ColonFormatter() if not capture else CaptureFormatter()
-        return SshNode(hostname='faraday.inria.fr',
-                       username='root',
+        return SshNode(hostname='localhost',
+                       username=localuser(),
                        # this is the default in fact
                        keys=load_private_keys(),
                        formatter=formatter)
@@ -34,6 +35,7 @@ class Tests(unittest.TestCase):
     # all the ways to create a simple command
 
     def run_one_job(self, job, *, details=False, expected=True):
+        print(job)
         scheduler = Scheduler(job, verbose=True)
         orchestration = scheduler.run()
         scheduler.list(details=details)
@@ -169,7 +171,8 @@ class Tests(unittest.TestCase):
                    command="hostname",
                    label='capture'))
 
-        self.assertEqual(node.formatter.get_capture(), "faraday\n")
+        self.assertEqual(node.formatter.get_capture(),
+                         f"{localhostname()}\n")
 
     def test_logic1(self):
         self.run_one_job(
@@ -233,14 +236,21 @@ class Tests(unittest.TestCase):
             self.assertEqual(s1, s3)
 
     def test_local_command(self):
+        # create random file in python rather than with /dev/random
+        # that is not working in virtualbox
+        random_full = "RANDOM-full"
+        random_head = "RANDOM"
+
+        self.random_file(random_full, size=19)
+        print("DONE")
         self.run_one_job(
             # details = True,
             job=SshJob(
                 node=LocalNode(),
                 commands=[
-                    Run("head < /dev/random > RANDOM", "-c", 2**20),
-                    Run("ls -l RANDOM"),
-                    Run("shasum RANDOM"),
+                    Run(f"head -c {2**18} < {random_full} > {random_head}"),
+                    Run(f"ls -l {random_head}"),
+                    Run(f"shasum {random_head}"),
                 ]))
 
     def test_local_command2(self):
@@ -263,7 +273,7 @@ class Tests(unittest.TestCase):
                 commands=[
                     Run("hostname"),
                     RunScript("tests/script-with-args.sh", "arg1", "arg2"),
-                    RunString("for i in $(seq 3); do host fit0$i; done"),
+                    RunString("for i in $(seq 3); do echo verbose$i; done"),
                     Push(localpaths=dummy_path, remotepath="."),
                     Pull(remotepaths=dummy_file,
                          localpath=dummy_path + ".loop"),
@@ -327,8 +337,8 @@ xterm
 
     # fit23 must be turned on
     def node_2hops(self):
-        return SshNode(hostname="fit23",
-                       username="root",
+        return SshNode(hostname="localhost",
+                       username=localuser(),
                        gateway=self.gateway())
 
     def xterm_2hops(self):
@@ -343,24 +353,24 @@ xterm
 
     def test_targets1(self):
         argv = []
-        argv = ['-l', 'root']
-        argv += ['-t', 'faraday.inria.fr']
+        argv = ['-l', localuser()]
+        argv += ['-t', 'localhost']
         argv += ['hostname']
         self.run_apssh(argv)
 
     def test_targets2(self):
         argv = []
-        argv = ['-l', 'root']
-        argv += ['-t', 'faraday.inria.fr']
-        argv += ['-t', 'r2lab.inria.fr']
+        argv = ['-l', localuser()]
+        argv += ['-t', "localhost"]
+        argv += ['-t', "127.0.0.1"]
         argv += ['hostname']
         self.run_apssh(argv)
 
     def test_targets3(self):
         filename = 'TARGETS3'
         with open(filename, 'w') as targets:
-            targets.write('root@r2lab.inria.fr\n')
-            targets.write('root@faraday.inria.fr\n')
+            targets.write(f'{localuser()}@localhost\n')
+            targets.write(f'{localuser()}@127.0.0.1\n')
         argv = []
         argv += ['-t', filename]
         argv += ['hostname']
@@ -369,10 +379,10 @@ xterm
     def test_targets4(self):
         filename = 'TARGETS4'
         with open(filename, 'w') as targets:
-            targets.write('r2lab.inria.fr\n')
-            targets.write('faraday.inria.fr\n')
+            targets.write(f'{localuser()}@localhost\n')
+            targets.write(f'{localuser()}@127.0.0.1\n')
         argv = []
-        argv += ['-l', 'root']
+        argv += ['-l', localuser()]
         argv += ['-t', filename]
         argv += ['hostname']
         self.run_apssh(argv)
@@ -381,8 +391,8 @@ xterm
     # on the selected nodes
     def test_targets5(self):
         argv = []
-        argv += ['-l', 'root']
-        argv += ['-t', "r2lab.inria.fr faraday.inria.fr"]
+        argv += ['-l', localuser()]
+        argv += ['-t', "localhost 127.0.0.1"]
         argv += ['hostname']
         self.run_apssh(argv)
 

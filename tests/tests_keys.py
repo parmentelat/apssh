@@ -7,7 +7,6 @@ Testing the keys loading features in apssh
 # pylint: disable=c0111,r0201
 
 import unittest
-
 from pathlib import Path
 
 from apssh.keys import import_private_key, load_private_keys

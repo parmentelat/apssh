@@ -16,7 +16,7 @@ Recommended now:
   * with auto-mount capability
 
 ```
-    cd /media/sf_apssh-git
+    cd /media/sf_apssh
 ```
 
 * create 2 network adapters
@@ -35,10 +35,20 @@ apt-get install graphviz
 pip3 install graphviz
 ```
 
+* ***OPTIONAL***
+
+It can be interesting to also share asynciojobs, and then define `PYTHONPATH` accordingly:
+
+```
+root@apssh-testbox:/media/sf_apssh# export $PYTHONPATH=/media/sf_asynciojobs
+```
+
+
+
 * run tests as root on guest
 
 ```
-root@apssh-testbox:/media/sf_apssh-git# python3 -m unittest tests.tests_connections
+root@apssh-testbox:/media/sf_apssh# python3 -m unittest tests.tests_connections
 creating 5 commands on 1 connections to root@localhost
 INITIAL count in=1 out=0
 localhost:apssh-testbox

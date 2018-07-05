@@ -10,7 +10,7 @@ from asynciojobs import Scheduler, Sequence
 
 from apssh import SshNode, SshJob, Run, RunString, RunScript, Push, Pull
 
-from .util import produce_png
+from .util import localhostname, localuser, produce_png
 
 class Tests(unittest.TestCase):
 
@@ -18,7 +18,8 @@ class Tests(unittest.TestCase):
 
         scheduler = Scheduler(critical=False)
 
-        gateway = SshNode(hostname='faraday.inria.fr', username='root')
+        gateway = SshNode(hostname=localhostname(),
+                          username=localuser())
 
         Sequence(
             SshJob(

@@ -1,18 +1,14 @@
 # pylint: disable=c0111
 
-import time
 import asyncio
 
 from unittest import TestCase
 
-from .util import in_out_connections
+from asynciojobs import Scheduler
 
-from asynciojobs import Scheduler, Job
 from apssh import SshNode, SshJob, ColonFormatter
 
-def localuser():
-    import os
-    return os.environ['LOGNAME']
+from .util import localuser, in_out_connections
 
 class Tests(TestCase):
 
@@ -21,7 +17,7 @@ class Tests(TestCase):
         """
         one node 1 hop away
         create one or <number> connections (depending on share_connection)
-        and run <number> times 'hostname'
+        and run <number> times 'echo simple{i}'
         check the number of alive connections
         """
         if username is None:
@@ -47,7 +43,7 @@ class Tests(TestCase):
                                formatter=ColonFormatter(verbose=False))
                 nodes.append(node)
             jobs.append(SshJob(node=node,
-                               command='hostname',
+                               command=f'echo simple{i}',
                                scheduler=scheduler))
 
         # record base status
@@ -69,12 +65,23 @@ class Tests(TestCase):
         self.assertEqual(in1-in0, 0)
         self.assertEqual(out1-out0, 0)
 
-
     def test_simple_1(self):
         self.simple(share_connection=True)
 
     def test_simple_n(self):
         self.simple(share_connection=False)
+
+    def hop2(self, hostname='localhost', username=None,
+             *, share_connection=False, number=5):
+        """
+        same but with 2 hops
+        create either one or <number> level1 connections (depending on share_connection)
+        then <number> times, create a 2-hop connection (ditto)
+        and on each of these, run 'hostname'
+        check the number of alive connections
+        """
+        pass
+
 
 def main():
     import argparse
@@ -88,9 +95,9 @@ def main():
     args = parser.parse_args()
 
     Tests().simple(hostname=args.hostname,
-                   username=args.username,
-                   number=args.number,
-                   share_connection=args.share_connection)
+                 username=args.username,
+                 number=args.number,
+                 share_connection=args.share_connection)
 
 if __name__ == '__main__':
     main()

@@ -1,8 +1,20 @@
 # pylint: disable=c0111
 
+import os
 import subprocess
 import platform
 from pathlib import Path
+
+def localuser():
+    return os.environ['LOGNAME']
+
+
+def localhostname():
+    command = "hostname"
+    completed = subprocess.run(command, stdout=subprocess.PIPE)
+    return (completed.stdout
+            .decode(encoding='utf-8')
+            .replace("\n", ""))
 
 def produce_png(scheduler, name):
     dot = scheduler.graph()
@@ -24,8 +36,6 @@ def count_ssh_connections(incoming:bool, outgoing:bool):
 
     based on linux's 'ss' command for now
     """
-
-
 
     if platform.system() != "Linux":
         raise ValueError(f"inspector works only on linux boxes")

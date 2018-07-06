@@ -77,16 +77,18 @@ class Tests(TestCase):
               f"{commands} commands per conn "
               f" to {username}@{hostname}")
         scheduler = Scheduler()
-        nodes = []
+        nodes1 = []
+        nodes2 = []
         jobs = []
         for n in range(c1):
             node1 = SshNode(hostname, username=username,
                             formatter=ColonFormatter(verbose=False))
-            nodes.append(node1)
+            nodes1.append(node1)
             for m in range(c2):
                 node2 = SshNode(hostname, username=username,
                                 gateway=node1,
                                 formatter=ColonFormatter(verbose=False))
+                nodes2.append(node2)
                 for c in range(commands):
                     jobs.append(SshJob(node=node2,
                                        command=f'echo hop1-{n}-{m}-{c}',
@@ -107,10 +109,11 @@ class Tests(TestCase):
         self.assertEqual(out1-out0, expected)
 
         # cleanup
-        # pretend there is no order in there
-        nodes = set(nodes)
-        gathered = asyncio.get_event_loop().run_until_complete(
-            asyncio.gather(*(node.close() for node in nodes)))
+        # would be nice to find a way to check that the result
+        # holds no matter in what order the cleanup is done
+        for nodeset in nodes1, nodes2:
+            gathered = asyncio.get_event_loop().run_until_complete(
+                asyncio.gather(*(node.close() for node in nodeset)))
         in1, out1 = in_out_connections()
         print(f"AFTER CLEANUP in={in1} out={out1}")
         self.assertEqual(in1-in0, 0)

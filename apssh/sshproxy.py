@@ -113,6 +113,7 @@ class _VerboseClient(asyncssh.SSHClient):
         self.proxy = proxy
         self.formatter = proxy.formatter
         self.direct = direct
+        self._connection_lost = False
         asyncssh.SSHClient.__init__(self, *args, **kwds)
 
     def connection_made(self, conn):
@@ -127,6 +128,8 @@ class _VerboseClient(asyncssh.SSHClient):
     def connection_lost(self, exc):
         self.formatter.connection_lost(
             self.proxy.hostname, exc, self.proxy.username)
+        if exc:
+            self._connection_lost = True
 
     def auth_completed(self):
         self.formatter.auth_completed(self.proxy.hostname, self.proxy.username)
@@ -183,6 +186,7 @@ class SshProxy:                                         # pylint: disable=r0902
         self.timeout = timeout
         #
         self.conn, self.sftp_client = None, None
+        self.client = None
         # critical sections require mutual exclusions
         self._connect_lock = asyncio.Lock()
         self._disconnect_lock = asyncio.Lock()
@@ -267,7 +271,7 @@ class SshProxy:                                         # pylint: disable=r0902
 
         self.debug_line("SSH direct connecting")
         # second returned value is client, but is unused
-        self.conn, _ = \
+        self.conn, self.client = \
             await asyncio.wait_for(
                 asyncssh.create_connection(
                     ClientClosure, self.hostname, port=self.port,
@@ -295,7 +299,7 @@ class SshProxy:                                         # pylint: disable=r0902
         self.debug_line("SSH tunnel connecting")
         # second returned value is client, but is unused
         try:
-            self.conn, _ = \
+            self.conn, self.client = \
                 await asyncio.wait_for(
                     self.gateway.conn.create_ssh_connection(
                         ClientClosure, self.hostname, port=self.port,
@@ -370,10 +374,12 @@ class SshProxy:                                         # pylint: disable=r0902
             self.conn = None
             try:
                 preserve.close()
-            except Exception:                           # pylint: disable=w0703
+            except Exception:
                 pass
-            await preserve.wait_closed()
 
+            await preserve.wait_closed()
+            if self.client._connection_lost:
+                raise ConnectionError("Close connection went wrong")
     async def close(self):
         """
         Close everything open, i.e. ssh connection and SFTP subsystem
@@ -402,7 +408,6 @@ class SshProxy:                                         # pylint: disable=r0902
         """
 
         # pylint: disable=c0111
-
         # this closure is a _LineBasedSession
         # with a .proxy attribute that points back here
         class SessionClosure(_LineBasedSession):

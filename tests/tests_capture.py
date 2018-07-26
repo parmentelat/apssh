@@ -1,8 +1,10 @@
-from apssh import SshNode, SshJob, Run, CaptureFormatter, TerminalFormatter
+import unittest
 
 from asynciojobs import Scheduler
 
-import unittest
+from apssh import SshNode, SshJob, Run, CaptureFormatter, TerminalFormatter
+
+from .util import localuser, localhostname
 
 class Tests(unittest.TestCase):
 
@@ -10,7 +12,7 @@ class Tests(unittest.TestCase):
 
         s = Scheduler()
         f = CaptureFormatter()
-        n = SshNode('faraday.inria.fr', username='root', formatter=f)
+        n = SshNode(localhostname(), username=localuser(), formatter=f)
         s.add(
             SshJob(
                 node=n,
@@ -32,6 +34,6 @@ class Tests(unittest.TestCase):
         s = Scheduler()
         f = TerminalFormatter("%Y:%H:%S - @host@:@line@",
                               verbose=True)
-        n = SshNode('faraday.inria.fr', username='root', formatter=f)
+        n = SshNode(localhostname(), username=localuser(), formatter=f)
         s.add(SshJob(node=n, commands=[ Run("echo LINE1"), Run("echo LINE2")]))
         s.run()

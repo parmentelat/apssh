@@ -29,6 +29,10 @@ REQUIRED_MODULES = [
     'asyncssh',
     'asynciojobs',
 ]
+TESTS_REQUIRE = [
+    'nose',
+    'psutil',
+]
 
 setuptools.setup(
     name="apssh",
@@ -50,7 +54,7 @@ setuptools.setup(
     },
 
     install_requires=REQUIRED_MODULES,
-
+    tests_require=TESTS_REQUIRE,
     project_urls={
         'source': 'http://github.com/parmentelat/apssh',
         'documentation': 'http://apssh.readthedocs.io/',

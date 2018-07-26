@@ -28,7 +28,3 @@ class Tests(unittest.TestCase):
     def test_agent(self):
         for key in load_private_keys():
             print("Found in agent: {}".format(key))
-
-
-if __name__ == '__main__':
-    unittest.main()

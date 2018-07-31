@@ -35,3 +35,4 @@ try:
     from .nodes import SshNode, LocalNode
 except Exception as exc:                                # pylint: disable=W0703
     print("Warning: could not import module asyncssh")
+    print(exc)

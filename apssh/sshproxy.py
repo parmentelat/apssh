@@ -78,7 +78,7 @@ class _LineBasedSession(asyncssh.SSHClientSession):
         self.command = command
         self.stdout = self.Channel("stdout", proxy)
         self.stderr = self.Channel("stderr", proxy)
-        self._status = None
+        self._exit = None
         super().__init__(*args, **kwds)
 
     # this seems right only for text streams...
@@ -99,9 +99,16 @@ class _LineBasedSession(asyncssh.SSHClientSession):
         self.proxy.debug_line("EOF")
 
     def exit_status_received(self, status):
-        self._status = status
+        self._exit = status
         self.proxy.debug_line("STATUS = {}\n".format(status))
 
+    def exit_signal_received(self, signal,
+                             core_dumped, msg, lang):   # pylint: disable=w0613
+        # When a process now receive a signal that make him exit,
+        # we will put the name of the signal as _exit so
+        # that we avoid error type "task [...] returned None on node ...."
+        self._exit = signal
+        self.proxy.debug_line("SIGNAL = {}--{}\n".format(signal, msg))
 
 # _VerboseClient is created through factories attached to each proxy
 
@@ -416,7 +423,7 @@ class SshProxy:                                         # pylint: disable=r0902
                 self.conn.create_session(SessionClosure, command, **x11_kwds),
                 timeout=self.timeout)
         await chan.wait_closed()
-        return session._status                          # pylint: disable=w0212
+        return session._exit                          # pylint: disable=w0212
 
     async def mkdir(self, remotedir):
         """

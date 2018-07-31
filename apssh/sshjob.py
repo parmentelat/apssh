@@ -208,8 +208,10 @@ class SshJob(AbstractJob):
                 result = await command.co_run_local(self.node)
             else:
                 result = await command.co_run_remote(self.node)
-            # one command has failed
-            if result != 0:
+            # has the command failed ?
+            if result == 0 or result in command.allowed_exits:
+                pass
+            else:
                 if self.critical:
                     # if job is critical, let's raise an exception
                     # so the scheduler will stop

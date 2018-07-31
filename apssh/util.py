@@ -17,12 +17,10 @@ def close_ssh_from_sched(scheduler):
     return loop.run_until_complete(co_close_ssh_from_sched(scheduler))
 
 async def co_close_ssh_from_sched(scheduler):
-    jobs = scheduler.jobs
     nodes = set()
     gateways = set()
     not_gateways = set()
-
-    for job in jobs:
+    for job in scheduler.itterate_job():
         if isinstance(job, apssh.SshJob)\
          and isinstance(job.node, apssh.SshProxy):
             nodes.add(job.node)

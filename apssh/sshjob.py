@@ -202,7 +202,7 @@ class SshJob(AbstractJob):
         """
         # the commands are of course sequential,
         # so we wait for one before we run the next
-        overall = 0
+        ret = []
         for command in self.commands:
             if isinstance(self.node, LocalNode):
                 result = await command.co_run_local(self.node)
@@ -216,11 +216,12 @@ class SshJob(AbstractJob):
                     raise CommandFailedError(
                         "command {} returned {} on node {}"
                         .format(command.get_label_line(), result, self.node))
-                else:
-                    # not critical; let's proceed, but let's remember the
-                    # overall result is wrong
-                    overall = result
-        return overall
+
+            # Now, since we can have non 0 return code for a specific command,
+            # we want to return all the results of each command
+            # => Improved trouble shooting
+            ret.append(result)
+        return ret
 
     async def co_shutdown(self):
         """

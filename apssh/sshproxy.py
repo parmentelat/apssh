@@ -102,6 +102,12 @@ class _LineBasedSession(asyncssh.SSHClientSession):
         self._status = status
         self.proxy.debug_line("STATUS = {}\n".format(status))
 
+    def exit_signal_received(self, signal, core_dumped, msg, lang):
+        # When a process now receive a signal that make him exit,
+        # we will put the name of the signal as the exit_status so
+        # that we avoid error type "task [...] returned None on node ...."
+        self._status = signal
+        self.proxy.debug_line("SIGNAL = {}--{}\n".format(signal, msg))
 
 # _VerboseClient is created through factories attached to each proxy
 

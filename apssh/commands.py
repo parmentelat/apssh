@@ -20,8 +20,12 @@ class AbstractCommand:
     Abstract base class for all command classes.
     """
 
-    def __init__(self, *, label=None):
+    def __init__(self, *, label=None, exit_signals=[]):
         self.label = label
+        # This allow us to white-list some non-0 exit code when a process
+        # exit uppon receiving a signal.
+        # Usage : exit_signals = ["TERM", "QUIT", "ALRM"]
+        self.exit_signals = exit_signals
 
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, self.get_label_line())
@@ -109,11 +113,13 @@ class Run(AbstractCommand):
     # plus, maybe some day we'll need to add other keywords
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
-    def __init__(self, *argv, label=None, verbose=False, x11=False):
+    def __init__(self, *argv, label=None,
+                 exit_signals=[], verbose=False, x11=False):
         self.argv = argv
         self.verbose = verbose
         self.x11 = x11
-        super().__init__(label=label)
+        super().__init__(label=label,
+                         exit_signals=exit_signals)
 
     def label_line(self):
         """
@@ -185,7 +191,7 @@ class RunLocalStuff(AbstractCommand):
     """
 
     def __init__(self, args, *,
-                 label=None,
+                 label=None, exit_signals=[],
                  includes=None, remote_basename=None,
                  x11=False, verbose=False):
         self.args = args
@@ -193,7 +199,8 @@ class RunLocalStuff(AbstractCommand):
         self.remote_basename = remote_basename
         self.x11 = x11
         self.verbose = verbose
-        super().__init__(label=label)
+        super().__init__(label=label,
+                         exit_signals=exit_signals)
 
     @staticmethod
     def _random_id():
@@ -301,7 +308,8 @@ class RunScript(RunLocalStuff):
     """
 
     def __init__(self, local_script, *args,
-                 label=None, includes=None, x11=False,
+                 label=None, exit_signals=[],
+                 includes=None, x11=False,
                  # if this is set, run bash -x
                  verbose=False):
         self.local_script = local_script
@@ -310,6 +318,7 @@ class RunScript(RunLocalStuff):
 
         super().__init__(args,
                          label=label,
+                         exit_signals=exit_signals,
                          includes=includes,
                          remote_basename=remote_basename,
                          x11=x11, verbose=verbose)
@@ -359,7 +368,8 @@ class RunString(RunLocalStuff):
     """
 
     def __init__(self, script_body, *args,
-                 label=None, includes=None, x11=False,
+                 label=None, exit_signals=[],
+                 includes=None, x11=False,
                  # the name under which the remote command will be installed
                  remote_name=None,
                  # if this is set, run bash -x
@@ -375,6 +385,7 @@ class RunString(RunLocalStuff):
             remote_basename = self._random_id()
         super().__init__(args,
                          label=label,
+                         exit_signals=exit_signals,
                          includes=includes,
                          remote_basename=remote_basename,
                          x11=x11, verbose=verbose)

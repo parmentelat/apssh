@@ -14,7 +14,7 @@ Voici la liste des branche sur les différents modules :
 
 * close-con : Contient un patch qui permet de fermer correctement les connections ssh sur les noeuds et leur gateway. A utiliser avec la branche iterate-job de asynciojobs. Contient également les tests sur les connections et leur utilitaires.
 
-* service_killing :  Deprecated
+* ~~Service_Killing~~ :  deleted - was on commit 86707a7b9ec5e355330db2c3a6f9bb0d3d6b2c02
 
   Dedans on y trouve à la fois un patch pour tuer les processes de type “service” et un patch pour fermer les connections. Son contenu a donc été scindé dans d’autres branches (y compris la partie de la branche
   master).

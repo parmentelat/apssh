@@ -20,7 +20,7 @@ class Tests(unittest.TestCase):
         #sched.close_connection()
 
     def close_nodes(self, nodes, gateway_first=True):
-        if not gateway_first:
+        if gateway_first:
             nodes = nodes[::-1]
         try:
             gathered = asyncio.get_event_loop().run_until_complete(
@@ -88,7 +88,7 @@ class Tests(unittest.TestCase):
         # record base status
         in0, out0 = in_out_connections()
         print(f"INITIAL count in={in0} out={out0}")
-
+        scheduler.export_as_pngfile("debug")
         scheduler.run()
 
         in1, out1 = in_out_connections()
@@ -107,7 +107,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(out1-out0, 0)
 
     def hop2(self, hostname='localhost', username=None,
-             *, c1=1, c2=1, commands=1, s_command='echo hop1-{}-{}-{}',
+             *, c1=1, c2=1, commands=1, s_command='echo hop2-{}-{}-{}',
              close_method=None, gateway_first=True, nested_sched=(0, 1)):
         """
         create
@@ -180,7 +180,6 @@ class Tests(unittest.TestCase):
         print(f"AFTER CLEANUP in={in1} out={out1}")
         self.assertEqual(in1-in0, 0)
         self.assertEqual(out1-out0, 0)
-
 
     def test_hop1_shared(self):
         self.hop1(c1=1, commands=4)
@@ -362,7 +361,7 @@ class Tests(unittest.TestCase):
             gateway = node
             for c in range(commands):
                 jobs.append(SshJob(node=node,
-                                   command=f"echo {n}-{c}",
+                                   command=f"echo hop{n}-{c}",
                                    scheduler=scheduler))
 
         expected = depth

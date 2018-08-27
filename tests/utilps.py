@@ -60,4 +60,5 @@ class ProcessMonitor:
                     changes=True
                     relevant.add(proc.pid)
 
-        print(relevant)
+        #print(relevant)
+        return relevant

@@ -95,6 +95,16 @@ job = SshJob(node=node, forever=True,
             )
 ```
 
+New way to display exit code :
+```DONE: 1   ☉ ☓   <SshJob `should fail`> [[ -> [1, 0]]]
+```
+Comes from :
+```SshJob(node=self.gateway(),
+             critical=False,
+             commands=[Run("false"),
+                       Run("true")],
+             label="should fail")
+```
 
 ### r2lab-python / header-exp :
 

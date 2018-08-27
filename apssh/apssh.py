@@ -427,7 +427,6 @@ class Apssh:
         if not scheduler.run():
             scheduler.debrief()
         results = [job.result() for job in scheduler.jobs]
-
         ##########
         # print on stdout the name of the output directory
         # useful mostly with -d :
@@ -453,7 +452,7 @@ class Apssh:
                 os.makedirs("{}/{}".format(subdir, names[None]), exist_ok=True)
 
             for proxy, result in zip(proxies, results):
-                prefix = names[0] if result == 0 else names[None]
+                prefix = names[0] if result == [0]*len(result) else names[None]
                 mark_path = Path(subdir) / prefix / proxy.hostname
                 with mark_path.open("w") as mark:
                     mark.write(result + "\n")
@@ -463,6 +462,6 @@ class Apssh:
 
         # return 0 only if all hosts have returned 0
         # otherwise, return 1
-        failures = [r for r in results if r != 0]
+        failures = [r for res in results for r in res if r != 0]
         overall = 0 if not failures else 1
         return overall

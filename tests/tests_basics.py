@@ -34,7 +34,7 @@ class Tests(unittest.TestCase):
 
     # all the ways to create a simple command
 
-    def run_one_job(self, job, *, details=False, expected=True):
+    def run_one_job(self, job, *, details=False, expected=True, nb_command = 1):
         print(job)
         scheduler = Scheduler(job, verbose=True)
         orchestration = scheduler.run()
@@ -43,9 +43,9 @@ class Tests(unittest.TestCase):
             scheduler.debrief()
         self.assertTrue(orchestration)
         if expected:
-            self.assertEqual(job.result(), 0)
+            self.assertEqual(job.result(), [0]*nb_command)
         else:
-            self.assertNotEqual(job.result(), 0)
+            self.assertNotEqual(job.result(), [0]*nb_command)
 
     # singular command =
     def test_s1(self):
@@ -138,7 +138,7 @@ class Tests(unittest.TestCase):
                        RunScript("tests/needsinclude.sh", "another",
                                  "run", includes=includes)
                    ],
-                   label='script_commands'))
+                   label='script_commands'), nb_command=3)
 
     ##########
     # NOTE
@@ -214,7 +214,7 @@ class Tests(unittest.TestCase):
                        Push(localpaths=p1, remotepath="apssh-tests"),
                        Pull(remotepaths="apssh-tests/" +
                             b1, localpath="tests/" + b2),
-                   ]))
+                   ]), nb_command=3)
 
         with open(p1) as f1:
             s1 = f1.read()
@@ -230,7 +230,7 @@ class Tests(unittest.TestCase):
                        Run("mkdir -p apssh-tests"),
                        Pull(remotepaths="apssh-tests/" +
                             b1, localpath="tests/" + b3),
-                   ]))
+                   ]), nb_command=2)
         with open(p3) as f3:
             s3 = f3.read()
             self.assertEqual(s1, s3)
@@ -251,7 +251,7 @@ class Tests(unittest.TestCase):
                     Run(f"head -c {2**18} < {random_full} > {random_head}"),
                     Run(f"ls -l {random_head}"),
                     Run(f"shasum {random_head}"),
-                ]))
+                ]), nb_command=3)
 
     def test_local_command2(self):
         self.run_one_job(
@@ -295,7 +295,7 @@ class Tests(unittest.TestCase):
                 commands=[
                     Run("echo DISPLAY=$DISPLAY", x11=True),
                     Run("xlsfonts | head -5", x11=True),
-                ]))
+                ]), nb_command=2)
 
     def test_x11_shell(self):
         self.run_one_job(
@@ -305,7 +305,7 @@ class Tests(unittest.TestCase):
                     Run("echo DISPLAY=$DISPLAY", x11=True),
                     RunString("""#!/bin/bash
 xlsfonts | head -5
-""", x11=True)]))
+""", x11=True)]), nb_command=2)
 
     ##########
     # some variants involving xterm

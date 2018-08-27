@@ -37,7 +37,7 @@ tags:
 ##########
 # always running tests through nose makes life easier
 tests test:
-	nosetests tests/tests*.py
+	nosetests tests/tests*.py -s
 
 .PHONY: tests test
 

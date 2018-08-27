@@ -8,6 +8,8 @@ import asyncio
 
 import os
 
+import signal
+
 from subprocess import PIPE
 
 from asyncssh import EXTENDED_DATA_STDERR
@@ -53,6 +55,7 @@ class LocalNode:
             self.formatter.verbose = verbose
         # could be improved
         self.hostname = "LOCALNODE"
+        self.processes = {}
         # some users reported issues with this so
         # given that it's really only for convenience
         # let's do this best effort
@@ -88,24 +91,45 @@ class LocalNode:
                 return
             self.lines(line, datatype)
 
-    async def run(self, command):
+    async def run(self, command, command_id=None):
+        if command_id is not None:
+            if not os.path.exists(".apssh"):
+                os.makedirs(".apssh")
         try:
             process = await asyncio.create_subprocess_shell(
-                command, stdout=PIPE, stderr=PIPE)
+                #os.setpgrp will create a new group with the childid before exe
+                command, stdout=PIPE, stderr=PIPE, preexec_fn=os.setpgrp)
+            if command_id is not None:
+                self.processes[command_id] = process
             # no need to refer to stdout and stderr
             _, _ = await asyncio.gather(
                 self.read_and_display(process.stdout, 0),
                 self.read_and_display(process.stderr, EXTENDED_DATA_STDERR))
             retcod = await process.wait()
             return retcod
+        except asyncio.CancelledError as exc:
+            if command_id is not None:
+                return 0
+            else:
+                line = "LocalNode: Could not run local command {} - {}"\
+                       .format(command, exc)
+                self.formatter.line(line, EXTENDED_DATA_STDERR, self.hostname)
+                return 1
         except Exception as exc:                        # pylint: disable=w0703
             line = "LocalNode: Could not run local command {} - {}"\
                    .format(command, exc)
             self.formatter.line(line, EXTENDED_DATA_STDERR, self.hostname)
-
+            return 1
     async def close(self):
         pass
 
+    async def shutdown(self, command_id=None):
+        if command_id is not None:
+            pid = self.processes[command_id].pid
+            os.kill(-pid, signal.SIGTERM)
+            #await self.run("kill -TERM -- -$(cat .apssh/apssh_spid_{})".format(command_id))
+            del self.processes[command_id]
+            os.remove(".apssh/apssh_spid_{}".format(command_id))
 
 # ========== SshNode == SshProxy
 

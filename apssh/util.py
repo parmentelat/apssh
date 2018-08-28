@@ -20,7 +20,7 @@ async def co_close_ssh_from_sched(scheduler):
     nodes = set()
     gateways = set()
     not_gateways = set()
-    for job in scheduler.itterate_job():
+    for job in scheduler.iterate_jobs():
         if isinstance(job, apssh.SshJob)\
          and isinstance(job.node, apssh.SshProxy):
             nodes.add(job.node)

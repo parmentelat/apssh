@@ -25,7 +25,7 @@ Recommended now:
 
 * open up ssh access
   * from host to guest as root; this one is used to log in manually but not by the test code; you might wish to write down the guest's IP address in your ssh client bookmarks
-  * and **in loopback from root on guest to root on guest** - this si the one used by all tests
+  * and **in loopback from root on guest to root on guest** - this is the one used by all tests
 
 * install dependencies graphviz and orderedset
 

@@ -2,7 +2,23 @@
 
 Voici la liste des branche sur les différents modules :
 
+### asynciojobs:
+
+* ~~ittrate-job~~ :  **in 0.12.11**
+
+  ~~Contient le patch qui permet à APSSH de récupérer les jobs à l’intérieur de scheduler nestés. Attention pour une obscure raison, je l’ai basé sur une version contenant le patch de implicit-shutdown.~~
+
+* implicit-shutdown : **reste à intégrer**
+
+  Réactive le shutdown implicite à la fin d’un scheduler, un timeout ou une exception.
+
+* ~~implicit_shutdown : Deprecated & removed was 92e7425~~
+
 ### apssh :
+
+* close-con :
+
+  Contient un patch qui permet de fermer correctement les connections ssh sur les noeuds et leur gateway. A utiliser avec la branche iterate-job de asynciojobs. Contient également les tests sur les connections et leur utilitaires.
 
 * prezombie-kill :
 
@@ -12,26 +28,12 @@ Voici la liste des branche sur les différents modules :
 
   Contient un patch qui permet de white-list des signal/exit-code spécifiques sur un job critique. Contient aussi une amélioration du retour d’une commande. Il y a aussi les tests portant sur la feature.
 
-* close-con : Contient un patch qui permet de fermer correctement les connections ssh sur les noeuds et leur gateway. A utiliser avec la branche iterate-job de asynciojobs. Contient également les tests sur les connections et leur utilitaires.
 
 * ~~Service_Killing~~ :  deleted - was on commit 86707a7b9ec5e355330db2c3a6f9bb0d3d6b2c02
 
-  Dedans on y trouve à la fois un patch pour tuer les processes de type “service” et un patch pour fermer les connections. Son contenu a donc été scindé dans d’autres branches (y compris la partie de la branche
-  master).
-
-### assynciojobs:
-
-* implicit-shutdown : Réactive le shutdown implicite à la fin d’un scheduler, un timeout ou une exception.
-
-* ittrate-job :
-
-  Contient le patch qui permet à APSSH de récupérer les jobs à l’intérieur de scheduler nestés. Attention pour une obscure raison, je l’ai basé sur une version contenant le patch de implicit-shutdown.
-
-  À faire : changer “itterate” en “iterate” dans le patch.
-
-* implicit_shutdown : Deprecated
-
-Tout ce qu’il y a eu de rajouter sur la branche master après la version 12.7 sont à rajouter dans implicit-shutdown et itterate-job.
+  ~~Dedans on y trouve à la fois un patch pour tuer les processes de type
+  “service” et un patch pour fermer les connections. Son contenu a donc été
+  scindé dans d’autres branches (y compris la partie de la branche master).~~
 
 ### r2lab-python:
 

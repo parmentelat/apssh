@@ -20,7 +20,7 @@ class AbstractCommand:
     Abstract base class for all command classes.
     """
 
-    def __init__(self, *, label=None, exit_signals=[]):
+    def __init__(self, *, label=None, exit_signals=None):
         self.label = label
         # This allow us to white-list some non-0 exit code when a process
         # exit uppon receiving a signal.
@@ -114,7 +114,7 @@ class Run(AbstractCommand):
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
     def __init__(self, *argv, label=None,
-                 exit_signals=[], verbose=False, x11=False):
+                 exit_signals=None, verbose=False, x11=False):
         self.argv = argv
         self.verbose = verbose
         self.x11 = x11
@@ -191,7 +191,7 @@ class RunLocalStuff(AbstractCommand):
     """
 
     def __init__(self, args, *,
-                 label=None, exit_signals=[],
+                 label=None, exit_signals=None,
                  includes=None, remote_basename=None,
                  x11=False, verbose=False):
         self.args = args
@@ -308,7 +308,7 @@ class RunScript(RunLocalStuff):
     """
 
     def __init__(self, local_script, *args,
-                 label=None, exit_signals=[],
+                 label=None, exit_signals=None,
                  includes=None, x11=False,
                  # if this is set, run bash -x
                  verbose=False):
@@ -368,7 +368,7 @@ class RunString(RunLocalStuff):
     """
 
     def __init__(self, script_body, *args,
-                 label=None, exit_signals=[],
+                 label=None, exit_signals=None,
                  includes=None, x11=False,
                  # the name under which the remote command will be installed
                  remote_name=None,

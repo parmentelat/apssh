@@ -209,7 +209,10 @@ class SshJob(AbstractJob):
             else:
                 result = await command.co_run_remote(self.node)
             # one command has failed
-            if result != 0 and result not in command.exit_signals:
+            if result != 0 \
+               and \
+               result not in (command.exit_signals
+                              if command.exit_signals is not None else []):
                 if self.critical:
                     # if job is critical, let's raise an exception
                     # so the scheduler will stop

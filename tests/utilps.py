@@ -1,3 +1,5 @@
+# pylint: disable=c0111
+
 import psutil
 
 #class PsTree:
@@ -11,7 +13,7 @@ import psutil
 class ProcessMonitor:
     """
     Memorize the state of processes at one point in time
-    and then can cmopute differences in terms of new/exited processes
+    and then can compute differences in terms of new/exited processes
     """
 
     def __init__(self):
@@ -23,6 +25,9 @@ class ProcessMonitor:
         """
         self.pids = set(psutil.pids())
         self.procs = [psutil.Process(pid) for pid in self.pids]
+        # updated by difference()
+        self.news = set()
+        self.olds = set()
 
     def difference(self):
         """
@@ -34,10 +39,10 @@ class ProcessMonitor:
 
         """
         pids_now = set(psutil.pids())
-#        procs_now = [psutil.Process(pid) for pid in self.pids]
+        # procs_now = [psutil.Process(pid) for pid in self.pids]
 
-        self.news = pids_now - self.pids
-        self.olds = self.pids - pids_now
+        self.news = pids_now - self.pids                # pylint: disable=w0201
+        self.olds = self.pids - pids_now                # pylint: disable=w0201
 
     def ssh_family(self):
         """
@@ -57,8 +62,7 @@ class ProcessMonitor:
                 if proc.pid in relevant:
                     continue
                 if proc.ppid() in relevant:
-                    changes=True
+                    changes = True
                     relevant.add(proc.pid)
 
-        #print(relevant)
         return relevant

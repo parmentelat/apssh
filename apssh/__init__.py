@@ -37,6 +37,8 @@ from .sshjob import SshJob, CommandFailedError
 # LocalNode is helpful to add local commands in a scenario
 from .nodes import SshNode, LocalNode
 
+from .service import Service
+
 from .topology import (
     close_ssh_in_scheduler, co_close_ssh_in_scheduler,
     topology_graph, topology_dot, topology_as_dotfile, topology_as_pngfile

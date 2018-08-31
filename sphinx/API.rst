@@ -21,15 +21,23 @@ Commands classes
 .. automodule:: apssh.commands
 		:members:
 
+		-----
+
+		Formatters classes
+		------------------------------
+
+		.. automodule:: apssh.formatters
+				:members:
+				:member-order: bysource
+				:exclude-members: VerboseFormatter
+
 -----
 
-Formatters classes
+The Service class
 ------------------------------
 
-.. automodule:: apssh.formatters
+.. automodule:: apssh.service
 		:members:
-		:member-order: bysource
-		:exclude-members: VerboseFormatter
 
 -----
 

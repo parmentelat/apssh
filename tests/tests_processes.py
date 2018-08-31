@@ -14,36 +14,80 @@ from . import util
 
 class Tests(unittest.TestCase):
 
-    def test_allowed_exits(self, host="localhost", username=None,
-                           wait_time=2, tested_sig="TERM"):
-        print("Testing that we do not have exceptions on critical "
-              "jobs uppon receiving a signal if this one has been "
-              "whitelisted")
+    def _allowed_signal(self, allowed_exits,
+                       host="localhost", username=None):
+
+        print(f"Testing allowed signal allowed_exits={allowed_exits}")
+
+        # global timeout
+        total = 4
+        # scheduled duration
+        long = 2
+        # send signal after that amount
+        short = 1
+        # we always kill with TERM
+        signal = "TERM"
+
         if username is None:
             username = util.localuser()
-        received_exception = False
-        scheduler = Scheduler()
-
         node = SshNode(host, username=username)
 
-        job = [SshJob(node=node, forever=True,
-                      command=[Run(f"sleep {wait_time*15}",
-                                   allowed_exits=[f"{tested_sig}"]
-                                   )
-                               ]
-                      )
-               ]
-        service = Scheduler(*job, scheduler=scheduler)
-        job_sleep = SshJob(node=node, scheduler=scheduler,
-                           command=Run(f"sleep {wait_time}"))
-        jobkill = SshJob(node=node, required=job_sleep, scheduler=scheduler,
-                         # Use kill $(pgrep) instead of pkill
-                         # because cursiously pkill does not return
-                         # an exit code nor an exit signal
-                         command=Run(f"kill -{tested_sig} $(pgrep sleep)")
-                         )
-        try:
-            scheduler.orchestrate()
-        except CommandFailedError:
-            received_exception = True
-        self.assertFalse(received_exception)
+        scheduler = Scheduler(timeout = total, critical=False)
+        SshJob(node=node, scheduler=scheduler,
+               command=Run(f"sleep {long}",
+                           allowed_exits=allowed_exits))
+        SshJob(node=node, scheduler=scheduler,
+               command=f"sleep {short}; pkill -{signal} sleep")
+
+        expected = signal in allowed_exits
+
+        run = scheduler.run()
+        scheduler.list()
+        self.assertEqual(run, expected)
+
+    def test_allowed_signal_regular(self):
+        self._allowed_signal(allowed_exits=[])
+    def test_allowed_signal_term(self):
+        self._allowed_signal(allowed_exits=['TERM'])
+    def test_allowed_signal_term_mix(self):
+        self._allowed_signal(allowed_exits=['TERM', 100])
+    def test_allowed_signal_term_foreign(self):
+        self._allowed_signal(allowed_exits=[100])
+
+
+
+    def _allowed_retcod(self, allowed_exits,
+                       host="localhost", username=None):
+
+        print(f"Testing allowed retcod allowed_exits={allowed_exits}")
+
+        # global timeout
+        total = 4
+        # scheduled duration
+        long = 1
+        # we always exit code 100
+        retcod = 1000
+
+        if username is None:
+            username = util.localuser()
+        node = SshNode(host, username=username)
+
+        scheduler = Scheduler(timeout = total, critical=False)
+        SshJob(node=node, scheduler=scheduler,
+               command=Run(f"sleep {long}; exit {retcod}",
+                           allowed_exits=allowed_exits))
+
+        expected = retcod in allowed_exits
+
+        run = scheduler.run()
+        scheduler.list()
+        self.assertEqual(run, expected)
+
+    def test_allowed_retcod_regular(self):
+        self._allowed_retcod(allowed_exits=[])
+    def test_allowed_retcod_term(self):
+        self._allowed_retcod(allowed_exits=[100])
+    def test_allowed_retcod_term_mix(self):
+        self._allowed_retcod(allowed_exits=['TERM', 100])
+    def test_allowed_retcod_term_foreign(self):
+        self._allowed_retcod(allowed_exits=[100])

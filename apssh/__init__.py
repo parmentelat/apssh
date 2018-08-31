@@ -33,5 +33,7 @@ try:
     #  default for keys management
     # LocalNode is helpful to add local commands in a scenario
     from .nodes import SshNode, LocalNode
+
+    from .service import Service
 except Exception as exc:                                # pylint: disable=W0703
     print("Warning: could not import module asyncssh")

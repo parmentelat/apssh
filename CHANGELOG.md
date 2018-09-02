@@ -1,5 +1,21 @@
 # ChangeLog
 
+## 0.13.0 - 2018 Aug 31
+
+* command objects can define a `allowed_exits` attribute; this allows
+  for instance to state that a command may be killed,
+  or return a non-zero retcod, while still being deemd OK.
+* `apssh.close_ssh_in_scheduler` now allows to explicitly close all ssh
+  connections invlolved in a scheduler; coroutine `co_close_ssh_in_scheduler` available as well;
+* more cleanly close connection to ssh agent when fetching keys
+* ssh sessions now retain exit code or signal, when relevant
+* `SshJob.repr()` gives more details on which command failed and how,
+  resulting in a more troubleshooting-friendly listing for apssh schedulers,
+  especially with multi-command jobs.
+* much wider test scope, redesigned to work exclusively in standalone mode,
+  using a local ubuntu virtualbox.
+
+
 ## 0.12.1 - 2018 May 22
 
 * bugfix, selection between RunScript and RunString in apssh -s
@@ -15,7 +31,7 @@
 ## 0.11.2 - 2018 May 4
 
 * bugfix, failing SshJob tried to throw an exception using the command()
-  mthod on the failing command, which is no longer available
+  method on the failing command, which is no longer available
 
 ## 0.11.1 - 2018 Apr 30
 

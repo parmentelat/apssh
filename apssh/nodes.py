@@ -123,7 +123,7 @@ class LocalNode:
 class SshNode(SshProxy):
     """
     An instance of `SshNode` typically is needed to create a
-    :py:obj:`apssh.sshjob.SshJob` instance, that defines a batch of commands
+    :class:`apssh.sshjob.SshJob` instance, that defines a batch of commands
     or file transfers to run in sequence on that node.
 
     Examples:

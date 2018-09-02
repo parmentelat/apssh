@@ -7,7 +7,7 @@ import asyncio
 
 from asynciojobs import Scheduler
 
-from apssh import util as uti
+from apssh import util as util
 from apssh import SshNode, SshJob, ColonFormatter
 
 from .util import localuser, in_out_connections
@@ -16,7 +16,7 @@ from .util import localuser, in_out_connections
 class Tests(unittest.TestCase):
 
     def close_sched(self, sched, dummy_bool=False):
-        uti.close_ssh_from_sched(sched)
+        util.close_ssh_in_scheduler(sched)
         #sched.close_connection()
 
     def close_nodes(self, nodes, gateway_first=True):

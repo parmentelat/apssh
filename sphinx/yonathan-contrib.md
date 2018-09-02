@@ -84,7 +84,7 @@ from apssh import util
 
 ok = main_sheduler.orchestrate()
 if ok:
-  util.close_ssh_from_sched(main_scheduler)
+  util.close_ssh_in_scheduler(main_scheduler)
 ```
 
 ## signal-exit :
@@ -181,7 +181,7 @@ Concerning the types of scheduler used for these 2 types of tests :
 
 Each of these type of tests are done by either :
   * Calling the .close method directly on the nodes
-  * Calling the `apssh.util.close_ssh_from_sched()` on the master scheduler
+  * Calling the `apssh.util.close_ssh_in_scheduler()` on the master scheduler
 
 The third type of test consist only in building a hierarchy of nodes executing each a job :
 
@@ -195,7 +195,7 @@ gateway0 : echo hop0-0
                               --------> gateway3: echo hop3-0
 ```
 
-And the close all the connection using the `apssh.util.close_ssh_from_sched()`.
+And the close all the connection using the `apssh.util.close_ssh_in_scheduler()`.
 
 ***
 As a side note : for this test we do not test the node.close method because we
@@ -217,7 +217,7 @@ The gateway_first argument indicates if the gateways are first in the nodes list
 
 `def close_sched(self, sched, dummy_bool=False)`:
 
-Will close the connection using 'apssh.util.close_ssh_from_sched()'
+Will close the connection using 'apssh.util.close_ssh_in_scheduler()'
 on the given scheduler. The dummy_bool argument is a nasty hack so that the method has the same
 signature as the close_nodes method.
 

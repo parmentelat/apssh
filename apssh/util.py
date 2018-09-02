@@ -12,11 +12,23 @@ def print_stderr(*args, **kwds):
     """
     print(file=sys.stderr, *args, **kwds)
 
-def close_ssh_from_sched(scheduler):
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(co_close_ssh_from_sched(scheduler))
 
-async def co_close_ssh_from_sched(scheduler):
+def close_ssh_in_scheduler(scheduler):
+    """
+    Convenience: synchroneous version of :py:obj:`co_close_ssh_in_scheduler()`.
+    """
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(co_close_ssh_in_scheduler(scheduler))
+
+async def co_close_ssh_in_scheduler(scheduler):
+    """
+    This utility function allows to close all ssh connections
+    involved in a scheduler.
+
+    Its logic is to find all `SshNode` instances referred in the jobs
+    contained in the scheduler, nested schedulers included. All the attached
+    ssh connections are then closed, starting with the remotest ones.
+    """
     nodes = set()
     gateways = set()
     not_gateways = set()

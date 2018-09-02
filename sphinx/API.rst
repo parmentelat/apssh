@@ -27,6 +27,15 @@ Formatters classes
 
 -----
 
+
+Utilities
+------------------------------
+
+.. automodule:: apssh.util
+		:members: close_ssh_in_scheduler, co_close_ssh_in_scheduler
+
+-----
+
 ``nepi-ng`` node classes
 -------------------------------------
 

@@ -2,20 +2,28 @@
 
 Voici la liste des branche sur les différents modules :
 
-### asynciojobs:
+### ~~asynciojobs~~:
 
 * ~~ittrate-job~~ :  **in 0.12.11**
 
   ~~Contient le patch qui permet à APSSH de récupérer les jobs à l’intérieur de scheduler nestés. Attention pour une obscure raison, je l’ai basé sur une version contenant le patch de implicit-shutdown.~~
 
-* implicit-shutdown : **reste à intégrer**
+* ~~implicit-shutdown~~ : **in 0.13.0**
 
-  Réactive le shutdown implicite à la fin d’un scheduler, un timeout ou une exception.
+  ~~Réactive le shutdown implicite à la fin d’un scheduler, un timeout ou une exception.~~
 
 * ~~implicit_shutdown : Deprecated & removed was 92e7425~~
 
-### apssh :
+### apssh:
 
+* troisième branche (`prezombie-kill`): pas intégrée du tout; on se dirige plutôt vers une solution à la `systemd-services`; **RESTE à intégrer**
+
+* ~~`close-ssh`~~: **in 0.13.0** s'inspire de `close-conn`; l'algorithme est modifié pour fermer les connexions les plus distantes d'abord
+
+* ~~`allowed-exits`~~: **in 0.13.0** s'inspire de signal-exit 
+
+
+##### historically, by Yonathan:
 * close-con :
 
   Contient un patch qui permet de fermer correctement les connections ssh sur les noeuds et leur gateway. A utiliser avec la branche iterate-job de asynciojobs. Contient également les tests sur les connections et leur utilitaires.

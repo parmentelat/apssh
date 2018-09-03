@@ -1,9 +1,10 @@
 # ChangeLog
 
-## 0.13.1 - 2018 Sep 3
+## 0.13.2 - 2018 Sep 3
 
 * a tool to produce a graphical representation of the
   "node x is the gateway for node y" relationship. See ``topology_as_dot`` or ``topology_as_graph``.
+* 0.13.1 used lingering f-strings
 
 ## 0.13.0 - 2018 Sep 3
 

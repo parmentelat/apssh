@@ -33,5 +33,9 @@ try:
     #  default for keys management
     # LocalNode is helpful to add local commands in a scenario
     from .nodes import SshNode, LocalNode
+
+    from .close_ssh import close_ssh_in_scheduler, co_close_ssh_in_scheduler
+
 except Exception as exc:                                # pylint: disable=W0703
     print("Warning: could not import module asyncssh")
+    print(exc)

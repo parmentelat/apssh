@@ -164,3 +164,15 @@ class SshNode(SshProxy):
         if not keys:
             keys = load_private_keys()
         SshProxy.__init__(self, hostname, username=username, keys=keys, **kwds)
+
+    def distance(self):
+        """
+        Returns:
+          int: number of hops from the local node.
+          An instance without a `gateway` has a distance of 1.
+          Otherwise, it is deemed one hop further than its gateway.
+        """
+        if not self.gateway:                            # pylint: disable=r1705
+            return 1
+        else:
+            return 1 + self.gateway.distance()

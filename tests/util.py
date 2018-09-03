@@ -73,6 +73,7 @@ def count_ssh_connections_psutil(incoming:bool, outgoing:bool):
                  or (outgoing and conn.raddr.port == 22):
                     count += 1
     return count
+
 # ssh connections accounting
 def count_ssh_connections(incoming:bool, outgoing:bool):
     """

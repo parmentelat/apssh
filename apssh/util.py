@@ -3,61 +3,12 @@ A set of helper functions for the apssh package
 """
 
 import sys
-import asyncio
-import apssh
 
 def print_stderr(*args, **kwds):
     """
     A shorthand for ``print()`` but on standard error
     """
     print(file=sys.stderr, *args, **kwds)
-
-
-def close_ssh_in_scheduler(scheduler):
-    """
-    Convenience: synchroneous version of :py:obj:`co_close_ssh_in_scheduler()`.
-    """
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(co_close_ssh_in_scheduler(scheduler))
-
-async def co_close_ssh_in_scheduler(scheduler):
-    """
-    This utility function allows to close all ssh connections
-    involved in a scheduler.
-
-    Its logic is to find all `SshNode` instances referred in the jobs
-    contained in the scheduler, nested schedulers included. All the attached
-    ssh connections are then closed, starting with the remotest ones.
-    """
-    nodes = set()
-    gateways = set()
-    not_gateways = set()
-    for job in scheduler.iterate_jobs():
-        if isinstance(job, apssh.SshJob)\
-         and isinstance(job.node, apssh.SshProxy):
-            nodes.add(job.node)
-            if job.node:
-                if job.node.gateway:
-                    not_gateways.add(job.node)
-                    gateways.add(job.node.gateway)
-                else:
-                    gateways.add(job.node)
-    middle_nodes = set()
-    killable_nodes = set()
-
-    while len(not_gateways) > 0:
-        for node in not_gateways:
-            if node.gateway in not_gateways:
-                middle_nodes.add(node.gateway)
-        killable_nodes = not_gateways - middle_nodes
-        middle_nodes = set()
-        not_gateways = not_gateways - killable_nodes
-        for node in killable_nodes:
-            await node.close()
-        killable_nodes = set()
-
-    for node in gateways:
-        await node.close()
 
 
 def check_arg_type(instance, types, message):

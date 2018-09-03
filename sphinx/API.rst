@@ -31,7 +31,7 @@ Formatters classes
 Utilities
 ------------------------------
 
-.. automodule:: apssh.util
+.. automodule:: apssh.close_ssh
 		:members: close_ssh_in_scheduler, co_close_ssh_in_scheduler
 
 -----

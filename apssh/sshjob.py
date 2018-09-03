@@ -165,6 +165,8 @@ class SshJob(AbstractJob):
         assert len(self.commands) >= 1
         assert all(isinstance(c, AbstractCommand) for c in self.commands)
 
+        # used in repr_result() to show which command has failed
+        self._errors = []
         # propagate the verbose flag on all commands if set
         if verbose is not None:
             for propagate in self.commands:
@@ -203,22 +205,32 @@ class SshJob(AbstractJob):
         # the commands are of course sequential,
         # so we wait for one before we run the next
         overall = 0
-        for command in self.commands:
+        for i, command in enumerate(self.commands, 1):
+
+            # trigger
             if isinstance(self.node, LocalNode):
                 result = await command.co_run_local(self.node)
             else:
                 result = await command.co_run_remote(self.node)
-            # one command has failed
-            if result != 0:
+
+            # has the command failed ?
+            if result == 0 or result in command.allowed_exits:
+                pass
+            else:
+                label = command.get_label_line()
                 if self.critical:
                     # if job is critical, let's raise an exception
                     # so the scheduler will stop
+                    self._errors.append("!Crit![{}]:{}->{}"
+                                        .format(i, label, result))
                     raise CommandFailedError(
                         "command {} returned {} on node {}"
-                        .format(command.get_label_line(), result, self.node))
+                        .format(label, result, self.node))
                 else:
                     # not critical; let's proceed, but let's remember the
                     # overall result is wrong
+                    self._errors.append("Ignr[{}]:{}->{}"
+                                        .format(i, label, result))
                     overall = result
         return overall
     async def close(self):
@@ -282,3 +294,10 @@ class SshJob(AbstractJob):
         """
         # turn out the logic for graph_label is exactly right
         return self.graph_label()
+
+    def repr_result(self):                              # pylint: disable=c0111
+        if not self.is_running():
+            return ""
+        if not self._errors:
+            return "OK"
+        return " - ".join(self._errors)

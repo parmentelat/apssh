@@ -18,10 +18,42 @@ class AbstractCommand:
 
     """
     Abstract base class for all command classes.
+
+    Parameters:
+      label: optional label used when representing a scheduler
+        textually or graphically
+      allowed_exits: the default is to only allow the command to exit(0).
+        Using ``allowed_exits``, one can whitelist a set of exit codes
+        or signals. If the command returns one of these codes, or receives
+        one of these signals, it is deemed to have completed successfully.
+        A retcod 0 is always allowed.
+
+    Examples:
+      ``allowed_exits=["TERM", 4]`` would allow the command to either
+      return exit code ``4``, or to end after receiving signal `'TERM'`.
+      Refer to the POSIX documentation for signal names, like `QUIT`
+      or `ALRM`.
+
+    Note:
+      ``allowed_exits`` is typically useful when a command starts a process
+      that is designed to be killed by another command later in the scheduler.
     """
 
-    def __init__(self, *, label=None):
+    def __init__(self, *, label=None,
+                 allowed_exits=None):
+        """
+        Some code
+        """
+
+        # handle default, create empty set if needed
+        if allowed_exits is None:
+            allowed_exits = set()
+        else:
+            allowed_exits = set(allowed_exits)
+
+        # store local attributes
         self.label = label
+        self.allowed_exits = allowed_exits
 
     def __repr__(self):
         return "<{}: {}>".format(type(self).__name__, self.get_label_line())
@@ -109,11 +141,14 @@ class Run(AbstractCommand):
     # plus, maybe some day we'll need to add other keywords
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
-    def __init__(self, *argv, label=None, verbose=False, x11=False):
+    def __init__(self, *argv, label=None,
+                 allowed_exits=None, service=None,
+                 verbose=False, x11=False):
         self.argv = argv
         self.verbose = verbose
         self.x11 = x11
-        super().__init__(label=label)
+        super().__init__(label=label,
+                         allowed_exits=allowed_exits)
 
     def label_line(self):
         """
@@ -185,7 +220,7 @@ class RunLocalStuff(AbstractCommand):
     """
 
     def __init__(self, args, *,
-                 label=None,
+                 label=None, allowed_exits=None, service=None,
                  includes=None, remote_basename=None,
                  x11=False, verbose=False):
         self.args = args
@@ -193,7 +228,8 @@ class RunLocalStuff(AbstractCommand):
         self.remote_basename = remote_basename
         self.x11 = x11
         self.verbose = verbose
-        super().__init__(label=label)
+        super().__init__(label=label,
+                         allowed_exits=allowed_exits)
 
     @staticmethod
     def _random_id():
@@ -301,7 +337,8 @@ class RunScript(RunLocalStuff):
     """
 
     def __init__(self, local_script, *args,
-                 label=None, includes=None, x11=False,
+                 label=None, allowed_exits=None,
+                 includes=None, x11=False,
                  # if this is set, run bash -x
                  verbose=False):
         self.local_script = local_script
@@ -310,6 +347,7 @@ class RunScript(RunLocalStuff):
 
         super().__init__(args,
                          label=label,
+                         allowed_exits=allowed_exits,
                          includes=includes,
                          remote_basename=remote_basename,
                          x11=x11, verbose=verbose)
@@ -359,7 +397,8 @@ class RunString(RunLocalStuff):
     """
 
     def __init__(self, script_body, *args,
-                 label=None, includes=None, x11=False,
+                 label=None, allowed_exits=None,
+                 includes=None, x11=False,
                  # the name under which the remote command will be installed
                  remote_name=None,
                  # if this is set, run bash -x
@@ -375,6 +414,7 @@ class RunString(RunLocalStuff):
             remote_basename = self._random_id()
         super().__init__(args,
                          label=label,
+                         allowed_exits=allowed_exits,
                          includes=includes,
                          remote_basename=remote_basename,
                          x11=x11, verbose=verbose)

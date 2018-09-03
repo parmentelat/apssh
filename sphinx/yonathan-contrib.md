@@ -93,7 +93,7 @@ Allow white-listing of exits code.
 ```python3
 job = SshJob(node=node, forever=True,
              command=Run(f"sleep {wait_time*15}",
-                         exit_signals=["TERM"])
+                         allowed_exits=["TERM"])
             )
 ```
 
@@ -151,7 +151,7 @@ Sometimes there is an exception that is thrown but it is not harmful for the tes
 
 These exception come from the way we end the sleep command. By sending it a SIGTERM, it returns an
 'exit on signal' exit code. With the patch on the branch signal-exit we could put the attribute
-'exit_signals=["TERM"]' in the Run() object to avoid this exception.
+'allowed_exits=["TERM"]' in the Run() object to avoid this exception.
 
 ## test_connections :
 

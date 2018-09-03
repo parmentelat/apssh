@@ -106,9 +106,7 @@ def topology_dot(scheduler):
             result += '{} [style="rounded", label="{}", shape="box"]\n'\
                       .format(index, node.__user_host__())
     for distance in distances:
-        print(f'distance = {distance} -> {len(dist_dict[distance])}')
         for node in dist_dict[distance]:
-            print(f"\t{node} - {indices[node]}")
             upstream = 0 if not node.gateway else indices[node.gateway]
             result += '{} -> {}\n'.format(upstream, indices[node])
     result += '}\n'

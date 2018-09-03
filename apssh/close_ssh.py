@@ -47,8 +47,6 @@ async def co_close_ssh_in_scheduler(scheduler, manage_gateways=True):
             recursive_scan(node)
         nodes_set |= gateways_set
 
-    print(f"Found a total of {len(nodes_set)} nodes")
-
     # gather nodes by distance
     dist_dict = defaultdict(list)
     for node in nodes_set:
@@ -59,12 +57,7 @@ async def co_close_ssh_in_scheduler(scheduler, manage_gateways=True):
     distances.sort(reverse=True)
 
     for distance in distances:
-        print(f"NODES at distance {distance}")
         nodes = dist_dict[distance]
-        for node in nodes:
-            print(f"\t{node}")
-        print("Closing {} ssh connections at distance {}"
-              .format(len(nodes), distance))
         close_tasks = [node.close() for node in nodes]
         await asyncio.gather(*close_tasks)
 

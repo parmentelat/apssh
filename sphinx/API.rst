@@ -1,6 +1,12 @@
 The apssh API
 ========================================
 
+Most symbols can be imported directly from the ``apssh`` package, e.g.
+
+    ``from apssh import SshJob``
+
+No need to import module ``apssh.sshjob`` here.
+
 The SshProxy class
 ------------------------------
 
@@ -27,12 +33,11 @@ Formatters classes
 
 -----
 
-
 Utilities
 ------------------------------
 
-.. automodule:: apssh.close_ssh
-		:members: close_ssh_in_scheduler, co_close_ssh_in_scheduler
+.. automodule:: apssh.topology
+		:members: close_ssh_in_scheduler, co_close_ssh_in_scheduler, topology_graph, topology_dot, topology_as_dotfile, topology_as_pngfile
 
 -----
 

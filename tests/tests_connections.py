@@ -10,6 +10,8 @@ from asynciojobs import Scheduler
 from apssh import close_ssh_in_scheduler
 from apssh import SshNode, SshJob, ColonFormatter
 
+from apssh import topology_as_pngfile
+
 from .util import localuser, in_out_connections
 
 
@@ -83,6 +85,7 @@ class Tests(unittest.TestCase):
         in0, out0 = in_out_connections()
         verbose(f"INITIAL count in={in0} out={out0}")
         scheduler.export_as_pngfile("debug")
+        topology_as_pngfile(scheduler, "topology")
         scheduler.run()
 
         in1, out1 = in_out_connections()
@@ -140,6 +143,7 @@ class Tests(unittest.TestCase):
         # for each hop1 conn, there are 1 hop1 + c2 hop2 connections alive
         expected = c1 * (c2+1)
         scheduler.export_as_pngfile("debug")
+        topology_as_pngfile(scheduler, "topology")
 
         # record base status
         in0, out0 = in_out_connections()

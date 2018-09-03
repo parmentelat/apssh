@@ -2,13 +2,15 @@
 Testing basic functions of apssh
 """
 
-# pylint: disable=c0111,c0103
+# pylint: disable=c0111,c0103, r0201
 
 import unittest
 
 from asynciojobs import Scheduler, Sequence
 
 from apssh import SshNode, SshJob, Run, RunString, RunScript, Push, Pull
+
+from apssh import topology_as_pngfile
 
 from .util import localhostname, localuser, produce_png
 
@@ -126,3 +128,15 @@ class Tests(unittest.TestCase):
         ok = scheduler.run()
 
         self.assertFalse(ok)
+
+
+    def test_topology(self):
+        g1 = SshNode("faraday", username="inria_tutorial")
+        n1 = SshNode(gateway=g1, hostname="fit01", username="root")
+        n2 = SshNode(gateway=g1, hostname="fit02", username="root")
+
+        s = Scheduler()
+        SshJob(n1, command='hostname', scheduler=s)
+        SshJob(n2, command='hostname', scheduler=s)
+
+        topology_as_pngfile(s, "topology")

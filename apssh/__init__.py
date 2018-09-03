@@ -34,7 +34,11 @@ try:
     # LocalNode is helpful to add local commands in a scenario
     from .nodes import SshNode, LocalNode
 
-    from .close_ssh import close_ssh_in_scheduler, co_close_ssh_in_scheduler
+    from .topology import (
+        close_ssh_in_scheduler, co_close_ssh_in_scheduler,
+        topology_graph, topology_dot, topology_as_dotfile, topology_as_pngfile
+    )
+
 
 except Exception as exc:                                # pylint: disable=W0703
     print("Warning: could not import module asyncssh")

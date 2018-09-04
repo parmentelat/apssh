@@ -142,7 +142,7 @@ class Run(AbstractCommand):
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
     def __init__(self, *argv, label=None,
-                 allowed_exits=None, service=None,
+                 allowed_exits=None, 
                  verbose=False, x11=False):
         self.argv = argv
         self.verbose = verbose
@@ -220,7 +220,7 @@ class RunLocalStuff(AbstractCommand):
     """
 
     def __init__(self, args, *,
-                 label=None, allowed_exits=None, service=None,
+                 label=None, allowed_exits=None,
                  includes=None, remote_basename=None,
                  x11=False, verbose=False):
         self.args = args

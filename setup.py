@@ -4,17 +4,18 @@
 Packaging and installation for the apssh package
 """
 
+from pathlib import Path
+
 import setuptools
 
 # https://packaging.python.org/guides/single-sourcing-package-version/
 # set __version__ by read & exec of the python code
 # this is better than an import that would otherwise try to
 # import the whole package, and fail if a required module is not yet there
-from pathlib import Path
 VERSION_FILE = Path(__file__).parent / "apssh" / "version.py"
 ENV = {}
 with VERSION_FILE.open() as f:
-    exec(f.read(), ENV)
+    exec(f.read(), ENV)                                 # pylint: disable=w0122
 __version__ = ENV['__version__']
 
 LONG_DESCRIPTION = \

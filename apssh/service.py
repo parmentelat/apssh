@@ -2,6 +2,8 @@
 The service module defines the Service helper class.
 """
 
+# pylint: disable=r1705
+
 import random
 
 from .commands import Run
@@ -43,7 +45,7 @@ class Service:
         self.systemd_type = systemd_type
         self.service_id = service_id
         self.salt = self._salt()
-        self.full_id = salt if not service_id \
+        self.full_id = self.salt if not service_id \
                        else "{}-{}".format(service_id, self.salt)
 
     @staticmethod

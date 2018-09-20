@@ -93,7 +93,7 @@ class AbstractCommand:
         attempt = self.label
         if attempt is not None:
             return attempt
-        attempt = self.label_line()
+        attempt = self.label_line()                     # pylint: disable=e1111
         if attempt is not None:
             return attempt
         return "NO-LABEL-LINE (class {})"\
@@ -142,7 +142,7 @@ class Run(AbstractCommand):
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
     def __init__(self, *argv, label=None,
-                 allowed_exits=None, 
+                 allowed_exits=None,
                  verbose=False, x11=False):
         self.argv = argv
         self.verbose = verbose

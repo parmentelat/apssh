@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.14.1 - 2018 Sep 20
+
+* bugfix: computation of distances was broken with jobs that were not sshjob instances
+* bugfix: creation of a Service instance with no service_id was broken
+
 ## 0.14.0 - 2018 Sep 4
 
 * new class `Service`: simplify creation of things running in the background,

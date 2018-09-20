@@ -1,9 +1,10 @@
 # pylint: disable=c0111
 
-from collections import defaultdict
-
 import asyncio
 
+from collections import defaultdict
+
+from .sshjob import SshJob
 from .nodes import SshNode
 
 
@@ -14,7 +15,8 @@ def _distances_dict(scheduler, manage_gateways):
     # gather all relevant instances of SshJob
     nodes_set = {
         job.node for job in scheduler.iterate_jobs()
-        if isinstance(job.node, SshNode)
+        if isinstance(job, SshJob)
+        and isinstance(job.node, SshNode)
     }
     # transitive closure to gather gateways as well
     # can't modify the subject of a for loop

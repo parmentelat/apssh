@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.14.2 - 2018 Oct 10
+
+* minor cosmetic tweaks
+  * graphical output shows job number for easier binding to textual listing
+  * default RunString textual repr is based on a truncated script body
+
 ## 0.14.1 - 2018 Sep 20
 
 * bugfix: computation of distances was broken with jobs that were not sshjob instances

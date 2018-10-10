@@ -5,6 +5,7 @@ The ``commands`` module implements all the command classes, typically
 
 from pathlib import Path
 import random
+import re
 
 from asyncssh import EXTENDED_DATA_STDERR
 
@@ -419,9 +420,33 @@ class RunString(RunLocalStuff):
                          remote_basename=remote_basename,
                          x11=x11, verbose=verbose)
 
+
+    @staticmethod
+    def relevant_first_line(body):
+        blank = re.compile(r'\A\s*\Z')
+        comment = re.compile(r'\A\s*#')
+        result = ""
+        for line in body.split("\n"):
+            if comment.match(line) or blank.match(line):
+                continue
+            return line.strip()
+        return "??? empty body ???"
+
+    WIDTH = 15
+
+    def _truncated(self, width=None):
+        if width is None:
+            width = self.WIDTH
+        body = self.relevant_first_line(self.script_body)
+        if len(body) <= width:
+            return body
+        # generate {:15.15s}...
+        truncate_format = "{{:{width}.{width}s}}...".format(width=width)
+        return truncate_format.format(body)
+
     def label_line(self):
-        remote_name = self.remote_name or '[no_remote_name]'
-        return "RunString: " + remote_name + " " + self._args_line()
+        return "RunString: {} {}".format(self._truncated(), self._args_line())
+
 
     async def co_install(self, node, remote_path):
         self._verbose_message(

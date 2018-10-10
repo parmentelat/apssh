@@ -280,8 +280,10 @@ class SshJob(AbstractJob):
 
         Relies on each command's ``label_line()`` method
         """
-        lines = ["{}@{}".format(self.node.username,
-                                self.node.hostname)]
+        lines = ["{} :{}@{}".format(
+            self.repr_id(),
+            self.node.username,
+            self.node.hostname)]
         for command in self.commands:
             line = command.get_label_line()
             if line:

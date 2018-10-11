@@ -37,9 +37,22 @@ class Service:
         systemd type instead. Refer to systemd documentation for more details,
         at
         https://www.freedesktop.org/software/systemd/man/systemd.service.html#Type=
+      environ: a dictionary that defines additional environment variables
+        to be made visible to the running service. In contrast with what happens
+        with regular `Run` commands, processes forked by systemd have a very
+        limited set of environment variables defined - typically only
+        ``LANG`` and ``PATH``. If your program rely on, for example,
+        the ``USER`` variable to be defined as well, you may specify it here,
+        for example ``environ={'USER': 'root'}``.
+
     """
     def __init__(self, command, *,
-                 service_id=None, tty=False, systemd_type='simple'):
+                 service_id=None,
+                 tty=False,
+                 systemd_type='simple',
+                 environ=None,
+                 verbose=False,
+                 ):
         self.command = command
         self.tty = tty
         self.systemd_type = systemd_type
@@ -47,6 +60,8 @@ class Service:
         self.salt = self._salt()
         self.full_id = self.salt if not service_id \
                        else "{}-{}".format(service_id, self.salt)
+        self.environ = environ if environ else {}
+        self.verbose = verbose
 
     @staticmethod
     def _salt():
@@ -66,8 +81,17 @@ class Service:
 
     def _start(self):
         tty_option = "" if not self.tty else "--pty"
-        return "systemd-run {} --unit={} --service-type={} {}"\
-              .format(tty_option, self.full_id, self.systemd_type, self.command)
+        command = ""
+        if self.environ:
+            defines = (" ".join("{}='{}'".format(var, value)
+                                for var, value in self.environ.items()))
+            command = ("systemctl set-environment {} ;"
+                       .format(defines))
+
+        command += ("systemd-run {} --unit={} --service-type={} {}"
+                    .format(tty_option, self.full_id,
+                            self.systemd_type, self.command))
+        return command
 
     def _manage(self, subcommand):
         """
@@ -76,13 +100,20 @@ class Service:
         return "systemctl {} {}"\
                .format(subcommand, self.full_id)
 
+    def mode_label(self, mode, user_defined):
+        if user_defined:
+            return user_defined
+        if not self.verbose:
+            return "Service: {} {}".format(mode, self._label())
+        # verbose: show command
+        return "Serv: {} {} ➝ {}".format(mode, self._label(), self.command)
+
     def start_command(self, *, label=None, **kwds):
         """
         Returns:
           a Run instance suitable to be inserted in a SshJob object
         """
-        if label is None:
-            label = "Service: start {}".format(self._label())
+        label = self.mode_label("start", label)
         return Run(self._start(), label=label, **kwds)
 
     def stop_command(self, *, label=None, **kwds):
@@ -90,8 +121,7 @@ class Service:
         Returns:
           a Run instance suitable to be inserted in a SshJob object
         """
-        if label is None:
-            label = "Service: stop {}".format(self._label())
+        label = self.mode_label("stop", label)
         return Run(self._manage('stop'), label=label, **kwds)
 
     def status_command(self, *, output=None, label=None, **kwds):
@@ -102,6 +132,5 @@ class Service:
         command = self._manage('status')
         if output:
             command += " > {}".format(output)
-        if label is None:
-            label = "Service: status {}".format(self._label())
+        label = self.mode_label("status", label)
         return Run(command, label=label, **kwds)

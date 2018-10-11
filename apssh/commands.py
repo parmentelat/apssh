@@ -422,10 +422,9 @@ class RunString(RunLocalStuff):
 
 
     @staticmethod
-    def relevant_first_line(body):
+    def _relevant_first_line(body):
         blank = re.compile(r'\A\s*\Z')
         comment = re.compile(r'\A\s*#')
-        result = ""
         for line in body.split("\n"):
             if comment.match(line) or blank.match(line):
                 continue
@@ -437,7 +436,7 @@ class RunString(RunLocalStuff):
     def _truncated(self, width=None):
         if width is None:
             width = self.WIDTH
-        body = self.relevant_first_line(self.script_body)
+        body = self._relevant_first_line(self.script_body)
         if len(body) <= width:
             return body
         # generate {:15.15s}...

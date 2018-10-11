@@ -2,7 +2,7 @@
 The service module defines the Service helper class.
 """
 
-# pylint: disable=r1705
+# pylint: disable=r1705, r0902
 
 import random
 
@@ -51,8 +51,7 @@ class Service:
                  tty=False,
                  systemd_type='simple',
                  environ=None,
-                 verbose=False,
-                 ):
+                 verbose=False):
         self.command = command
         self.tty = tty
         self.systemd_type = systemd_type
@@ -100,7 +99,7 @@ class Service:
         return "systemctl {} {}"\
                .format(subcommand, self.full_id)
 
-    def mode_label(self, mode, user_defined):
+    def _mode_label(self, mode, user_defined):
         if user_defined:
             return user_defined
         if not self.verbose:
@@ -113,7 +112,7 @@ class Service:
         Returns:
           a Run instance suitable to be inserted in a SshJob object
         """
-        label = self.mode_label("start", label)
+        label = self._mode_label("start", label)
         return Run(self._start(), label=label, **kwds)
 
     def stop_command(self, *, label=None, **kwds):
@@ -121,7 +120,7 @@ class Service:
         Returns:
           a Run instance suitable to be inserted in a SshJob object
         """
-        label = self.mode_label("stop", label)
+        label = self._mode_label("stop", label)
         return Run(self._manage('stop'), label=label, **kwds)
 
     def status_command(self, *, output=None, label=None, **kwds):
@@ -132,5 +131,5 @@ class Service:
         command = self._manage('status')
         if output:
             command += " > {}".format(output)
-        label = self.mode_label("status", label)
+        label = self._mode_label("status", label)
         return Run(command, label=label, **kwds)

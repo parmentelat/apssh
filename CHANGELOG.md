@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.15.0 - 2018 Oct 11
+
+* the Service class accepts a new `environ` attribute that lets user define e.g.
+  USER or HOME similar environment variables 
+
 ## 0.14.2 - 2018 Oct 10
 
 * minor cosmetic tweaks

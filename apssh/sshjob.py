@@ -233,6 +233,7 @@ class SshJob(AbstractJob):
                                         .format(i, label, result))
                     overall = result
         return overall
+
     async def close(self):
         """
         Implemented as part of the AbstractJob_ protocol.
@@ -280,7 +281,7 @@ class SshJob(AbstractJob):
 
         Relies on each command's ``label_line()`` method
         """
-        lines = ["{} :{}@{}".format(
+        lines = ["{}: {}@{}".format(
             self.repr_id(),
             self.node.username,
             self.node.hostname)]

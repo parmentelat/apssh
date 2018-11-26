@@ -288,6 +288,14 @@ class Apssh:
             then the user should specify private key file(s) - additive
             """)
         parser.add_argument(
+            "-K", "--ok-if-no-key", default=False, action='store_true',
+            help="""
+            When no key can be found, apssh won't even bother
+            to try and connect. With this option it proceeds
+            even with no key available.
+            """
+            )
+        parser.add_argument(
             "-g", "--gateway", default=None,
             help="""
             specify a gateway for 2-hops ssh
@@ -377,7 +385,7 @@ class Apssh:
         # load keys
         self.loaded_private_keys = load_private_keys(
             self.parsed_args.keys, args.verbose or args.debug)
-        if not self.loaded_private_keys:
+        if not self.loaded_private_keys and not args.ok_if_no_key:
             print("Could not find any usable key - exiting")
             exit(1)
 

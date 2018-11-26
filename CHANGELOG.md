@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.16.0 - 2018 Nov 26
+
+* new option -K / --ok-if-no-key - don't check for at least one key
+* micro-change in labelling nodes in a graph: swap space and colon
+
 ## 0.15.1 - 2018 Oct 11
 
 * the Service class accepts a new `environ` attribute that lets user define e.g.

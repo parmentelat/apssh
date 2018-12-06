@@ -464,7 +464,7 @@ class Apssh:
                 prefix = names[0] if result == 0 else names[None]
                 mark_path = Path(subdir) / prefix / proxy.hostname
                 with mark_path.open("w") as mark:
-                    mark.write(result + "\n")
+                    mark.write("{}\n".format(result))
 
         # xxx - when in gateway mode, the gateway proxy never gets disconnected
         # which probably is just fine

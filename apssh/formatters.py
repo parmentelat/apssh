@@ -277,7 +277,7 @@ class SubdirFormatter(VerboseFormatter):
             print_stderr("File permission problem {}".format(exc))
             exit(1)
         except Exception as exc:                        # pylint: disable=W0703
-            print_stderr("Unexpected error {}".format(exc))
+            print_stderr("Unexpected error {} {}".format(type(exc), exc))
             exit(1)
 
     def line(self, line, datatype, hostname):

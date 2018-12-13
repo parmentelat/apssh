@@ -1,11 +1,12 @@
 # ChangeLog
 
-## 0.17.0 - 2018 Dec 13
+## 0.17.1 - 2018 Dec 13
 
 * Service class revisited:
-  * mandatory unit_name parameter
+  * parameter service_id is mandatory
   * comes with an implicit reset-failed by default
   * no longer salted
+  * 0.17.0 was breaking compatibility for no benefit, please don't use
 
 ## 0.16.0 - 2018 Nov 26
 

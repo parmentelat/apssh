@@ -20,7 +20,7 @@ class Tests(TestCase):
         status = f"/root/TCPDUMP-{forever}.status"
 
         tcpdump = Service(f"tcpdump -i lo -w {storage}",
-                          unit_name='tcpdump',
+                          service_id='tcpdump',
                           verbose=True)
         monitor = ProcessMonitor()
 

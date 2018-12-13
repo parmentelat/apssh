@@ -24,7 +24,7 @@ class Service:
 
     Parameters:
       command(str): the command to start the service
-      unit_name(str): this mandatory id is passed to ``systemd-run``
+      service_id(str): this mandatory id is passed to ``systemd-run``
         to monitor the associated transient service;
         should be unique on a given host,
         in particular so that ``reset-failed`` can work reliably
@@ -56,7 +56,7 @@ class Service:
 
         service = Service(
             "tcpdump -i eth0 -w /root/ethernet.pcap",
-            unit_name='tcpdump',
+            service_id='tcpdump',
             tty=True)
 
         SshJob(
@@ -78,14 +78,14 @@ class Service:
         )
 
     """
-    def __init__(self, command, *, unit_name,
+    def __init__(self, command, *, service_id,
                  tty=False,
                  systemd_type='simple',
                  environ=None,
                  reset_failed=True,
                  verbose=False):
         self.command = command
-        self.unit_name = unit_name
+        self.service_id = service_id
         self.tty = tty
         self.systemd_type = systemd_type
         self.environ = environ if environ else {}
@@ -98,7 +98,7 @@ class Service:
         tty_option = "" if not self.tty else "--pty"
         command = ""
         if self.reset_failed:
-            command += f"systemctl reset-failed {self.unit_name} ;"
+            command += f"systemctl reset-failed {self.service_id} ;"
 
         if self.environ:
             defines = (" ".join("{}='{}'".format(var, value)
@@ -107,7 +107,7 @@ class Service:
                        .format(defines))
 
         command += ("systemd-run {} --unit={} --service-type={} {}"
-                    .format(tty_option, self.unit_name,
+                    .format(tty_option, self.service_id,
                             self.systemd_type, self.command))
         return command
 
@@ -116,15 +116,15 @@ class Service:
         subcommand is sent to systemctl, be it status or stop
         """
         return "systemctl {} {}"\
-               .format(subcommand, self.unit_name)
+               .format(subcommand, self.service_id)
 
     def _mode_label(self, mode, user_defined):
         if user_defined:
             return user_defined
         if not self.verbose:
-            return "Service: {} {}".format(mode, self.unit_name)
+            return "Service: {} {}".format(mode, self.service_id)
         # verbose: show command
-        return "Serv: {} {} ➝ {}".format(mode, self.unit_name, self.command)
+        return "Serv: {} {} ➝ {}".format(mode, self.service_id, self.command)
 
     def start_command(self, *, label=None, **kwds):
         """

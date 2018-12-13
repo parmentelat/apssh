@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.17.0 - 2018 Dec 13
+
+* Service class revisited:
+  * mandatory unit_name parameter
+  * comes with an implicit reset-failed by default
+  * no longer salted
+
 ## 0.16.0 - 2018 Nov 26
 
 * new option -K / --ok-if-no-key - don't check for at least one key
@@ -8,7 +15,7 @@
 ## 0.15.1 - 2018 Oct 11
 
 * the Service class accepts a new `environ` attribute that lets user define e.g.
-  USER or HOME similar environment variables 
+  USER or HOME similar environment variables
 * 0.15.0 was broken
 
 ## 0.14.2 - 2018 Oct 10

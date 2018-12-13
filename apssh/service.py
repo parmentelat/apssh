@@ -24,9 +24,10 @@ class Service:
 
     Parameters:
       command(str): the command to start the service
-      service_id(str): a unique id used to refer to that particular service;
-        the class always add a randomly generated salt to the (optional)
-        user-provided id.
+      unit_name(str): this mandatory id is passed to ``systemd-run``
+        to monitor the associated transient service;
+        should be unique on a given host,
+        in particular so that ``reset-failed`` can work reliably
       tty(bool): some services require a pseudo-tty to work properly
       systemd_type(str): a systemd service unit can have several values
         for its ``type`` setting, depending on the forking strategy implemented
@@ -43,44 +44,62 @@ class Service:
         limited set of environment variables defined - typically only
         ``LANG`` and ``PATH``. If your program rely on, for example,
         the ``USER`` variable to be defined as well, you may specify it here,
-        for example ``environ={'USER': 'root'}``.
+        for example ``environ={'USER': 'root'}``
+      reset_failed: by default, prior to starting the service using systemd-run,
+        ``start_command`` will issue a call to ``systemctl reset-failed``. This
+        is recommended, in order to cleanly trash any remnant of a previous
+        run, that for any reason could have failed to call the ``stop_command``.
+        Setting this attribute to ``False`` prevents this behaviour.
+
+    Example:
+      To start a remote service that triggers a tcpdump session::
+
+        service = Service(
+            "tcpdump -i eth0 -w /root/ethernet.pcap",
+            unit_name='tcpdump',
+            tty=True)
+
+        SshJob(
+            remotenode,
+            commands=[
+                service.start_command(),
+            ],
+            scheduler=scheduler,
+        )
+
+        # and down the road when you're done
+
+        SshJob(
+            remotenode,
+            commands=[
+                service.stop_command(),
+            ],
+            scheduler=scheduler,
+        )
 
     """
-    def __init__(self, command, *,
-                 service_id=None,
+    def __init__(self, command, *, unit_name,
                  tty=False,
                  systemd_type='simple',
                  environ=None,
+                 reset_failed=True,
                  verbose=False):
         self.command = command
+        self.unit_name = unit_name
         self.tty = tty
         self.systemd_type = systemd_type
-        self.service_id = service_id
-        self.salt = self._salt()
-        self.full_id = self.salt if not service_id \
-                       else "{}-{}".format(service_id, self.salt)
         self.environ = environ if environ else {}
+        self.reset_failed = reset_failed
         self.verbose = verbose
 
-    @staticmethod
-    def _salt():
-        """
-        Generate a random string to avoid conflicting names
-        on the remote host
-        """
-        return "".join(random.choice('abcdefghijklmnopqrstuvwxyz')
-                       for i in range(8))
-
-    def _label(self):
-        if self.service_id:
-            return "{}[-{}]".format(self.service_id, self.salt)
-        else:
-            return self.salt
-
-
     def _start(self):
+        # the -t option is a.k.a. --pty but on ubuntu-16.04 at least
+        # the long version is broken
         tty_option = "" if not self.tty else "--pty"
         command = ""
+        if self.reset_failed:
+            command += f"systemctl reset-failed {self.unit_name} ;"
+
         if self.environ:
             defines = (" ".join("{}='{}'".format(var, value)
                                 for var, value in self.environ.items()))
@@ -88,7 +107,7 @@ class Service:
                        .format(defines))
 
         command += ("systemd-run {} --unit={} --service-type={} {}"
-                    .format(tty_option, self.full_id,
+                    .format(tty_option, self.unit_name,
                             self.systemd_type, self.command))
         return command
 
@@ -97,15 +116,15 @@ class Service:
         subcommand is sent to systemctl, be it status or stop
         """
         return "systemctl {} {}"\
-               .format(subcommand, self.full_id)
+               .format(subcommand, self.unit_name)
 
     def _mode_label(self, mode, user_defined):
         if user_defined:
             return user_defined
         if not self.verbose:
-            return "Service: {} {}".format(mode, self._label())
+            return "Service: {} {}".format(mode, self.unit_name)
         # verbose: show command
-        return "Serv: {} {} ➝ {}".format(mode, self._label(), self.command)
+        return "Serv: {} {} ➝ {}".format(mode, self.unit_name, self.command)
 
     def start_command(self, *, label=None, **kwds):
         """

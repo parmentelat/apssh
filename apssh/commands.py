@@ -490,10 +490,10 @@ class Pull(AbstractCommand):
         paths = self.remotepaths
         if isinstance(self.remotepaths, str):
             paths = [paths]
-        return "remote path {}".format(paths[0]) \
-            if len(paths) == 1 \
-               else "{} remote path(s) starting with {}"\
-            .format(len(self.remotepaths), self.remotepaths[0])
+        if len(paths) == 1:
+            return paths[0]
+        else:
+            return f"paths[0] ... ({len(paths)} total)"
 
     def label_line(self):
         return "Pull: {} into {}".\

@@ -493,7 +493,7 @@ class Pull(AbstractCommand):
         if len(paths) == 1:
             return paths[0]
         else:
-            return f"paths[0] ... ({len(paths)} total)"
+            return "paths[0] ... ({} total)".format(len(paths))
 
     def label_line(self):
         return "Pull: {} into {}".\
@@ -546,7 +546,7 @@ class Push(AbstractCommand):
         if len(paths) == 1:
             return paths[0]
         else:
-            return f"paths[0] ... ({len(paths)} total)"
+            return "paths[0] ... ({} total)".format(len(paths))
 
     def label_line(self):
         return "Push: {} onto {}".\

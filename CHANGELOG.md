@@ -1,10 +1,11 @@
 # ChangeLog
 
-## 0.17.2 - 2018 Dec 19
+## 0.17.3 - 2018 Dec 19
 
 * Service class continued:
-  * parameter reset_failed renamed into stop_if_running
-  * more robust wrt restarting the same service
+* parameter reset_failed renamed into stop_if_running
+* more robust wrt restarting the same service
+* 0.17.2 was fine but used a couple f-strings which broke readthedocs
 
 ## 0.17.1 - 2018 Dec 13
 

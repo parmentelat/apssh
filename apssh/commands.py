@@ -543,10 +543,10 @@ class Push(AbstractCommand):
         paths = self.localpaths
         if isinstance(self.localpaths, str):
             paths = [paths]
-        return "local path {}".format(paths[0]) \
-            if len(paths) == 1 \
-               else "{} local path(s) starting with {}"\
-            .format(len(self.localpaths), self.localpaths[0])
+        if len(paths) == 1:
+            return paths[0]
+        else:
+            return f"paths[0] ... ({len(paths)} total)"
 
     def label_line(self):
         return "Push: {} onto {}".\

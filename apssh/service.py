@@ -45,11 +45,15 @@ class Service:
         ``LANG`` and ``PATH``. If your program rely on, for example,
         the ``USER`` variable to be defined as well, you may specify it here,
         for example ``environ={'USER': 'root'}``
-      reset_failed: by default, prior to starting the service using systemd-run,
-        ``start_command`` will issue a call to ``systemctl reset-failed``. This
-        is recommended, in order to cleanly trash any remnant of a previous
-        run, that for any reason could have failed to call the ``stop_command``.
-        Setting this attribute to ``False`` prevents this behaviour.
+      stop_if_running: by default, prior to starting the service using systemd-run,
+        ``start_command`` will ensure that no service of that name is currently
+        running; this is especially useful when running the same experiment
+        over and over, if you cannot be sure that your experiment code properly
+        stops that service.
+        Setting this attribute to ``False`` prevents this behaviour, and in
+        that case the `start_command` will issue a mere invokation of
+        ``systemd-run``.
+
 
     Example:
       To start a remote service that triggers a tcpdump session::
@@ -82,49 +86,58 @@ class Service:
                  tty=False,
                  systemd_type='simple',
                  environ=None,
-                 reset_failed=True,
+                 stop_if_running=True,
                  verbose=False):
         self.command = command
         self.service_id = service_id
         self.tty = tty
         self.systemd_type = systemd_type
         self.environ = environ if environ else {}
-        self.reset_failed = reset_failed
+        self.stop_if_running = stop_if_running
         self.verbose = verbose
 
     def _start(self):
         # the -t option is a.k.a. --pty but on ubuntu-16.04 at least
         # the long version is broken
-        tty_option = "" if not self.tty else "--pty"
-        command = ""
-        if self.reset_failed:
-            command += f"systemctl reset-failed {self.service_id} ;"
+        commands = []
+        if self.stop_if_running:
+            # stop if running
+            commands.append(
+                "{} && {}".format(
+                    self._manage("is-active", trash_output=True),
+                    self._manage("stop")))
+            # reset-failed
+            commands.append(self._manage("reset-failed",
+                                         trash_output=True))
 
         if self.environ:
             defines = (" ".join("{}='{}'".format(var, value)
                                 for var, value in self.environ.items()))
-            command = ("systemctl set-environment {} ;"
-                       .format(defines))
+            commands.append("systemctl set-environment {}"
+                            .format(defines))
 
-        command += ("systemd-run {} --unit={} --service-type={} {}"
-                    .format(tty_option, self.service_id,
-                            self.systemd_type, self.command))
-        return command
+        tty_option = "" if not self.tty else "--pty"
+        commands.append("systemd-run {} --unit={} --service-type={} {}"
+                        .format(tty_option, self.service_id,
+                                self.systemd_type, self.command))
+        return " ; ".join(commands)
 
-    def _manage(self, subcommand):
+    def _manage(self, subcommand, trash_output=False):
         """
         subcommand is sent to systemctl, be it status or stop
         """
-        return "systemctl {} {}"\
-               .format(subcommand, self.service_id)
+        trash_part = " >& /dev/null" if trash_output else ""
+        return "systemctl {} {}{}"\
+               .format(subcommand, self.service_id, trash_part)
 
     def _mode_label(self, mode, user_defined):
         if user_defined:
             return user_defined
-        if not self.verbose:
+        if mode != 'start' or not self.verbose:
             return "Service: {} {}".format(mode, self.service_id)
-        # verbose: show command
-        return "Serv: {} {} ➝ {}".format(mode, self.service_id, self.command)
+        # start & verbose: show command
+        return "Serv: {} ➝ {}".format(self.service_id,
+                                      self._start().replace(";", "\n"))
 
     def start_command(self, *, label=None, **kwds):
         """

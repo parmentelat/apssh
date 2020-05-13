@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.17.4 - 2020 May 20
+
+* no change in code
+* reviewed recipe for uploading to PyPI
+* long_description now based on proper README in markdown
+
 ## 0.17.3 - 2018 Dec 19
 
 * Service class continued:

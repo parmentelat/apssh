@@ -18,8 +18,8 @@ with VERSION_FILE.open() as f:
     exec(f.read(), ENV)                                 # pylint: disable=w0122
 __version__ = ENV['__version__']
 
-LONG_DESCRIPTION = \
-    "See README at https://github.com/parmentelat/apssh/blob/master/README.md"
+with open("README.md") as feed:
+    LONG_DESCRIPTION = feed.read()
 
 # requirements - used by pip install
 # *NOTE* for ubuntu, to install asyncssh, at some point in time_ok
@@ -41,6 +41,7 @@ setuptools.setup(
     author_email="thierry.parmentelat@inria.fr",
     description="Asynchroneous Parallel ssh",
     long_description=LONG_DESCRIPTION,
+    long_description_content_type = "text/markdown",
     license="CC BY-SA 4.0",
     keywords=['asyncio', 'remote shell', 'parallel ssh'],
 

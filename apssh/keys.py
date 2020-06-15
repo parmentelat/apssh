@@ -12,6 +12,7 @@ import asyncssh
 
 from .config import default_private_keys
 
+VERBOSE_FROM_ENV = os.environ.get("APSSH_DEBUG_KEYS", None)
 
 def import_private_key(filename):
     """
@@ -30,7 +31,7 @@ def import_private_key(filename):
     path = Path(filename)
     basename = path.name
     if not path.exists():
-        # print("No such key file {}".format(filename))
+        # print(f"No such key file {filename}")
         return None
     with path.open() as file:
         data = file.read()
@@ -39,9 +40,9 @@ def import_private_key(filename):
         except asyncssh.KeyImportError:
             while True:
                 passphrase = getpass(
-                    "Enter passphrase for key {} : ".format(basename))
+                    f"Enter passphrase for key {basename} : ")
                 if not passphrase:
-                    print("Ignoring key {}".format(filename))
+                    print(f"Ignoring key {filename}")
                     break
                 try:
                     sshkey = asyncssh.import_private_key(data, passphrase)
@@ -54,7 +55,7 @@ def import_private_key(filename):
         return sshkey
 
 
-def load_agent_keys(agent_path=None, *, loop=None):
+def load_agent_keys(agent_path=None):
     """
     The ssh-agent is a convenience tool that aims at easying the use of
     private keys protected with a password. In a nutshell, the agent runs on
@@ -74,7 +75,6 @@ def load_agent_keys(agent_path=None, *, loop=None):
     Parameters:
       agent_path: how to locate the agent;
         defaults to env. variable $SSH_AUTH_SOCK
-      loop: an asyncio event loop, probably safer to ignore this.
 
     Returns:
       a list of SSHKey_ keys from the agent
@@ -85,23 +85,24 @@ def load_agent_keys(agent_path=None, *, loop=None):
 
     """
     # pylint: disable=c0111
-    async def co_load_agent_keys(agent_path, loop):
+    async def co_load_agent_keys(agent_path):
         # make sure to return an empty list when something goes wrong
         try:
-            agent_client = asyncssh.SSHAgentClient(loop, agent_path)
+            agent_client = asyncssh.SSHAgentClient(agent_path)
             keys = await agent_client.get_keys()
             agent_client.close()
             return keys
-        except Exception as exc:                        # pylint: disable=w0703
+        except ValueError as exc:                        # pylint: disable=w0703
             # not quite sure which exceptions to expect here
-            print("When fetching agent keys: ignored exception {}".format(exc))
+            print(f"When fetching agent keys: "
+                  f"ignored exception {type(exc)} - {exc}")
             return []
 
     agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
     if agent_path is None:
         return []
-    loop = loop or asyncio.get_event_loop()
-    return loop.run_until_complete(co_load_agent_keys(agent_path, loop))
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(co_load_agent_keys(agent_path))
 
 
 def load_private_keys(command_line_keys=None, verbose=False):
@@ -113,7 +114,8 @@ def load_private_keys(command_line_keys=None, verbose=False):
       command_line_keys: a collection of local filenames that should contain
         private keys; this should correspond to keys that a user has
         explicitly decided to use through a command-line option or similar;
-      verbose: gives more details on what is going on.
+      verbose: gives more details on what is going on; alternatively set environment
+        variable ``APSSH_DEBUG_KEYS``
 
     This function is used both by the apssh binary, and by the
     :class:`~apssh.nodes.SshNode` class.
@@ -137,28 +139,28 @@ def load_private_keys(command_line_keys=None, verbose=False):
       Use ``ssh-add`` for managing the keys known to the agent.
 
     """
+    verbose = verbose or VERBOSE_FROM_ENV
     filenames = []
     if not command_line_keys:
         agent_keys = load_agent_keys()
         # agent has stuff : let's use it
         if agent_keys:
             if verbose:
-                print("apssh has loaded {} keys from the ssh agent"
-                      .format(len(agent_keys)))
+                print(f"apssh has loaded {len(agent_keys)} keys from the ssh agent")
             return agent_keys
+        else:
+            if verbose:
+                print(f"no keys loaded from agent")
         # use config to figure out what the default keys are
         filenames = default_private_keys
         if verbose:
-            print("apssh will try to load {} default keys"
-                  .format(len(filenames)))
+            print(f"apssh will try to load {len(filenames)} default keys")
     else:
         filenames = command_line_keys
         if verbose:
-            print("apssh will try to load {} keys from the command line".
-                  format(len(filenames)))
+            print(f"apssh will try to load {len(filenames)} keys from the command line")
     keys = [import_private_key(filename) for filename in filenames]
     valid_keys = [k for k in keys if k]
     if verbose:
-        print("apssh has loaded {} keys"
-              .format(len(valid_keys)))
+        print(f"apssh has loaded {len(valid_keys)} keys")
     return valid_keys

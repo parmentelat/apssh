@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.17.5 - 2020 Jun 15
+
+* cleaning in the keys area  
+  no longer pass asyncio loop around, that was causing an exception
+  setting env. variable APSSH_DEBUG_KEYS allows feedback on keys loading
+
 ## 0.17.4 - 2020 May 20
 
 * no change in code

@@ -30,7 +30,7 @@ def import_private_key(filename):
     path = Path(filename)
     basename = path.name
     if not path.exists():
-        # print("No such key file {}".format(filename))
+        # print(f"No such key file {filename}")
         return None
     with path.open() as file:
         data = file.read()
@@ -39,9 +39,9 @@ def import_private_key(filename):
         except asyncssh.KeyImportError:
             while True:
                 passphrase = getpass(
-                    "Enter passphrase for key {} : ".format(basename))
+                    f"Enter passphrase for key {basename} : ")
                 if not passphrase:
-                    print("Ignoring key {}".format(filename))
+                    print(f"Ignoring key {filename}")
                     break
                 try:
                     sshkey = asyncssh.import_private_key(data, passphrase)
@@ -92,7 +92,8 @@ def load_agent_keys(agent_path=None):
                 return keys
         except Exception as exc:                        # pylint: disable=w0703
             # not quite sure which exceptions to expect here
-            print("When fetching agent keys: ignored exception {}".format(exc))
+            print(f"When fetching agent keys: "
+                  f"ignored exception {type(exc)} - {exc}")
             return []
 
     agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
@@ -141,8 +142,7 @@ def load_private_keys(command_line_keys=None, verbose=False):
         # agent has stuff : let's use it
         if agent_keys:
             if verbose:
-                print("apssh has loaded {} keys from the ssh agent"
-                      .format(len(agent_keys)))
+                print(f"apssh has loaded {len(agent_keys)} keys from the ssh agent")
             return agent_keys
         else:
             if verbose:
@@ -150,16 +150,13 @@ def load_private_keys(command_line_keys=None, verbose=False):
         # use config to figure out what the default keys are
         filenames = default_private_keys
         if verbose:
-            print("apssh will try to load {} default keys"
-                  .format(len(filenames)))
+            print(f"apssh will try to load {len(filenames)} default keys")
     else:
         filenames = command_line_keys
         if verbose:
-            print("apssh will try to load {} keys from the command line".
-                  format(len(filenames)))
+            print(f"apssh will try to load {len(filenames)} keys from the command line")
     keys = [import_private_key(filename) for filename in filenames]
     valid_keys = [k for k in keys if k]
     if verbose:
-        print("apssh has loaded {} keys"
-              .format(len(valid_keys)))
+        print(f"apssh has loaded {len(valid_keys)} keys")
     return valid_keys

@@ -121,9 +121,10 @@ class VerboseFormatter(Formatter):
         # so always notify in this case
         if exc:
             adjective = "failed"
+            # not all exceptions have a reason attribute
+            displayed = getattr(exc, 'reason', exc)
             print_stderr("Connection failed to {}@{} : {}"
-                         .format(username, hostname, exc.reason))
-#            print("code =", exc.code, "reason=", exc.reason)
+                         .format(username, hostname, displayed))
         else:
             adjective = "closed"
         if self.verbose:

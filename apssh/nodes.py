@@ -99,8 +99,7 @@ class LocalNode:
             retcod = await process.wait()
             return retcod
         except Exception as exc:                        # pylint: disable=w0703
-            line = "LocalNode: Could not run local command {} - {}"\
-                   .format(command, exc)
+            line = f"LocalNode: Could not run local command {command} - {exc}"
             self.formatter.line(line, EXTENDED_DATA_STDERR, self.hostname)
 
     async def close(self):

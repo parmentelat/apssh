@@ -47,6 +47,6 @@ def check_arg_type(instance, types, message):
     msg_received = atomic_typename(type(instance))
 
     # asembled
-    msg_complete = "{} is expected to be an instance of {}, got a {} instead"\
-                   .format(message, msg_expected, msg_received)
+    msg_complete = (f"{message} is expected to be an instance of {msg_expected},"
+                    f" got a {msg_received} instead")
     raise ValueError(msg_complete)

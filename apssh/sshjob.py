@@ -221,16 +221,13 @@ class SshJob(AbstractJob):
                 if self.critical:
                     # if job is critical, let's raise an exception
                     # so the scheduler will stop
-                    self._errors.append("!Crit![{}]:{}->{}"
-                                        .format(i, label, result))
+                    self._errors.append(f"!Crit![{i}]:{label}->{result}")
                     raise CommandFailedError(
-                        "command {} returned {} on node {}"
-                        .format(label, result, self.node))
+                        f"command {label} returned {result} on node {self.node}")
                 else:
                     # not critical; let's proceed, but let's remember the
                     # overall result is wrong
-                    self._errors.append("Ignr[{}]:{}->{}"
-                                        .format(i, label, result))
+                    self._errors.append(f"Ignr[{i}]:{label}->{result}")
                     overall = result
         return overall
 
@@ -271,7 +268,7 @@ class SshJob(AbstractJob):
         """
         first_label = self.commands[0].get_label_line()
         return first_label if len(self.commands) == 1 \
-            else first_label + ".. + {}".format(len(self.commands) - 1)
+            else first_label + f".. + {len(self.commands) - 1}"
 
     def graph_label(self):
         """
@@ -281,10 +278,7 @@ class SshJob(AbstractJob):
 
         Relies on each command's ``label_line()`` method
         """
-        lines = ["{}: {}@{}".format(
-            self.repr_id(),
-            self.node.username,
-            self.node.hostname)]
+        lines = [f"{self.repr_id()}: {self.node.username}@{self.node.hostname}"]
         for command in self.commands:
             line = command.get_label_line()
             if line:

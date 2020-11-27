@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.17.6 - 2020 Nov 27
+
+* robustified loading keys from agent
+* adaptation to changes in asyncssh regarding the initialization of SSHAgentClient
+* as a consequence our load_agent_keys() function no longer accepts a loop argument
+* 0.17.5 was BROKEN
+
 ## 0.17.4 - 2020 May 20
 
 * no change in code

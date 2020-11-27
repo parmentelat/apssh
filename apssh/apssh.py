@@ -132,9 +132,7 @@ class Apssh:
                 except FileNotFoundError as exc:
                     return False, None
                 except Exception as exc:
-                    print_stderr(
-                        "Unexpected exception when parsing file {}, {}"
-                        .format(target, exc))
+                    print_stderr(f"Unexpected exception when parsing file {target}, {exc}")
                     if self.parsed_args.debug:
                         import traceback
                         traceback.print_exc()
@@ -160,7 +158,7 @@ class Apssh:
             parsed, cli_excludes = self.analyze_target(exclude)
             excludes.update(cli_excludes)
         if self.parsed_args.dry_run:
-            print("========== {} excludes found:".format(len(excludes)))
+            print(f"========== {len(excludes)} excludes found:")
             for exclude in excludes:
                 print(exclude)
 
@@ -171,7 +169,7 @@ class Apssh:
         for target in self.parsed_args.targets:
             parsed, cli_targets = self.analyze_target(target)
             if not parsed:
-                print("WARNING: ignoring target {}".format(target))
+                print(f"WARNING: ignoring target {target}")
                 continue
             for target2 in cli_targets:
                 if target2 not in excludes:
@@ -184,8 +182,8 @@ class Apssh:
             exit(1)
 
         if self.parsed_args.dry_run:
-            print("========== {} hostnames selected ({} excluded):"
-                  .format(len(hostnames), actually_excluded))
+            print(f"========== {len(hostnames)} hostnames selected"
+                  f"({actually_excluded} excluded):")
             for hostname in hostnames:
                 print(hostname)
             exit(0)
@@ -226,15 +224,15 @@ class Apssh:
         # scope - on what hosts
         parser.add_argument(
             "-s", "--script", action='store_true', default=False,
-            help="""If this flag is present, the first element of the remote
+            help=f"""If this flag is present, the first element of the remote
             command is assumed to be either the name of a local script, or,
             if this is not found, the body of a local script, that will be
             copied over before being executed remotely.
             In this case it should be executable.
 
             On the remote boxes it will be installed
-            and run in the {} directory.
-            """.format(default_remote_workdir))
+            and run in the {default_remote_workdir} directory.
+            """)
         parser.add_argument(
             "-i", "--includes", dest='includes', default=[], action='append',
             help="""for script mode only : a list of local files that are
@@ -272,12 +270,11 @@ class Apssh:
         parser.add_argument(
             "-c", "--connect-timeout", dest='timeout',
             type=float, default=default_timeout,
-            help="specify connection timeout, default is {}s"
-                 .format(default_timeout))              # pylint: disable=c0330
+            help=f"specify connection timeout, default is {default_timeout}s")
         # ssh settings
         parser.add_argument(
             "-l", "--login", default=default_username,
-            help="remote user name - default is {}".format(default_username))
+            help=f"remote user name - default is {default_username}")
         parser.add_argument(
             "-k", "--key", dest='keys',
             default=None, action='append', type=str,
@@ -373,7 +370,7 @@ class Apssh:
 
         # helpers
         if args.version:
-            print("apssh version {}".format(apssh_version))
+            print(f"apssh version {apssh_version}")
             exit(0)
 
         # manual check for REMAINDER
@@ -401,7 +398,7 @@ class Apssh:
 
         proxies = self.create_proxies(gateway)
         if args.verbose:
-            print_stderr("apssh is working on {} nodes".format(len(proxies)))
+            print_stderr(f"apssh is working on {len(proxies)} nodes")
 
         window = self.parsed_args.window
 
@@ -448,23 +445,23 @@ class Apssh:
         # details on the individual retcods - a bit hacky
         if self.parsed_args.debug:
             for proxy, result in zip(proxies, results):
-                print("PROXY {} -> {}".format(proxy.hostname, result))
+                print(f"PROXY {proxy.hostname} -> {result}")
         # marks
         names = {0: '0ok', None: '1failed'}
         if subdir and self.parsed_args.mark:
             # do we need to create the subdirs
             need_ok = [s for s in results if s == 0]
             if need_ok:
-                os.makedirs("{}/{}".format(subdir, names[0]), exist_ok=True)
+                os.makedirs(f"{subdir}/{names[0]}", exist_ok=True)
             need_fail = [s for s in results if s != 0]
             if need_fail:
-                os.makedirs("{}/{}".format(subdir, names[None]), exist_ok=True)
+                os.makedirs(f"{subdir}/{names[None]}", exist_ok=True)
 
             for proxy, result in zip(proxies, results):
                 prefix = names[0] if result == 0 else names[None]
                 mark_path = Path(subdir) / prefix / proxy.hostname
                 with mark_path.open("w") as mark:
-                    mark.write("{}\n".format(result))
+                    mark.write(f"{result}\n")
 
         # xxx - when in gateway mode, the gateway proxy never gets disconnected
         # which probably is just fine

@@ -146,6 +146,9 @@ def load_private_keys(command_line_keys=None, verbose=False):
                 print("apssh has loaded {} keys from the ssh agent"
                       .format(len(agent_keys)))
             return agent_keys
+        else:
+            if verbose:
+                print(f"apssh has loaded no keys from agent")
         # use config to figure out what the default keys are
         filenames = default_private_keys
         if verbose:

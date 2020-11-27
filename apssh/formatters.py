@@ -58,11 +58,10 @@ class Formatter:
         self.format = custom_format.replace("@time@", self.time_format)
 
     def _formatted_line(self, line, hostname=None, username=None):
-        return time.strftime(self.format) \
-                   .replace("@line@", line) \
-                   .replace("@host@", hostname or "") \
-                   .replace("@user@", "{}@".format(username)
-                            if username else "")
+        return (time.strftime(self.format)
+                   .replace("@line@", line)
+                   .replace("@host@", hostname or "")
+                   .replace("@user@", f"{username}@" if username else ""))
 
     # pylint: disable=c0111
 
@@ -112,8 +111,7 @@ class VerboseFormatter(Formatter):
     def connection_made(self, hostname, username, direct):
         if self.verbose:
             msg = "direct" if direct else "tunnelled"
-            line = SEP + " Connecting ({}) to {}@{}"\
-                .format(msg, username, hostname)
+            line = SEP + f" Connecting ({msg}) to {username}@{hostname}"
             print_stderr(self._formatted_line(line, hostname, username))
 
     def connection_lost(self, hostname, exc, username):
@@ -123,29 +121,26 @@ class VerboseFormatter(Formatter):
             adjective = "failed"
             # not all exceptions have a reason attribute
             displayed = getattr(exc, 'reason', exc)
-            print_stderr("Connection failed to {}@{} : {}"
-                         .format(username, hostname, displayed))
+            print_stderr(f"Connection failed to {username}@{hostname} : {displayed}")
         else:
             adjective = "closed"
         if self.verbose:
-            line = SEP + " Connection {} to {}@{}"\
-                .format(adjective, username, hostname)
+            line = SEP + f" Connection {adjective} to {username}@{hostname}"
             print_stderr(self._formatted_line(line, hostname, username))
 
     def auth_completed(self, hostname, username):
         if self.verbose:
-            line = SEP + " Authorization OK {}@{}"\
-                .format(username, hostname)
+            line = SEP + f" Authorization OK {username}@{hostname}"
             print_stderr(self._formatted_line(line, hostname, username))
 
     def session_start(self, hostname, command):
         if self.verbose:
-            line = SEP + " Session started for {}".format(command)
+            line = SEP + f" Session started for {command}"
             print_stderr(self._formatted_line(line, hostname))
 
     def session_stop(self, hostname, command):
         if self.verbose:
-            line = SEP + " Session ended for {}".format(command)
+            line = SEP + f" Session ended for {command}"
             print_stderr(self._formatted_line(line, hostname))
 
     def sftp_start(self, hostname):
@@ -252,7 +247,7 @@ class SubdirFormatter(VerboseFormatter):
         return str(Path(self.run_name) / hostname)
 
     def err(self, hostname):
-        return str(Path(self.run_name) / "{}.err".format(hostname))
+        return str(Path(self.run_name) / f"{hostname}.err")
 
     def filename(self, hostname, datatype):
         return self.err(hostname) if datatype == EXTENDED_DATA_STDERR \
@@ -272,13 +267,12 @@ class SubdirFormatter(VerboseFormatter):
             with open(self.out(hostname), 'w') as out:
                 if self.verbose:
                     msg = "direct" if direct else "tunnelled"
-                    out.write("Connected ({}) to {}@{}\n".format(
-                        msg, username, hostname))
+                    out.write(f"Connected ({msg}) to {username}@{hostname}\n")
         except OSError as exc:
-            print_stderr("File permission problem {}".format(exc))
+            print_stderr(f"File permission problem {exc}")
             exit(1)
         except Exception as exc:                        # pylint: disable=W0703
-            print_stderr("Unexpected error {} {}".format(type(exc), exc))
+            print_stderr(f"Unexpected error {type(exc)} {exc}")
             exit(1)
 
     def line(self, line, datatype, hostname):

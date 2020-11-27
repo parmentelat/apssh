@@ -54,7 +54,7 @@ def import_private_key(filename):
         return sshkey
 
 
-def load_agent_keys(agent_path=None, *, loop=None):
+def load_agent_keys(agent_path=None):
     """
     The ssh-agent is a convenience tool that aims at easying the use of
     private keys protected with a password. In a nutshell, the agent runs on
@@ -74,7 +74,6 @@ def load_agent_keys(agent_path=None, *, loop=None):
     Parameters:
       agent_path: how to locate the agent;
         defaults to env. variable $SSH_AUTH_SOCK
-      loop: an asyncio event loop, probably safer to ignore this.
 
     Returns:
       a list of SSHKey_ keys from the agent
@@ -85,7 +84,7 @@ def load_agent_keys(agent_path=None, *, loop=None):
 
     """
     # pylint: disable=c0111
-    async def co_load_agent_keys(agent_path, loop):
+    async def co_load_agent_keys(agent_path):
         # make sure to return an empty list when something goes wrong
         try:
             async with asyncssh.SSHAgentClient(agent_path) as agent_client:
@@ -99,8 +98,8 @@ def load_agent_keys(agent_path=None, *, loop=None):
     agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
     if agent_path is None:
         return []
-    loop = loop or asyncio.get_event_loop()
-    return loop.run_until_complete(co_load_agent_keys(agent_path, loop))
+    loop = asyncio.get_event_loop()
+    return loop.run_until_complete(co_load_agent_keys(agent_path))
 
 
 def load_private_keys(command_line_keys=None, verbose=False):

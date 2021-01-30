@@ -15,7 +15,7 @@ Recommended now:
   * so that guest can point at your `apssh` workdir
   * with auto-mount capability
 
-```
+```bash
     cd /media/sf_apssh
 ```
 
@@ -29,8 +29,9 @@ Recommended now:
 
 * install dependencies graphviz and orderedset
 
-```
-pip3 install asyncssh asynciojobs orderedset psutil
+```bash
+pip3 install ~/git/asynciojobs ~/git/apssh
+pip3 install orderedset psutil
 apt-get install graphviz
 pip3 install graphviz
 ```
@@ -43,12 +44,10 @@ It can be interesting to also share asynciojobs, and then define `PYTHONPATH` ac
 root@apssh-testbox:/media/sf_apssh# export PYTHONPATH=/media/sf_asynciojobs
 ```
 
-
-
 * run tests as root on guest
 
-```
-root@apssh-testbox:/media/sf_apssh# python3 -m unittest tests.tests_connections
+```bash
+root@apssh-testbox:/media/sf_apssh# python3 -m unittest tests.test_connections
 creating 5 commands on 1 connections to root@localhost
 INITIAL count in=1 out=0
 localhost:apssh-testbox

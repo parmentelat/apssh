@@ -166,6 +166,11 @@ class SshJob(AbstractJob):
         assert len(self.commands) >= 1
         assert all(isinstance(c, AbstractCommand) for c in self.commands)
 
+        # xxx assign a back-reference from commands to node
+        # for the capture mechanism
+        for command in self.commands:
+          command.node = self.node
+
         # used in repr_result() to show which command has failed
         self._errors = []
         # propagate the verbose flag on all commands if set

@@ -1,10 +1,11 @@
 import unittest
 
-from asynciojobs import Scheduler
+from asynciojobs import Scheduler, Sequence
 
 from apssh import (
-    SshNode, SshJob, Run, Deferred, Variables,
+    SshNode, SshJob, Run,
     CaptureFormatter, TerminalFormatter,
+    Deferred, Variables, Capture
 )
 
 from .util import localuser, localhostname
@@ -51,3 +52,32 @@ class Tests(unittest.TestCase):
         self.check_expansion(
             (d1, e1), (d2, e2), (d3, e3))
 
+    def test_chain_deferred(self):
+        """
+        one command computes a string that gets passed to another one
+
+        this is analogous to
+
+            run1=$(ssh localhost echo from-first-run)
+            final=$(ssh localhost echo ${run1})
+        """
+
+        s = Scheduler()
+        env = Variables()
+
+        n = SshNode(localhostname(), username=localuser())
+        Sequence(
+            SshJob(n,
+                   commands=Run("echo from-first-run",
+                                capture=Capture('run1', env))),
+            SshJob(n,
+                   commands=Run(Deferred("echo {{run1}}", env),
+                                capture=Capture('final', env))),
+            scheduler=s)
+
+        s.run()
+
+        print(f"env={env}")
+        obtained = env.final
+        expected = "from-first-run"
+        self.assertEqual(obtained, expected)

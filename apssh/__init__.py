@@ -45,5 +45,5 @@ from .topology import (
 )
 
 from .deferred import (
-    Variables, Deferred,
+    Variables, Deferred, Capture,
 )

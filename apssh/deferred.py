@@ -25,7 +25,8 @@ class Variables(dict):
     we cannot use the regular Python binding because at the time where
     a Scheduler gets built, those variables are not yet available
 
-    and at the time where the command triggers
+    so the Variables object collects values that are computed during
+    a scheduler run
     """
     # support for the . notation
     def __getattr__(self, attr):
@@ -37,11 +38,20 @@ class Variables(dict):
 
 class Deferred:
     """
-    a Deferred object look a bit like a string template
-    with variables enclosed in {}
+    a Deferred object is made of 2 parts
 
-    it can then be instantiated from a Variables object to replace the
-    those fragments with the actual values found in the Variables object
+    * a jinja template as a string that may contain variables or expressions
+      enclosed in {}
+    * a Variables instance, that collects values over time
+
+    a Deferred object can be used to create instances
+    of the Run class and its siblings;
+    this is useful when the command contains a part
+    that needs to be computed during the scenario
+
+    Typically in a kubernetes-backed scenario,
+    we often need to get node actual names
+    from the k8s master
     """
     def __init__(self, template, variables):
         self.template = template
@@ -52,15 +62,35 @@ class Deferred:
         replace expresions of the form {x} with the
         value of variable x as per the variables object
         """
-        try:
-            template = Template(self.template, undefined=DebugUndefined)
-            return template.render(**self.variables)
-        # this should no longer happen
-        except KeyError as exc:
-            print("probably unknown variable in Deferred template")
-            print(exc)
-            raise
+        template = Template(self.template, undefined=DebugUndefined)
+        return template.render(**self.variables)
 
     def __repr__(self):
         return (f"Deferred with template {self.template} "
                 f"and variables {self.variables} ")
+
+
+# will become a dataclass
+class Capture:
+    """
+    this class has no logic in itself, it is only a convenience so that
+    one can specify where a Run command should store it's captured output
+
+    for example a shell script like:
+    
+        foobar=$(ssh host1 some-command)
+        ssh host2 other-command $foobar
+
+    could be mimicked with (simplified version)
+
+        env = Variables()
+        Sequence(
+            SshJob(host1node,
+                   commands=Run("some-command",
+                                capture=Capture('foobar', env)))
+            SshJob(host2node,
+                   commands=Run(Deferred("other-command {foo}", env)))
+    """
+    def __init__(self, varname: str, variables: Variables):
+        self.varname = varname
+        self.variables = variables

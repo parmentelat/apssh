@@ -9,7 +9,9 @@ import re
 
 from asyncssh import EXTENDED_DATA_STDERR
 
-from apssh.config import default_remote_workdir
+from .formatters import CaptureFormatter
+from .deferred import Capture
+from .config import default_remote_workdir
 
 ####################
 # The base class for items that make a SshJob's commands
@@ -111,7 +113,42 @@ class AbstractCommand:
         pass
 
 
-class Run(AbstractCommand):
+class CapturableMixin:
+    """
+    this class implements the simple logic for capturing a command output
+
+    NOTE. it relies on the presence of the `self.node` attribute that points
+    back at the SshNode where this command is going to run;
+    which is set by the SshJob class
+    """
+    def __init__(self, capture: Capture):
+        self.capture = capture
+
+    def start_capture(self):
+        if self.capture:
+            # store the node's formatter and set aside for later
+            self.previous_formatter = self.node.formatter
+            self.node.formatter = CaptureFormatter()
+
+    def end_capture(self):
+        print("END")
+        if self.capture:
+            # get result from transient formatter
+            captured = self.node.formatter.get_capture()
+            # restore the node's formatter
+            self.node.formatter = self.previous_formatter
+            self.previous_formatter = None
+            # sanitize
+            if captured[-1] == "\n":
+                captured = captured[:-1]
+            # store captured in self.capture
+            variables = self.capture.variables
+            varname = self.capture.varname
+#            print(f"in variables, {varname} assigned to {captured}")
+            variables[varname] = captured
+
+
+class Run(AbstractCommand, CapturableMixin):
     """
     The most basic form of a command is to run a remote command
 
@@ -144,12 +181,14 @@ class Run(AbstractCommand):
     # so, it feels about right to call this just like x11
     def __init__(self, *argv, label=None,
                  allowed_exits=None,
-                 verbose=False, x11=False):
+                 verbose=False, x11=False,
+                 capture: Capture = None):
         self.argv = argv
         self.verbose = verbose
         self.x11 = x11
-        super().__init__(label=label,
-                         allowed_exits=allowed_exits)
+        AbstractCommand.__init__(self, label=label,
+                                 allowed_exits=allowed_exits)
+        CapturableMixin.__init__(self, capture)
 
     def label_line(self):
         """
@@ -165,6 +204,7 @@ class Run(AbstractCommand):
         """
         The semantics of running on a remote node.
         """
+        self.start_capture()
         command = self._remote_command()
         self._verbose_message(node, "Run: -> {}".format(command))
         # need an ssh connection
@@ -174,17 +214,20 @@ class Run(AbstractCommand):
         node_run = await node.run(command, x11_forwarding=self.x11)
         self._verbose_message(
             node, "Run: {} <- {}".format(node_run, command))
+        self.end_capture()
         return node_run
 
     async def co_run_local(self, localnode):
         """
         The semantics of running on a local node.
         """
+        self.start_capture()
         command = self._remote_command()
         self._verbose_message(localnode, "Run: -> {}".format(command))
         retcod = await localnode.run(command)
         self._verbose_message(
             localnode, "Run: {} <- {}".format(retcod, command))
+        self.end_capture()
         return retcod
 
 # the base class for running a script provided locally
@@ -223,14 +266,16 @@ class RunLocalStuff(AbstractCommand):
     def __init__(self, args, *,
                  label=None, allowed_exits=None,
                  includes=None, remote_basename=None,
-                 x11=False, verbose=False):
+                 x11=False, verbose=False,
+                 capture: Capture=None):
         self.args = args
         self.includes = includes if includes is not None else []
         self.remote_basename = remote_basename
         self.x11 = x11
         self.verbose = verbose
-        super().__init__(label=label,
-                         allowed_exits=allowed_exits)
+        AbstractCommand.__init__(self, label=label,
+                                 allowed_exits=allowed_exits)
+        CapturableMixin.__init__(self, capture)
 
     @staticmethod
     def _random_id():
@@ -301,11 +346,13 @@ class RunLocalStuff(AbstractCommand):
                     return
 
         # trigger it
+        self.start_capture()
         command = self._remote_command()
         self._verbose_message(node, "RunLocalStuff: -> {}".format(command))
         node_run = await node.run(command, x11_forwarding=self.x11)
         self._verbose_message(
             node, "RunLocalStuff: {} <- {}".format(node_run, command))
+        self.end_capture()
         return node_run
 
 
@@ -341,7 +388,8 @@ class RunScript(RunLocalStuff):
                  label=None, allowed_exits=None,
                  includes=None, x11=False,
                  # if this is set, run bash -x
-                 verbose=False):
+                 verbose=False,
+                 capture: Capture=None):
         self.local_script = local_script
         self.local_basename = Path(local_script).name
         remote_basename = self.local_basename + '-' + self._random_id()
@@ -351,7 +399,7 @@ class RunScript(RunLocalStuff):
                          allowed_exits=allowed_exits,
                          includes=includes,
                          remote_basename=remote_basename,
-                         x11=x11, verbose=verbose)
+                         x11=x11, verbose=verbose, capture=capture)
 
     def label_line(self):
         return "RunScript: " + self.local_basename + " " + self._args_line()
@@ -403,7 +451,8 @@ class RunString(RunLocalStuff):
                  # the name under which the remote command will be installed
                  remote_name=None,
                  # if this is set, run bash -x
-                 verbose=False):
+                 verbose=False,
+                 capture: Capture=None):
         self.script_body = script_body
         if remote_name:
             self.remote_name = remote_name
@@ -418,7 +467,8 @@ class RunString(RunLocalStuff):
                          allowed_exits=allowed_exits,
                          includes=includes,
                          remote_basename=remote_basename,
-                         x11=x11, verbose=verbose)
+                         x11=x11, verbose=verbose,
+                         capture=capture)
 
 
     @staticmethod

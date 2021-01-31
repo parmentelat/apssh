@@ -6,8 +6,6 @@ from apssh import SshNode, SshJob, Run, CaptureFormatter, TerminalFormatter
 
 from .util import localuser, localhostname
 
-from .util import localuser, localhostname
-
 class Tests(unittest.TestCase):
 
     def test_capture(self):

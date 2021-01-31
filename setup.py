@@ -29,6 +29,7 @@ with open("README.md") as feed:
 REQUIRED_MODULES = [
     'asyncssh',
     'asynciojobs',
+    'jinja2',
 ]
 TESTS_REQUIRE = [
     'nose',

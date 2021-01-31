@@ -15,6 +15,8 @@
 # * finally, we're going to need some mechanism to hol the content of such variables
 #   because Python variables won't be able to do the job
 
+from jinja2 import Template, DebugUndefined
+
 class Variables(dict):
     """
     think of this class as a regular namespace, i.e. a set of associations
@@ -32,6 +34,7 @@ class Variables(dict):
     def __setattr__(self, attr, value):
         self[attr] = value
 
+
 class Deferred:
     """
     a Deferred object look a bit like a string template
@@ -40,8 +43,8 @@ class Deferred:
     it can then be instantiated from a Variables object to replace the
     those fragments with the actual values found in the Variables object
     """
-    def __init__(self, format, variables):
-        self.format = format
+    def __init__(self, template, variables):
+        self.template = template
         self.variables = variables
 
     def __str__(self):
@@ -50,12 +53,14 @@ class Deferred:
         value of variable x as per the variables object
         """
         try:
-            return self.format.format(**self.variables)
+            template = Template(self.template, undefined=DebugUndefined)
+            return template.render(**self.variables)
+        # this should no longer happen
         except KeyError as exc:
-            print("probably unknown variable in Deferred format")
+            print("probably unknown variable in Deferred template")
             print(exc)
             raise
 
     def __repr__(self):
-        return (f"Deferred with format {self.format} "
-                "and variables {self.variables} ")
+        return (f"Deferred with template {self.template} "
+                f"and variables {self.variables} ")

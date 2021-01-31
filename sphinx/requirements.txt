@@ -4,3 +4,4 @@ sphinxcontrib-asyncio
 asyncssh
 asynciojobs
 orderedset
+jinja2

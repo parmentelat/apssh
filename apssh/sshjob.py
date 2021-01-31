@@ -17,6 +17,7 @@ from asynciojobs.job import AbstractJob
 from .util import check_arg_type
 from .sshproxy import SshProxy
 from .nodes import LocalNode
+from .deferred import Deferred
 
 from .commands import AbstractCommand, Run
 
@@ -131,7 +132,7 @@ class SshJob(AbstractJob):
             # cannot tell which case in (1) (2) (3) (4)
             print("WARNING: SshJob requires a meaningful commands")
             self.commands = [Run("echo misformed SshJob - empty commands")]
-        elif isinstance(commands, str):
+        elif isinstance(commands, (str, Deferred)):
             # print("case (4)")
             self.commands = [Run(commands)]
         elif isinstance(commands, AbstractCommand):

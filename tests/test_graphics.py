@@ -10,6 +10,8 @@ from asynciojobs import Scheduler, Sequence
 
 from apssh import SshNode, SshJob, Run, RunString, RunScript, Push, Pull
 
+from apssh import Variables, Deferred
+
 from apssh import topology_as_pngfile
 
 from .util import localhostname, localuser, produce_png
@@ -140,3 +142,27 @@ class Tests(unittest.TestCase):
         SshJob(n2, command='hostname', scheduler=s)
 
         topology_as_pngfile(s, "topology")
+
+    def test_variables(self):
+        """
+        check how variables are rendered
+        """
+        v1 = Variables()
+        v2 = Variables()
+        v2.defined = 'OK-defined'
+
+        template = "defined: {{defined}} undefined: {{undefined}}"
+
+        scheduler = Scheduler(critical=False)
+
+        gateway = SshNode(hostname=localhostname(),
+                          username=localuser())
+
+        Sequence(
+            SshJob(gateway,
+                   command=Deferred(template, v1)),
+            SshJob(gateway,
+                   command=Deferred(template, v2)),
+            scheduler=scheduler)
+
+        produce_png(scheduler, "test_graphics_variables")

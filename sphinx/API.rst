@@ -15,7 +15,7 @@ The SshProxy class
 
 -----
 
-Commands classes
+Command classes
 ------------------------------
 
 .. automodule:: apssh.commands
@@ -23,13 +23,13 @@ Commands classes
 
 		-----
 
-		Formatters classes
-		------------------------------
+Formatter classes
+------------------------------
 
-		.. automodule:: apssh.formatters
-				:members:
-				:member-order: bysource
-				:exclude-members: VerboseFormatter
+.. automodule:: apssh.formatters
+		:members:
+		:member-order: bysource
+		:exclude-members: VerboseFormatter
 
 -----
 

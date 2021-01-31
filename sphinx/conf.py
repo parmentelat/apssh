@@ -18,7 +18,7 @@ from pathlib import Path
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here.
-sys.path.insert(0, Path("../..").resolve())
+#sys.path.insert(0, Path("../..").resolve())
 
 print("current directory is", os.getcwd())
 for path in sys.path:

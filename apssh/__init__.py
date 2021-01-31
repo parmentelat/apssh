@@ -43,3 +43,7 @@ from .topology import (
     close_ssh_in_scheduler, co_close_ssh_in_scheduler,
     topology_graph, topology_dot, topology_as_dotfile, topology_as_pngfile
 )
+
+from .deferred import (
+    Variables, Deferred,
+)

@@ -39,6 +39,13 @@ The Service class
 .. automodule:: apssh.service
 		:members:
 
+Deferred evaluation classes
+------------------------------
+
+.. automodule:: apssh.deferred
+		:members:
+		:exclude-members: StrLikeMixin, CapturableMixin
+
 -----
 
 Utilities

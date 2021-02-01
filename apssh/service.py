@@ -1,5 +1,5 @@
 """
-The service module defines the Service helper class.
+The service module defines the ``Service`` helper class.
 """
 
 # pylint: disable=r1705, r0902
@@ -11,7 +11,7 @@ from .deferred import Deferred
 
 class Service:
     """
-    The Service class is a helper class, that allows to deal with services
+    The ``Service`` class is a helper class, that allows to deal with services
     that an experiment scheduler needs to start and stop over the course
     of its execution. It leverages ``systemd-run``, which thus needs
     to be available on the remote box.
@@ -19,12 +19,13 @@ class Service:
     Typical examples include starting and stopping a netcat server,
     or a tcpdump session.
 
-    A Service instance is then able to generate a Command instance for
+    A ``Service`` instance is then able to generate a Command instance for
     starting or stopping the service, that should be inserted in an SshJob,
     just like e.g. a usual Run instance.
 
     Parameters:
-      command(str): the command to start the service
+      command(str): the command to start the service; 
+        a ``Deferred`` instance is acceptable too
       service_id(str): this mandatory id is passed to ``systemd-run``
         to monitor the associated transient service;
         should be unique on a given host,
@@ -32,7 +33,7 @@ class Service:
       tty(bool): some services require a pseudo-tty to work properly
       systemd_type(str): a systemd service unit can have several values
         for its ``type`` setting, depending on the forking strategy implemented
-        in the main command. The default used in Service is ``simple``,
+        in the main command. The default used in ``Service`` is ``simple``,
         which is correct for a command that hangs (does not fork
         or go in the background). If on the contrary the command already
         handles forking, then it may be appropriate to use the ``forking``
@@ -67,7 +68,7 @@ class Service:
         SshJob(
             remotenode,
             commands=[
-                service.start_command(),
+                Run(service.start_command()),
             ],
             scheduler=scheduler,
         )
@@ -77,7 +78,7 @@ class Service:
         SshJob(
             remotenode,
             commands=[
-                service.stop_command(),
+                Run(service.stop_command()),
             ],
             scheduler=scheduler,
         )

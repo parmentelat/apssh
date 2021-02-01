@@ -45,6 +45,7 @@ class Tests(TestCase):
             scheduler=scheduler,
         )
 
+        # cleanup before we run
         paths = (Path(x) for x in (storage, status))
         for path in paths:
             if path.exists():

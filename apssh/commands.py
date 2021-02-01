@@ -6,6 +6,7 @@ The ``commands`` module implements all the command classes, typically
 from pathlib import Path
 import random
 import re
+import copy
 
 from asyncssh import EXTENDED_DATA_STDERR
 
@@ -147,7 +148,24 @@ class CapturableMixin:
             variables[varname] = captured
 
 
-class Run(AbstractCommand, CapturableMixin):
+class StrLikeMixin:
+    """
+    the various Run* classes need to look like a str object for some
+    operations, like minimally the following dunder methods
+
+    this is needed for the deferred operation mode, where command objects
+    need to remain as Deferred objects and not str, as that would imply early evaluation
+    """
+
+    def __str__(self):
+        return self._remote_command()
+
+    def __add__(self, strlike):
+        result = copy.copy(self)
+        result.argv += str(strlike)
+
+
+class Run(AbstractCommand, CapturableMixin, StrLikeMixin):
     """
     The most basic form of a command is to run a remote command
 
@@ -234,7 +252,7 @@ class Run(AbstractCommand, CapturableMixin):
 # as a local material, either a local file, or a python string
 
 
-class RunLocalStuff(AbstractCommand, CapturableMixin):
+class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
     """
     The base class for ``RunScript`` and ``RunString``.
     This class implements the common logic for a local script that
@@ -275,6 +293,9 @@ class RunLocalStuff(AbstractCommand, CapturableMixin):
         AbstractCommand.__init__(self, label=label,
                                  allowed_exits=allowed_exits)
         CapturableMixin.__init__(self, capture)
+
+    def __str__(self):
+        return self._remote_command()
 
     @staticmethod
     def _random_id():

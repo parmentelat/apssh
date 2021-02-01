@@ -69,6 +69,12 @@ class Deferred:
         return (f"Deferred with template {self.template} "
                 f"and variables {self.variables} ")
 
+    def replace(self, old, new):
+        return Deferred(self.template.replace(old, new), self.variables)
+
+    def dup_from_string(self, new_template):
+        return Deferred(new_template, self.variables)
+
 
 # will become a dataclass
 class Capture:
@@ -77,7 +83,7 @@ class Capture:
     one can specify where a Run command should store it's captured output
 
     for example a shell script like:
-    
+
         foobar=$(ssh host1 some-command)
         ssh host2 other-command $foobar
 

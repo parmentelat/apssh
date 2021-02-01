@@ -7,6 +7,7 @@ The service module defines the Service helper class.
 import random
 
 from .commands import Run
+from .deferred import Deferred
 
 class Service:
     """
@@ -96,48 +97,54 @@ class Service:
         self.stop_if_running = stop_if_running
         self.verbose = verbose
 
+
     def _start(self):
         # the -t option is a.k.a. --pty but on ubuntu-16.04 at least
         # the long version is broken
         commands = []
         if self.stop_if_running:
             # stop if running
-            commands.append(
-                "{} && {}".format(
-                    self._manage("is-active", trash_output=True),
-                    self._manage("stop")))
+            is_active = self._manage("is-active", trash_output=True)
+            stop = self._manage("stop")
+            commands.append(f"{is_active} && {stop}")
             # reset-failed
-            commands.append(self._manage("reset-failed",
-                                         trash_output=True))
+            commands.append(self._manage("reset-failed", trash_output=True))
 
         if self.environ:
-            defines = (" ".join("{}='{}'".format(var, value)
+            defines = (" ".join(f"{var}='{value}'"
                                 for var, value in self.environ.items()))
-            commands.append("systemctl set-environment {}"
-                            .format(defines))
+            commands.append(f"systemctl set-environment {defines}")
 
         tty_option = "" if not self.tty else "--pty"
-        commands.append("systemd-run {} --unit={} --service-type={} {}"
-                        .format(tty_option, self.service_id,
-                                self.systemd_type, self.command))
-        return " ; ".join(commands)
+        commands.append(f"systemd-run {tty_option}"
+                        f" --unit={self.service_id}"
+                        f" --service-type={self.systemd_type}"
+                        f" {self.command}")
+
+        # support deferred evaluation
+        # here we need to preserve the type of self.command
+        intermediate = " ; ".join(commands)
+        if isinstance(self.command, Deferred):
+            # create a deferred with the same variables environment
+            return self.command.dup_from_string(intermediate)
+        else:
+            return intermediate
+
 
     def _manage(self, subcommand, trash_output=False):
         """
         subcommand is sent to systemctl, be it status or stop
         """
         trash_part = " >& /dev/null" if trash_output else ""
-        return "systemctl {} {}{}"\
-               .format(subcommand, self.service_id, trash_part)
+        return f"systemctl {subcommand} {self.service_id}{trash_part}"
 
     def _mode_label(self, mode, user_defined):
         if user_defined:
             return user_defined
         if mode != 'start' or not self.verbose:
-            return "Service: {} {}".format(mode, self.service_id)
+            return f"Service: {mode} {self.service_id}"
         # start & verbose: show command
-        return "Serv: {} ➝ {}".format(self.service_id,
-                                      self._start().replace(";", "\n"))
+        return "Serv: {self.service_id} ➝ {self._start().replace(';', '\n')}"
 
     def start_command(self, *, label=None, **kwds):
         """
@@ -162,6 +169,14 @@ class Service:
         """
         command = self._manage('status')
         if output:
-            command += " > {}".format(output)
+            command += f" > {output}"
         label = self._mode_label("status", label)
+        return Run(command, label=label, **kwds)
+
+    # since : see journalctl options
+    # e.g. since="10 seconds ago"
+    def journal_command(self, *, label=None, since=None, **kwds):
+        command = f"journalctl --unit {self.service_id}"
+        if since:
+            command += f' --since "{since}"'
         return Run(command, label=label, **kwds)

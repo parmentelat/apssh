@@ -131,7 +131,6 @@ class CapturableMixin:
             self.node.formatter = CaptureFormatter()
 
     def end_capture(self):
-        print("END")
         if self.capture:
             # get result from transient formatter
             captured = self.node.formatter.get_capture()
@@ -139,7 +138,7 @@ class CapturableMixin:
             self.node.formatter = self.previous_formatter
             self.previous_formatter = None
             # sanitize
-            if captured[-1] == "\n":
+            if captured and captured[-1] == "\n":
                 captured = captured[:-1]
             # store captured in self.capture
             variables = self.capture.variables
@@ -235,7 +234,7 @@ class Run(AbstractCommand, CapturableMixin):
 # as a local material, either a local file, or a python string
 
 
-class RunLocalStuff(AbstractCommand):
+class RunLocalStuff(AbstractCommand, CapturableMixin):
     """
     The base class for ``RunScript`` and ``RunString``.
     This class implements the common logic for a local script that

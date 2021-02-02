@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.18.0 - 2021 Feb 2
+
+* add support for deferred evaluation, i.e. the creation of Run-like and Service
+  instances based on strings that are not yet fully known at scheduler-creation time
+* 3 new classes are defined to that end: Variables, Deferred and Capture
+
 ## 0.17.6 - 2020 Nov 27
 
 * robustified loading keys from agent

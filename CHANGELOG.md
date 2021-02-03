@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.18.2 - 2021 Feb 3
+
+* revised, and tested, implementation of Service(environ=)
+
 ## 0.18.1 - 2021 Feb 3
 
 * hot bugfix

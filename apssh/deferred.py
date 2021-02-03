@@ -66,13 +66,21 @@ class Deferred:
     Parameters:
       template(str): a Jinja template as a string, that may contain variables
         or expressions enclosed in ``{{}}``
-      variables(Variables): an environment object that will collect values over time, 
+      variables(Variables): an environment object that will collect values over time,
         so that variables in ``{{}}`` can be expansed when the time comes
 
     a ``Deferred`` object can be used to create instances
     of the ``Run`` class and its siblings, or of the ``Service`` class;
     this is useful when the command contains a part
     that needs to be computed during the scenario
+
+    .. warning:: **beware of f-strings !**
+
+       since Jinja templates use double brackets
+       as delimiters for expressions, it is probably unwise to create a template
+       from an f-string, or if you do you will have to insert variable inside
+       quadruple brackets like so `{{{{varname}}}}`, so that after f-string evaluation
+       a double bracket remains.
     """
     def __init__(self, template, variables):
         self.template = template

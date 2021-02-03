@@ -145,7 +145,8 @@ class Service:
         if mode != 'start' or not self.verbose:
             return f"Service: {mode} {self.service_id}"
         # start & verbose: show command
-        return "Serv: {self.service_id} ➝ {self._start().replace(';', '\n')}"
+        multiline = self._start().replace(';', '\n')
+        return fr"Service: {self.service_id}\n{multiline}"
 
     def start_command(self, *, label=None, **kwds):
         """

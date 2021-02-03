@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.18.3 - 2021 Feb 3
+
+* new option Run(ignore_outputs=True) useful on local nodes
+  where Service cannot safely used to run background processes
+
 ## 0.18.2 - 2021 Feb 3
 
 * revised, and tested, implementation of Service(environ=)

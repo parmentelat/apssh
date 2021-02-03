@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.18.1 - 2021 Feb 3
+
+* hot bugfix
+
 ## 0.18.0 - 2021 Feb 2
 
 * add support for deferred evaluation, i.e. the creation of Run-like and Service

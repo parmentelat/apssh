@@ -6,7 +6,7 @@ from unittest import TestCase
 
 from asynciojobs import Scheduler, Sequence
 
-from apssh import SshNode, SshJob, Run, Service
+from apssh import SshNode, SshJob, Run, Service, Variables, Capture
 from apssh import close_ssh_in_scheduler
 
 from .util import produce_png
@@ -83,3 +83,31 @@ class Tests(TestCase):
         return self._simple(forever=False)
     def test_simple_forever(self):
         return self._simple(forever=True)
+
+    def test_environment(self):
+
+        needle_foo = 'xxx-foo-xxx'
+        needle_bar = 'xxx-bar-xxx'
+
+        scheduler = Scheduler()
+        node = SshNode("localhost")
+
+        env = Variables()
+        service = Service("env",
+                          service_id='echo-environ',
+                          environ={'FOO': needle_foo,
+                                   'BAR': needle_bar,
+                                   })
+        SshJob(
+            scheduler=scheduler,
+            node=node,
+            commands=[
+                Run(service.start_command()),
+                Run(service.journal_command(since='5s ago'),
+                    capture=Capture('journal', env))
+            ]
+        )
+
+        self.assertEqual(scheduler.run(), True)
+        self.assertTrue(f"FOO={needle_foo}" in env.journal)
+        self.assertTrue(f"BAR={needle_bar}" in env.journal)

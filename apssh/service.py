@@ -24,7 +24,7 @@ class Service:
     just like e.g. a usual Run instance.
 
     Parameters:
-      command(str): the command to start the service; 
+      command(str): the command to start the service;
         a ``Deferred`` instance is acceptable too
       service_id(str): this mandatory id is passed to ``systemd-run``
         to monitor the associated transient service;
@@ -111,13 +111,16 @@ class Service:
             # reset-failed
             commands.append(self._manage("reset-failed", trash_output=True))
 
-        if self.environ:
-            defines = (" ".join(f"{var}='{value}'"
-                                for var, value in self.environ.items()))
-            commands.append(f"systemctl set-environment {defines}")
+        # it seems safer to avoid affecting global state
+        # so we avoid systemctl set-environment
+        # and use --setenv option instead
+        environ_options = " ".join(
+                f"--setenv {var}='{value}'" for var, value in self.environ.items()
+            )
 
         tty_option = "" if not self.tty else "--pty"
         commands.append(f"systemd-run {tty_option}"
+                        f" {environ_options}"
                         f" --unit={self.service_id}"
                         f" --service-type={self.systemd_type}"
                         f" {self.command}")

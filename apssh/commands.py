@@ -178,6 +178,10 @@ class Run(AbstractCommand, CapturableMixin, StrLikeMixin):
       verbose (bool): if set, the actual command being run is printed out.
       x11 (bool): if set, will enable X11 forwarding, so that a X11 program
         running remotely ends on the local DISPLAY.
+      ignore_outputs(bool): this flag is currently used only when running on a LocalNode();
+        in that case, the stdout and stderr of the forked process are bound to /dev/null, 
+        and no attempt is made to read them; this has turned out a useful trick when
+        spawning port-forwarding ssh sessions
 
     Examples:
 
@@ -196,13 +200,17 @@ class Run(AbstractCommand, CapturableMixin, StrLikeMixin):
     # plus, maybe some day we'll need to add other keywords
     # to create_connection than just x11_forwarding,
     # so, it feels about right to call this just like x11
-    def __init__(self, *argv, label=None,
-                 allowed_exits=None,
-                 verbose=False, x11=False,
+    def __init__(self, *argv,
+                 # proper
+                 verbose=False, x11=False, ignore_outputs=False,
+                 # AbstractCommand
+                 label=None, allowed_exits=None,
+                 # CapturableMixin
                  capture: Capture = None):
         self.argv = argv
         self.verbose = verbose
         self.x11 = x11
+        self.ignore_outputs = ignore_outputs
         AbstractCommand.__init__(self, label=label,
                                  allowed_exits=allowed_exits)
         CapturableMixin.__init__(self, capture)
@@ -241,7 +249,7 @@ class Run(AbstractCommand, CapturableMixin, StrLikeMixin):
         self.start_capture()
         command = self._remote_command()
         self._verbose_message(localnode, "Run: -> {}".format(command))
-        retcod = await localnode.run(command)
+        retcod = await localnode.run(command, ignore_outputs=self.ignore_outputs)
         self._verbose_message(
             localnode, "Run: {} <- {}".format(retcod, command))
         self.end_capture()

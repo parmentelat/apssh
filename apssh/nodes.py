@@ -8,7 +8,7 @@ import asyncio
 
 import os
 
-from subprocess import PIPE
+from subprocess import PIPE, DEVNULL
 
 from asyncssh import EXTENDED_DATA_STDERR
 
@@ -44,7 +44,6 @@ class LocalNode:
     .. note::
       Not all command classes support running on a local node, essentially
         this is only available for usual ``Run`` commands as of this writing.
-
     """
 
     def __init__(self, formatter=None, verbose=None):
@@ -88,16 +87,27 @@ class LocalNode:
                 return
             self.lines(line, datatype)
 
-    async def run(self, command):
+    async def run(self, command, ignore_outputs=False):
         try:
-            process = await asyncio.create_subprocess_shell(
-                command, stdout=PIPE, stderr=PIPE)
-            # no need to refer to stdout and stderr
-            _, _ = await asyncio.gather(
-                self.read_and_display(process.stdout, 0),
-                self.read_and_display(process.stderr, EXTENDED_DATA_STDERR))
-            retcod = await process.wait()
-            return retcod
+            if not ignore_outputs:
+                process = await asyncio.create_subprocess_shell(
+                    command, stdout=PIPE, stderr=PIPE)
+                # multiplex stdout and stderr on the terminal
+                _, _ = await asyncio.gather(
+                    self.read_and_display(process.stdout, 0),
+                    self.read_and_display(process.stderr, EXTENDED_DATA_STDERR))
+                retcod = await process.wait()
+                return retcod
+            else:
+                process = await asyncio.create_subprocess_shell(
+                    command, stdout=DEVNULL, stderr=DEVNULL)
+                # nothing to read
+                self.lines(f"IGNORING (ignore_outputs=True) with `{command}`".encode(),
+                           EXTENDED_DATA_STDERR)
+                retcod = await process.wait()
+                print(f"retcod={retcod}")
+                return retcod
+
         except Exception as exc:                        # pylint: disable=w0703
             line = f"LocalNode: Could not run local command {command} - {exc}"
             self.formatter.line(line, EXTENDED_DATA_STDERR, self.hostname)

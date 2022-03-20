@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.19.0 - 2022 Mar 20
+
+* turn off loading of OpenSSH-compatible config files that
+  is more harmful than helpful
+
 ## 0.18.3 - 2021 Feb 3
 
 * new option Run(ignore_outputs=True) useful on local nodes

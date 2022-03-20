@@ -283,7 +283,10 @@ class SshProxy:                                         # pylint: disable=r0902
                 asyncssh.create_connection(
                     ClientClosure, self.hostname, port=self.port,
                     username=self.username,
-                    known_hosts=self.known_hosts, client_keys=self.keys
+                    known_hosts=self.known_hosts, client_keys=self.keys,
+                    # it is rather crucial that we skip config-loading
+                    # at least to be consistent with prevous user-experience
+                    config=None,
                 ),
                 timeout=self.timeout)
 

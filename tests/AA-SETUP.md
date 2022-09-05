@@ -60,7 +60,9 @@ Recommended now
 * dnf installs
 
   ```bash
-  dnf install -y graphviz gcc tcpdump git
+  dnf install -y graphviz gcc tcpdump git 
+  # for X11 forwarding - xterm is useful for tests
+  dnf install -y xorg-x11-server-Xorg xorg-x11-xauth xterm
   ```
 
 ## conda envs

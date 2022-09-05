@@ -32,7 +32,7 @@ REQUIRED_MODULES = [
     'jinja2',
 ]
 TESTS_REQUIRE = [
-    'nose',
+    'pytest',
     'psutil',
 ]
 

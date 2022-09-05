@@ -7,9 +7,9 @@ tags:
 .PHONY: tags
 
 ##########
-# always running tests through nose makes life easier
+# nose no longer maintained
 tests test:
-	nosetests tests/test_*.py -s
+	pytest
 
 .PHONY: tests test
 

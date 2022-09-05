@@ -3,8 +3,9 @@
 ## Historical setup
 
 Before July 2018, the test code was targetting R2lab live, i.e.
-  * a first ssh leg to `root@faraday.inria.fr`
-  * a second hop to one or several nodes, e.g. `root@fit01`
+
+* a first ssh leg to `root@faraday.inria.fr`
+* a second hop to one or several nodes, e.g. `root@fit01`
 
 ## Current setup
 
@@ -16,7 +17,7 @@ Recommended now:
   * with auto-mount capability
 
 ```bash
-    cd /media/sf_apssh
+cd /media/sf_apssh
 ```
 
 * create 2 network adapters
@@ -24,13 +25,14 @@ Recommended now:
   * one using `host-to-guest`
 
 * open up ssh access
-  * from host to guest as root; this one is used to log in manually but not by the test code; you might wish to write down the guest's IP address in your ssh client bookmarks
+  * from host to guest as root; this one is used to log in manually but not by the test code; you might wish to write down the guest's IP address in your ssh client bookmarks  
+  (like e.g. `192.168.56.101`)
   * and **in loopback from root on guest to root on guest** - this is the one used by all tests
 
 * install dependencies graphviz and orderedset
 
 ```bash
-pip3 install ~/git/asynciojobs ~/git/apssh
+pip3 install -e ~/git/asynciojobs ~/git/apssh
 pip3 install orderedset psutil
 apt-get install graphviz
 pip3 install graphviz

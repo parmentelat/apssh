@@ -1,76 +1,112 @@
 # Test setup
 
-## Historical setup
+Recommended now
 
-Before July 2018, the test code was targetting R2lab live, i.e.
+## base image
 
-* a first ssh leg to `root@faraday.inria.fr`
-* a second hop to one or several nodes, e.g. `root@fit01`
+* create a VirtualBox VM based ~~on ubuntu18~~  
+  ***update sep 2022*** now using fedora 36
+* using fedora-server - minimal distrib
+* root as the usual onelab passwd
 
-## Current setup
+## VB settings
 
-Recommended now:
-
-* create a VirtualBox VM based on ubuntu18
-* create shared folder
-  * so that guest can point at your `apssh` workdir
+* create shared folders
+  * so that guest can point at the sources
   * with auto-mount capability
 
-```bash
-cd /media/sf_apssh
-```
+    | host | guest |
+    |-|-|
+    | `~/git/apssh` | `/media/sf_apssh` |
+    | `~/git/sf_asynciojobs` | `/media/sf_asynciojobs` |
 
 * create 2 network adapters
   * one using `NAT` (the VB default) so that the VM has Internet connectivity
   * one using `host-to-guest`
 
+## linux settings
+
 * open up ssh access
-  * from host to guest as root; this one is used to log in manually but not by the test code; you might wish to write down the guest's IP address in your ssh client bookmarks  
-  (like e.g. `192.168.56.101`)
-  * and **in loopback from root on guest to root on guest** - this is the one used by all tests
+  * from host to guest as root; this one is used to log in manually but not by
+    the test code; you might wish to write down the guest's IP address in your
+    ssh client bookmarks  
+    (like e.g. `192.168.56.104`)
+  * and **in loopback from root on guest to root on guest** - this is the one
+    used by all tests
 
-* install dependencies graphviz and orderedset
+  * initialize known_hosts
+    ```bash
+    ssh localhost hostname
+    ```
 
-```bash
-pip3 install -e ~/git/asynciojobs ~/git/apssh
-pip3 install orderedset psutil
-apt-get install graphviz
-pip3 install graphviz
-```
+***from there, use iterm to login as it will support cut'n paste***
 
-* ***OPTIONAL***
+* guest additions are required (and a reboot too) for the shared folders to appear
 
-It can be interesting to also share asynciojobs, and then define `PYTHONPATH` accordingly:
+  ```bash
+  dnf install -y virtualbox-guest-additions
+  ```
 
-```
-root@apssh-testbox:/media/sf_apssh# export PYTHONPATH=/media/sf_asynciojobs
-```
+* install miniconda
 
-* run tests as root on guest
+  ```bash
+  cd /tmp
+  curl -O https://repo.anaconda.com/miniconda/Miniconda3-py39_4.12.0-Linux-x86_64.sh
+  bash Miniconda3-py39_4.12.0-Linux-x86_64.sh
+  ```
 
-```bash
-root@apssh-testbox:/media/sf_apssh# python3 -m unittest tests.test_connections
-creating 5 commands on 1 connections to root@localhost
-INITIAL count in=1 out=0
-localhost:apssh-testbox
-localhost:apssh-testbox
-localhost:apssh-testbox
-localhost:apssh-testbox
-localhost:apssh-testbox
-AFTER RUN in=2 out=1
-AFTER CLEANUP in=1 out=0
-.creating 5 commands on 5 connections to root@localhost
-INITIAL count in=1 out=0
-localhost:apssh-testbox
-localhost:apssh-testbox
-localhost:apssh-testbox
-localhost:apssh-testbox
-localhost:apssh-testbox
-AFTER RUN in=6 out=5
-AFTER CLEANUP in=1 out=0
-.
-----------------------------------------------------------------------
-Ran 2 tests in 1.649s
+***reboot for the guest-additions to kick in***
 
-OK
-```
+* dnf installs
+
+  ```bash
+  dnf install -y graphviz gcc tcpdump git
+  ```
+
+## conda envs
+
+* create and fill a conda env, e.g. to test on python3.9
+
+  ```bash
+  conda create -n py39 python=3.9
+  conda activate py39
+  pip install psutil orderedset graphviz pytest
+  pip install -e /media/sf_asynciojobs /media/sf_apssh
+  ```
+* use it to run tests
+
+  ```bash
+  conda activate py39
+  cd /media/sf_apssh
+  pytest   # or make test
+  ```
+
+### sample output
+  ```bash
+  [root@apssh-test sf_asynciojobs]# pytest
+  ============================================================== test session starts ==============================================================
+  platform linux -- Python 3.10.6, pytest-7.1.3, pluggy-1.0.0
+  rootdir: /media/sf_asynciojobs
+  collected 59 items
+
+  tests/test_basics.py .........................                                                                                            [ 42%]
+  tests/test_bypass.py .......                                                                                                              [ 54%]
+  tests/test_cycles.py ..                                                                                                                   [ 57%]
+  tests/test_graph.py ..                                                                                                                    [ 61%]
+  tests/test_nesting.py .......                                                                                                             [ 72%]
+  tests/test_png.py ......                                                                                                                  [ 83%]
+  tests/test_shutdown.py ..........                                                                                                         [100%]
+
+  =============================================================== warnings summary ================================================================
+  tests/test_basics.py: 20 warnings
+  tests/test_graph.py: 1 warning
+  tests/test_nesting.py: 16 warnings
+  tests/test_shutdown.py: 10 warnings
+
+  <snip>
+
+  ======================================================= 59 passed, 74 warnings in 40.71s ========================================================
+  sys:1: RuntimeWarning: coroutine 'aprint' was never awaited
+  RuntimeWarning: Enable tracemalloc to get the object allocation traceback
+  [root@apssh-test sf_asynciojobs]#
+  ```

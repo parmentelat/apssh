@@ -109,10 +109,10 @@ def count_ssh_connections(incoming:bool, outgoing:bool):
     return count
 
 def incoming_connections():
-    return count_ssh_connections_psutil(incoming=True, outgoing=False)
+    return count_ssh_connections(incoming=True, outgoing=False)
 
 def outgoing_connections():
-    return count_ssh_connections_psutil(outgoing=True, incoming=False)
+    return count_ssh_connections(outgoing=True, incoming=False)
 
 def in_out_connections():
     return incoming_connections(), outgoing_connections()

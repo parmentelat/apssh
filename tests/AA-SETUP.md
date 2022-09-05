@@ -1,6 +1,9 @@
 # Test setup
 
-Recommended now
+**WARNING** all this is a little fragile; for example some tests monitor the
+number of active processes and expect its size to change by some fixed amout
+bottom line is, these cannot run in parallel, for example it is not supported to
+run the tests for 2 flavours of Python at the same time on a given box
 
 ## base image
 

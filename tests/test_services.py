@@ -16,11 +16,18 @@ class Tests(TestCase):
 
     def _simple(self, forever):
 
-        storage = f"/root/TCPDUMP-{forever}.pcap"
-        status = f"/root/TCPDUMP-{forever}.status"
+        # initially this was using tcpdump
+        # however it exhibits issued related to
+        # the ownership of the capturefile
+        # which are totally orthogonal to our objective
+        # storage = f"/tmp/TCPDUMP-{forever}.pcap"
+        # status = f"/tmp/TCPDUMP-{forever}.status"
 
-        tcpdump = Service(f"tcpdump -i lo -w {storage}",
-                          service_id='tcpdump',
+        storage = f"/tmp/TICK-{forever}.out"
+        status = f"/tmp/TICK-{forever}.status"
+
+        tick = Service(f"""bash -c "while true; do date; sleep 0.2; done > {storage}" """,
+                          service_id='tick',
                           verbose=True)
         monitor = ProcessMonitor()
 
@@ -28,19 +35,19 @@ class Tests(TestCase):
         node = SshNode("localhost")
 
         SshJob(node, scheduler=scheduler,
-               command=tcpdump.start_command(),
+               command=tick.start_command(),
                forever=forever)
 
         Sequence(
             SshJob(node,
                    command="sleep 1"),
             SshJob(node,
-                   command=tcpdump.status_command(output=status)),
+                   command=tick.status_command(output=status)),
             SshJob(node,
                    command="sleep 1"),
             SshJob(node,
-                   command=tcpdump.stop_command()),
-            # could use a pull to retrive both files but that's not required
+                   command=tick.stop_command()),
+            # could use a pull to retrieve both files but that's not required
             # since we run on localhost, so keep tests simple
             scheduler=scheduler,
         )

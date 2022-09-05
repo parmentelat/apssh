@@ -237,7 +237,8 @@ class Tests(unittest.TestCase):
 
     def test_local_command(self):
         # create random file in python rather than with /dev/random
-        # that is not working in virtualbox
+        # this uses sha1sum which is available on the linux test boxes
+        # but not in macos
         random_full = "RANDOM-full"
         random_head = "RANDOM"
 
@@ -250,7 +251,7 @@ class Tests(unittest.TestCase):
                 commands=[
                     Run(f"head -c {2**18} < {random_full} > {random_head}"),
                     Run(f"ls -l {random_head}"),
-                    Run(f"shasum {random_head}"),
+                    Run(f"sha1sum {random_head}"),
                 ]))
 
     def test_local_command2(self):

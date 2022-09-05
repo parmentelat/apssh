@@ -42,6 +42,7 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinxcontrib.asyncio',
     'sphinxcontrib.napoleon',
+    'myst_parser',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

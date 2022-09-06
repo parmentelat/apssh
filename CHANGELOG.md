@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.19.1 - 2022 Sep 6
+
+* no change, but a dusted off doc & test environment
+* the code has no change but since we depend on asynciojobs
+  it is safe to assume that we depend on python-3.9
+
 ## 0.19.0 - 2022 Mar 20
 
 * turn off loading of OpenSSH-compatible config files that

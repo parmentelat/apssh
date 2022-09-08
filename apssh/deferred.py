@@ -1,10 +1,10 @@
 """
-Support for deferred evaluation; typical usecase is, you want to write something like::
+Support for deferred evaluation; typical use case is, you want to write something like::
 
     somevar=$(ssh nodename some-command)
     ssh othernode other-command $somevar
 
-but because a Schduler is totally created before it gets to run anything, creating a
+but because a Scheduler is totally created before it gets to run anything, creating a
 ``Run()`` instance from a string means that the string must be known at sheduler-creation
 time, at which point we do not yet have the value of somevar
 

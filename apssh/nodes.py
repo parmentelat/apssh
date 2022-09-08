@@ -18,8 +18,6 @@ from .sshproxy import SshProxy
 
 from .keys import load_private_keys, load_agent_keys
 
-##########
-
 
 class LocalNode:
     """

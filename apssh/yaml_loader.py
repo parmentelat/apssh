@@ -8,7 +8,7 @@ from jinja2 import Template, DebugUndefined
 
 
 from asynciojobs import Scheduler
-from apssh import Run, RunScript, RunString, SshJob
+from apssh import Run, RunScript, RunString, SshJob, formatters
 from apssh.nodes import SshNode
 
 class YamlLoader:
@@ -135,6 +135,11 @@ class YamlLoader:
 
         def locate_node_from_id(node_id):
             return nodes_map[node_id]
+
+        def locate_formatter(clsname):
+            # formatters is the apssh.formatters module
+            cls = getattr(formatters, clsname)
+            return cls()
 
         mandatories = {
             'hostname': None,

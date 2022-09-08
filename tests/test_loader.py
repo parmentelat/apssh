@@ -27,7 +27,7 @@ class Tests(unittest.TestCase):
     def test_loader_2(self):
 
         p = Path("tests/loader2.yaml.j2")
-        variables = {
+        jinja_variables = {
             'gateway': 'faraday.inria.fr',
             'leader': 'sopnode-l1.inria.fr',
             'verbose': True,
@@ -38,7 +38,7 @@ class Tests(unittest.TestCase):
             },
         }
 
-        nodes_map, jobs_map, s = YamlLoader(p).load_with_maps(variables)
+        nodes_map, jobs_map, s = YamlLoader(p).load_with_maps(jinja_variables)
 
         self.assertTrue( len(s) == 8)
         init_demo = jobs_map['init_demo']

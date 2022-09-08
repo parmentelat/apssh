@@ -8,6 +8,7 @@ from apssh import YamlLoader
 
 from . import util
 
+
 class Tests(unittest.TestCase):
 
     def test_loader_1(self):
@@ -25,7 +26,7 @@ class Tests(unittest.TestCase):
 
     def test_loader_2(self):
 
-        p = Path("tests/loader2.yaml")
+        p = Path("tests/loader2.yaml.j2")
         variables = {
             'gateway': 'faraday.inria.fr',
             'leader': 'sopnode-l1.inria.fr',

@@ -1,0 +1,143 @@
+# same as loader1.yaml, except that we use a jinja template to
+# pass some parameters, like here
+# - {{gateway}}
+# - {{leader}}
+# - {{verbose}} a bool
+# - {{nodes}} a dict like {'amf': 'fit01', 'gnb': 'fit02'}
+# so we can produce the 2 identical leave_join_ jobs from a single pattern
+
+nodes:
+  - id: faraday
+    hostname: faraday.inria.fr
+    formatter: TimeColonFormatter
+    verbose: True
+  - id: leader
+    hostname: sopnode-l1.inria.fr
+    gateway: faraday
+    username: r2lab
+    formatter: TimeColonFormatter
+    verbose: True
+  - id: amf
+    hostname: fit01
+    gateway: faraday
+    username: root
+    formatter: TimeColonFormatter
+    verbose: True
+  - id: gnb
+    hostname: fit02
+    gateway: faraday
+    username: root
+    formatter: TimeColonFormatter
+    verbose: True
+
+jobs:
+  - id: load_images
+    node: faraday
+    critical: True
+    verbose: True
+    label: load image kubernetes on FIT worker nodes
+    commands:
+      - type: Run
+        command: rhubarbe load fit01 fit02 -i kubernetes
+      - type: Run
+        command: rhubarbe wait fit01 fit02
+
+  - id: leave_join_amf
+    required: load_images
+    node: amf
+    critical: False
+    verbose: True
+    label: >
+      Reset data interface, ipip tunnels of worker node fit01 and possibly leave {leader} k8s cluster
+    commands:
+      - type: Run
+        command: nmcli con down data; nmcli dev status; leave-tunnel
+      - type: Run
+        command: kube-install.sh leave-cluster
+      - type: Run
+        command: sleep 60
+      - type: Run
+        command: nmcli con up data; nmcli dev status; join-tunnel
+      - type: Run
+        command: kube-install.sh join-cluster r2lab@{{leader}}
+
+  - id: leave_join_gnb
+    required: load_images
+    node: gnb
+    critical: False
+    verbose: True
+    label: >
+      Reset data interface, ipip tunnels of worker node fit02
+      and possibly leave {leader} k8s cluster
+    commands:
+      - type: Run
+        command: nmcli con down data; nmcli dev status; leave-tunnel
+      - type: Run
+        command: kube-install.sh leave-cluster
+      - type: Run
+        command: sleep 60
+      - type: Run
+        command: nmcli con up data; nmcli dev status; join-tunnel
+      - type: Run
+        command: kube-install.sh join-cluster r2lab@{{leader}}
+
+  - id: init_demo
+    required:
+      - leave_join_amf
+      - leave_join_gnb
+    node: amf
+    critical: True
+    verbose: True
+    label: >
+      Clone oai-cn5g-fed, apply patches
+      and run the k8s demo-oai script from fit01
+    commands:
+      - type: Run
+        command: >
+          rm -rf oai-cn5g-fed;
+          git clone -b master https://gitlab.eurecom.fr/oai/cn5g/oai-cn5g-fed
+      - type: RunScript
+        command: config-oai5g-sopnode.sh fit01 fit02
+      - type: RunScript
+        command: demo-oai.sh init
+
+  - id: start_demo
+    required: init_demo
+    node: amf
+    critical: True
+    verbose: True
+    label: >
+      Launch OAI5G pods by calling demo-oai.sh start from fit01
+    commands:
+      - type: RunScript
+        command: demo-oai.sh start {{namespace}} fit01 fit02
+
+  - id: stop_demo
+    required: start_demo
+    node: amf
+    critical: True
+    verbose: True
+    label: >
+      Launch OAI5G pods by calling demo-oai.sh start from fit01
+    commands:
+      - type: RunScript
+        command: demo-oai.sh stop {{namespace}}
+
+  - id: cleanup1
+    required: stop_demo
+    node: leader
+    critical: False
+    verbose: True
+    label: Drain and delete FIT nodes from the k8s {{leader}} cluster
+    commands:
+      - type: Run
+        command: fit-drain-nodes; fit-delete-nodes
+
+  - id: cleanup2
+    required: stop_demo
+    node: faraday
+    critical: False
+    verbose: True
+    commands:
+      - type: Run
+        command: rhubarbe off fit01 fit02

@@ -47,3 +47,7 @@ from .topology import (
 from .deferred import (
     Variables, Deferred, Capture,
 )
+
+from .yaml_loader import (
+    YamlLoader
+)

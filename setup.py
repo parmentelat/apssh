@@ -30,6 +30,7 @@ REQUIRED_MODULES = [
     'asyncssh',
     'asynciojobs',
     'jinja2',
+    'pyyaml',
 ]
 TESTS_REQUIRE = [
     'pytest',

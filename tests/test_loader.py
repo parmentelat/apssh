@@ -22,3 +22,25 @@ class Tests(unittest.TestCase):
         self.assertTrue( len(s1) == len(s2) == 8)
         util.produce_png(s1, "graphic-loader1-file")
         util.produce_png(s1, "graphic-loader1-path")
+
+    def test_loader_2(self):
+
+        p = Path("tests/loader2.yaml")
+        variables = {
+            'gateway': 'faraday.inria.fr',
+            'leader': 'sopnode-l1.inria.fr',
+            'verbose': True,
+            'namespace': 'oai5g',
+            'nodes': {
+                'amf': 'fit01',
+                'gnb': 'fit02',
+            },
+        }
+
+        nodes_map, jobs_map, s = YamlLoader(p).load_with_maps(variables)
+
+        self.assertTrue( len(s) == 8)
+        init_demo = jobs_map['init_demo']
+        self.assertIn('fit01', init_demo.label)
+
+        util.produce_png(s, "graphic-loader2")

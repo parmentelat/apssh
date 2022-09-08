@@ -4,6 +4,9 @@ import re
 
 import yaml
 
+from jinja2 import Template, DebugUndefined
+
+
 from asynciojobs import Scheduler
 from apssh import Run, RunScript, RunString, SshJob
 from apssh.nodes import SshNode
@@ -53,15 +56,18 @@ class YamlLoader:
             (*) the resulting scheduler
         """
         with self.path.open() as feed:
-            D = yaml.safe_load(feed)
+            yaml_input = feed.read()
+
+        if env:
+            template = Template(yaml_input, undefined=DebugUndefined)
+            yaml_input = template.render(**env)
+
+        D = yaml.safe_load(yaml_input)
 
         if 'nodes' not in D:
             raise ValueError(f"file {self.filename} has no 'nodes' key")
         if 'jobs' not in D:
             raise ValueError(f"file {self.filename} has no 'jobs' key")
-
-        if env:
-            self.fill_template(env)
 
         nodes_map = self._load_nodes(D['nodes'])
 

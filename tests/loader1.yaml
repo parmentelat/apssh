@@ -1,11 +1,3 @@
-# same as loader1.yaml, except that we use a jinja template to
-# pass some parameters, like here
-# - {{gateway}}
-# - {{leader}}
-# - {{verbose}} a bool
-# - {{nodes}} a dict like {'amf': 'fit01', 'gnb': 'fit02'}
-# so we can produce the 2 identical leave_join_ jobs from a single pattern
-
 nodes:
   - id: faraday
     hostname: faraday.inria.fr
@@ -59,7 +51,7 @@ jobs:
       - type: Run
         command: nmcli con up data; nmcli dev status; join-tunnel
       - type: Run
-        command: kube-install.sh join-cluster r2lab@{{leader}}
+        command: kube-install.sh join-cluster r2lab@sopnode-l1.inria.fr
 
   - id: leave_join_gnb
     required: load_images
@@ -79,7 +71,7 @@ jobs:
       - type: Run
         command: nmcli con up data; nmcli dev status; join-tunnel
       - type: Run
-        command: kube-install.sh join-cluster r2lab@{{leader}}
+        command: kube-install.sh join-cluster r2lab@sopnode-l1.inria.fr
 
   - id: init_demo
     required:
@@ -110,7 +102,7 @@ jobs:
       Launch OAI5G pods by calling demo-oai.sh start from fit01
     commands:
       - type: RunScript
-        command: demo-oai.sh start {{namespace}} fit01 fit02
+        command: demo-oai.sh start oai5g fit01 fit02
 
   - id: stop_demo
     required: start_demo
@@ -121,14 +113,14 @@ jobs:
       Launch OAI5G pods by calling demo-oai.sh start from fit01
     commands:
       - type: RunScript
-        command: demo-oai.sh stop {{namespace}}
+        command: demo-oai.sh stop oai5g
 
   - id: cleanup1
     required: stop_demo
     node: leader
     critical: False
     verbose: True
-    label: Drain and delete FIT nodes from the k8s {{leader}} cluster
+    label: Drain and delete FIT nodes from the k8s sopnode-l1.inria.fr cluster
     commands:
       - type: Run
         command: fit-drain-nodes; fit-delete-nodes

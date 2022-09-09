@@ -169,9 +169,9 @@ class YamlLoader:
         def locate_requirement(req_id_s):
             # search instance or instances of job in the current map
             if isinstance(req_id_s, str):
-                return [jobs_map[req_id_s]]
+                return {jobs_map[req_id_s]}
             else:
-                return [jobs_map[req_id] for req_id in req_id_s]
+                return {jobs_map[req_id] for req_id in req_id_s}
 
         def create_commands(commands_list):
             result = []

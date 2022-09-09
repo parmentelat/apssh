@@ -11,6 +11,13 @@ from asynciojobs import Scheduler
 from apssh import Run, RunScript, RunString, SshJob, formatters
 from apssh.nodes import SshNode
 
+
+WARNING = """
+# WARNING: this file was produced automatically - DO NOT EDIT !
+# see {original} instead
+#
+"""
+
 class YamlLoader:
 
     """
@@ -30,24 +37,31 @@ class YamlLoader:
         self.path = Path(filename)
 
 
-    def load(self, env=None) -> Scheduler:
+    def load(self, env=None, *, save_intermediate=None) -> Scheduler:
         """
         parse input filename and returns a `Scheduler` object; a shortcut to using
         `load_with_maps()` and trashing the intermediary maps
 
-        Parameters:
-          env(dict): if not empty, a Jinja2 pass is performed on the input
+        same parameters as `load_with_maps`
+
         """
-        _nodes_map, _jobs_map, scheduler = self.load_with_maps(env)
+        _nodes_map, _jobs_map, scheduler = self.load_with_maps(
+            env, save_intermediate=save_intermediate)
         return scheduler
 
 
-    def load_with_maps(self, env=None) -> Scheduler:
+    def load_with_maps(self, env=None, *, save_intermediate=None) -> Scheduler:
         """
         parse input filename
 
         Parameters:
           env(dict): if not empty, a Jinja2 pass is performed on the input
+          save_intermediate: defaults to None, meaning do nothing; if provided,
+            this parameter means to save the output of the jinja templating phase,
+            typically for debugging purposes; if set to `True`, the output filename
+            is computed from the object's filename as provided at constructor-time;
+            alternatively you may also pass a string, or a Path instance.
+            If env is None, this parameter is ignored.
 
         Returns:
           a tuple containing:
@@ -61,6 +75,29 @@ class YamlLoader:
         if env:
             template = Template(yaml_input, undefined=DebugUndefined)
             yaml_input = template.render(**env)
+            yaml_input = WARNING.format(original=self.path) + yaml_input
+
+            # save this intermediate form for debugging or documentation
+            if save_intermediate is None:
+                pass
+            elif isinstance(save_intermediate, (str, Path)):
+                if isinstance(save_intermediate, str):
+                    save_intermediate = Path(save_intermediate)
+                with save_intermediate.open('w') as writer:
+                    writer.write(yaml_input)
+                    print(f"(over)wrote {save_intermediate}")
+            else:
+                # compute a filename
+                if self.path.suffix == ".j2":
+                    # simply remove the .j2
+                    intermediate_path = self.path.with_suffix("")
+                else:
+                    # add a .tmp
+                    intermediate_path = self.path.parent / (self.path.name + ".tmp")
+                with intermediate_path.open('w') as writer:
+                    writer.write(yaml_input)
+                    print(f"(over)wrote {intermediate_path}")
+
 
         D = yaml.safe_load(yaml_input)
 

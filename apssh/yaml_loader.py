@@ -218,6 +218,8 @@ class YamlLoader:
                 cls = getattr(apssh, command_dict['type'])
                 result.append(cls(command_dict['command'].strip()))
             return result
+        def strip_label(label):
+            return label.strip()
 
         mandatories = {
             'node': locate_node_from_id,
@@ -227,7 +229,7 @@ class YamlLoader:
             'required': locate_requirement,
             'critical': None,
             'verbose': None,
-            'label': None,
+            'label': strip_label,
         }
 
         for job_dict in jobs_list:

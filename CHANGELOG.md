@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.20.1 - 2022 Sep 9
+
+* loader accepts the save_intermediate optional param
+  so users can inspect the output of the jinja phase
+
 ## 0.20.0 - 2022 Sep 9
 
 * first implementation of a yaml loader

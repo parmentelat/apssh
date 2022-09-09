@@ -78,14 +78,14 @@ class YamlLoader:
             yaml_input = WARNING.format(original=self.path) + yaml_input
 
             # save this intermediate form for debugging or documentation
-            if save_intermediate is None:
+            if save_intermediate is None or save_intermediate == False:
                 pass
             elif isinstance(save_intermediate, (str, Path)):
                 if isinstance(save_intermediate, str):
                     save_intermediate = Path(save_intermediate)
                 with save_intermediate.open('w') as writer:
                     writer.write(yaml_input)
-                    print(f"(over)wrote {save_intermediate}")
+                    print(f"save_intermediate: (over)wrote plain YAML {save_intermediate}")
             else:
                 # compute a filename
                 if self.path.suffix == ".j2":
@@ -96,7 +96,7 @@ class YamlLoader:
                     intermediate_path = self.path.parent / (self.path.name + ".tmp")
                 with intermediate_path.open('w') as writer:
                     writer.write(yaml_input)
-                    print(f"(over)wrote {intermediate_path}")
+                    print(f"save_intermediate: (over)wrote plain YAML {intermediate_path}")
 
 
         D = yaml.safe_load(yaml_input)

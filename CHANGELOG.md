@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.20.0 - 2022 Sep 9
+
+* first implementation of a yaml loader
+
 ## 0.19.1 - 2022 Sep 6
 
 * no change, but a dusted off doc & test environment

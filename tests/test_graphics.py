@@ -14,7 +14,7 @@ from apssh import Variables, Deferred
 
 from apssh import topology_as_pngfile
 
-from .util import localhostname, localuser, produce_png
+from .util import localhostname, localuser, produce_svg
 
 class Tests(unittest.TestCase):
 
@@ -125,7 +125,7 @@ class Tests(unittest.TestCase):
         scheduler.list()
         print("WITH DETAILS")
         scheduler.list(details=True)
-        produce_png(scheduler, "test_graphics1")
+        produce_svg(scheduler, "test_graphics1")
 
         ok = scheduler.run()
 
@@ -165,4 +165,4 @@ class Tests(unittest.TestCase):
                    command=Deferred(template, v2)),
             scheduler=scheduler)
 
-        produce_png(scheduler, "test_graphics_variables")
+        produce_svg(scheduler, "test_graphics_variables")

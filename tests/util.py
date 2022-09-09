@@ -20,18 +20,22 @@ def localhostname():
             .replace("\n", ""))
 
 
-# shortcut to make png output
-def produce_png(scheduler, name):
-    dot = scheduler.graph()
-    dot.format = 'png'
+# def produce_png(scheduler, name):
+#     produce_graphic(scheduler, name, format="png")
+
+def produce_svg(scheduler, name):
+    produce_graphic(scheduler, name, format="svg")
+
+def produce_graphic(scheduler, name, format):
 
     tests_dir = Path('tests')
     if tests_dir.exists():
-        actual_name = str(tests_dir / name)
+        actual_name = tests_dir / name
     else:
-        actual_name = name
-    dot.render(actual_name)
-    print(f"png file produced in {actual_name}{{,.png}}")
+        actual_name = Path(name)
+
+    scheduler.export_as_graphic(actual_name, format)
+    print(f"graphic files produced in {actual_name}.{{dot,{format}}}")
 
 
 # process management

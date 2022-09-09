@@ -9,7 +9,7 @@ from asynciojobs import Scheduler, Sequence
 from apssh import SshNode, SshJob, Run, Service, Variables, Capture
 from apssh import close_ssh_in_scheduler
 
-from .util import produce_png
+from .util import produce_svg
 from .utilps import ProcessMonitor
 
 class Tests(TestCase):
@@ -58,7 +58,7 @@ class Tests(TestCase):
             if path.exists():
                 path.unlink()
             self.assertFalse(path.exists())
-        produce_png(scheduler, f"service-{forever}")
+        produce_svg(scheduler, f"service-{forever}")
 
         self.assertTrue(scheduler.run())
         scheduler.list()

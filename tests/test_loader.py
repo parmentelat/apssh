@@ -25,8 +25,8 @@ class Tests(unittest.TestCase):
 
         # there's not such operation as s1 == s2
         self.assertTrue( len(s1) == len(s2) == 8)
-        util.produce_png(s1, "graphic-loader1-file")
-        util.produce_png(s2, "graphic-loader1-path")
+        util.produce_svg(s1, "graphic-loader1-file")
+        util.produce_svg(s2, "graphic-loader1-path")
 
     def test_loader_2(self):
         """
@@ -51,7 +51,7 @@ class Tests(unittest.TestCase):
         init_demo = jobs_map['init_demo']
         self.assertIn('fit01', init_demo.label)
 
-        util.produce_png(s, "graphic-loader2")
+        util.produce_svg(s, "graphic-loader2")
 
     def test_loader_3(self):
         """

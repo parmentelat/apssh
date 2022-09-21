@@ -101,6 +101,14 @@ jobs:
     label: >
       Launch OAI5G pods by calling demo-oai.sh start from fit01
     commands:
+      - type: Push
+        localpaths:
+          - demo-oai.sh
+        remotepath: /root/
+      - type: Pull
+        remotepaths:
+          - /root/demo-oai.sh
+        localpath: demo-oai.sh.loop
       - type: RunScript
         command: demo-oai.sh start oai5g fit01 fit02
 

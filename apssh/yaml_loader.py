@@ -8,7 +8,7 @@ from jinja2 import Template, DebugUndefined
 
 
 from asynciojobs import Scheduler
-from apssh import Run, RunScript, RunString, SshJob, formatters
+from apssh import Run, RunScript, RunString, SshJob, formatters, Push, Pull
 from apssh.nodes import SshNode
 
 
@@ -190,8 +190,7 @@ class YamlLoader:
             'verbose': None,
         }
         for node_dict in nodes_list:
-            id, node = self._dict_to_class(
-                node_dict, SshNode, mandatories, optionals)
+            id, node = self._dict_to_class(node_dict, SshNode, mandatories, optionals)
             nodes_map[id] = node
 
         return nodes_map
@@ -215,8 +214,14 @@ class YamlLoader:
             for command_dict in commands_list:
                 # locate the class
                 import apssh
-                cls = getattr(apssh, command_dict['type'])
-                result.append(cls(command_dict['command'].strip()))
+                classname = command_dict['type']
+                cls = getattr(apssh, classname)
+                if 'Run' in classname:
+                    command_instance = cls(command_dict['command'].strip())
+                elif classname in ('Push', 'Pull'):
+                    del command_dict['type']
+                    command_instance = cls(**command_dict)
+                result.append(command_instance)
             return result
         def strip_label(label):
             return label.strip()
@@ -233,8 +238,7 @@ class YamlLoader:
         }
 
         for job_dict in jobs_list:
-            id, job = self._dict_to_class(
-                job_dict, SshJob, mandatories, optionals)
+            id, job = self._dict_to_class(job_dict, SshJob, mandatories, optionals)
             jobs_map[id] = job
 
         scheduler = Scheduler()

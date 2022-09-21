@@ -1,6 +1,11 @@
 # ChangeLog
 
-## 0.20.1 - 2022 Sep 9
+## 0.20.2 - 2022 Sep 21
+
+* can create Push and Pull instances from yaml
+* tests produce svg files instead of png
+
+* ## 0.20.1 - 2022 Sep 9
 
 * loader accepts the save_intermediate optional param
   so users can inspect the output of the jinja phase

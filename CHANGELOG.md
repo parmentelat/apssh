@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.20.3 - 2022 Sep 27
+
+* bugfix, the formatter-parsing function was not plugged in, resulting in Node instances with a broken formatter field
+
 ## 0.20.2 - 2022 Sep 21
 
 * can create Push and Pull instances from yaml

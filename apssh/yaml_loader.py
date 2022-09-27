@@ -186,7 +186,7 @@ class YamlLoader:
             'gateway': locate_node_from_id,
             'username': None,
             'critical': None,
-            'formatter': None,
+            'formatter': locate_formatter,
             'verbose': None,
         }
         for node_dict in nodes_list:

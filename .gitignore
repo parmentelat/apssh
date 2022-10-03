@@ -1,2 +1,7 @@
 *.pyc
 sphinx/_build/*
+build/
+graphic-loader*
+tests/test_*
+apssh.egg-info
+tests/service*

@@ -77,7 +77,9 @@ jobs:
       - type: RunScript
         command: config-oai5g-sopnode.sh {{ nodes.values() | join(' ')}}
       - type: RunScript
-        command: demo-oai.sh init
+        local_script: demo-oai.sh
+        args:
+        - init
 
   - id: start_demo
     required: init_demo
@@ -87,8 +89,16 @@ jobs:
     label: >
       Launch OAI5G pods by calling demo-oai.sh start from {{nodes.amf}}
     commands:
-      - type: RunScript
-        command: demo-oai.sh start {{namespace}} {{nodes.values() | join (' ')}}
+      - type: RunString
+        script_body: |
+          # /bin/bash
+          for arg in "$@"; do
+              echo arg="$arg"
+          done
+        args:
+        - start
+        - {{namespace}}
+        - {{nodes.values() | join (' ')}}
 
   - id: stop_demo
     required: start_demo

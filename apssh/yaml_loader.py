@@ -1,6 +1,7 @@
 from pathlib import Path
 from platform import node
 import re
+from webbrowser import get
 
 import yaml
 
@@ -8,6 +9,7 @@ from jinja2 import Template, DebugUndefined
 
 
 from asynciojobs import Scheduler
+import apssh
 from apssh import Run, RunScript, RunString, SshJob, formatters, Push, Pull
 from apssh.nodes import SshNode
 
@@ -50,7 +52,7 @@ class YamlLoader:
         return scheduler
 
 
-    def load_with_maps(self, env=None, *, save_intermediate=None) -> Scheduler:
+    def load_with_maps(self, env=None, *, save_intermediate=None):
         """
         parse input filename
 
@@ -210,19 +212,47 @@ class YamlLoader:
                 return {jobs_map[req_id] for req_id in req_id_s}
 
         def create_commands(commands_list):
+            def get_and_delete_key(D, k, default=None):
+                if k in D:
+                    result = D[k]
+                    del D[k]
+                    return result
+                if default is None:
+                    raise ValueError(f"missing key {k}")
+                return default
+
             result = []
             for command_dict in commands_list:
                 # locate the class
-                import apssh
                 classname = command_dict['type']
+                del command_dict['type']
                 cls = getattr(apssh, classname)
+
                 if 'Run' in classname:
-                    command_instance = cls(command_dict['command'].strip())
-                elif classname in ('Push', 'Pull'):
-                    del command_dict['type']
+                    # the 'usual' shorthand is to simply define 'command'
+                    if 'command' in command_dict:
+                        argv = command_dict['command'].split()
+                        del command_dict['command']
+                        command_instance = cls(*argv, **command_dict)
+                    # however in some cases the 'split' approach may not work
+                    # as desired
+                    elif classname == 'Run':
+                        argv = get_and_delete_key(command_dict, 'argv')
+                        command_instance = cls(*argv, **command_dict)
+                    elif classname == 'RunScript':
+                        p1 = get_and_delete_key(command_dict, 'local_script')
+                        args = get_and_delete_key(command_dict, 'args', [])
+                        command_instance = cls(p1, *args, **command_dict)
+                    elif classname == 'RunString':
+                        p1 = get_and_delete_key(command_dict, 'script_body')
+                        args = get_and_delete_key(command_dict, 'args', [])
+                        command_instance = cls(p1, *args, **command_dict)
+                elif classname in ('Push, Pull'):
                     command_instance = cls(**command_dict)
+
                 result.append(command_instance)
             return result
+
         def strip_label(label):
             return label.strip()
 

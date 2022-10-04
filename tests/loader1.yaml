@@ -110,7 +110,12 @@ jobs:
           - /root/demo-oai.sh
         localpath: demo-oai.sh.loop
       - type: RunScript
-        command: demo-oai.sh start oai5g fit01 fit02
+        local_script: demo-oai.sh
+        args:
+        - start
+        - oai5g
+        - fit01
+        - fit02]
 
   - id: stop_demo
     required: start_demo
@@ -121,7 +126,10 @@ jobs:
       Launch OAI5G pods by calling demo-oai.sh start from fit01
     commands:
       - type: RunScript
-        command: demo-oai.sh stop oai5g
+        local_script: demo-oai.sh
+        # the way args is cut into pieces does not matter much
+        args:
+        - stop oai5g
 
   - id: cleanup1
     required: stop_demo

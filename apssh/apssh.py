@@ -240,6 +240,9 @@ class Apssh:
                 private_keys=private_keys, formatter=self.get_formatter(),
                 timeout=args.timeout, debug=args.debug, dry_run=args.dry_run)
             .create_proxies())
+            if args.debug:
+                for proxy in self.proxies:
+                    print(f"using target {proxy}")
         except ValueError:
             print("it makes no sense to run apssh without any target")
             self.parser.print_help()

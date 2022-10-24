@@ -87,7 +87,7 @@ class _LineBasedSession(asyncssh.SSHClientSession):
             else self.stdout
         channel.data_received(data, datatype)
 
-    def connection_made(self, conn):               # pylint:disable=w0221,w0613
+    def connection_made(self, chan):               # pylint:disable=w0221,w0613
         self.proxy.formatter.session_start(self.proxy.hostname, self.command)
 
     def connection_lost(self, exc):
@@ -353,10 +353,7 @@ class SshProxy:                                         # pylint: disable=r0902
             self.sftp_client = await self.conn.start_sftp_client()
             self.formatter.sftp_start(self.hostname)
         except asyncssh.sftp.SFTPError:
-            self.formatter.stderr_line(
-                "Cannot start STFP subsystem".format(),
-                self.hostname,
-            )
+            self.formatter.stderr_line( "Cannot start STFP subsystem", self.hostname)
             raise
 
     async def _close_sftp(self):

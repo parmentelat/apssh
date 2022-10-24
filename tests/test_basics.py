@@ -396,3 +396,16 @@ xterm
         argv += ['-t', "localhost 127.0.0.1"]
         argv += ['hostname']
         self.run_apssh(argv)
+
+    def test_targets6(self):
+        dir = Path("TARGETS-DIR")
+        dir.mkdir(exist_ok=True)
+        names = ['localhost', '127.0.0.1']
+        for name in names:
+            with (dir / name).open('w'):
+                pass
+        argv = []
+        argv += ['-l', localuser()]
+        argv += ['-t', str(dir)]
+        argv += ['hostname']
+        self.run_apssh(argv)

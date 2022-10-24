@@ -4,8 +4,6 @@ that can be defined as either hostnames directly, or from files that contain
 hostnames, or from directories that contain files named after hostnames.
 """
 
-# xxx there remains one call to os.listdir
-import os
 from pathlib import Path
 
 from .util import print_stderr
@@ -108,9 +106,7 @@ class Targets:
         if located:
             if located.is_dir():
                 # directory
-                # xxx use pathlib some day
-                onlyfiles = [f for f in os.listdir(target)
-                             if (located / f).is_file()]
+                onlyfiles = [str(f.name) for f in located.iterdir() if f.is_file()]
                 return True, onlyfiles
             else:
                 # file

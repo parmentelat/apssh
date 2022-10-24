@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.21.0 - 2022 Oct 25
+
+* refactored the way targets are managed - in a separate targets module
+  in preparation for #4
+* implemented #15; now one can attach a gateway to one node without altering the others
+* implemented #16; now targets can also be comma-separated, which requires fewer quotes
+
 ## 0.20.4 - 2022 Sep 27
 
 * improved YAML loader, particularly for creating RunString and RunScript instances

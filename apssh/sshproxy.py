@@ -100,7 +100,7 @@ class _LineBasedSession(asyncssh.SSHClientSession):
 
     def exit_status_received(self, status):
         self._exit = status
-        self.proxy.debug_line("STATUS = {}\n".format(status))
+        self.proxy.debug_line(f"STATUS = {status}\n")
 
     def exit_signal_received(self, signal,
                              core_dumped, msg, lang):   # pylint: disable=w0613
@@ -108,7 +108,7 @@ class _LineBasedSession(asyncssh.SSHClientSession):
         # we will put the name of the signal as _exit so
         # that we avoid error type "task [...] returned None on node ...."
         self._exit = signal
-        self.proxy.debug_line("SIGNAL = {}--{}\n".format(signal, msg))
+        self.proxy.debug_line(f"SIGNAL = {signal}--{msg}\n")
 
 # _VerboseClient is created through factories attached to each proxy
 
@@ -211,20 +211,19 @@ class SshProxy:                                         # pylint: disable=r0902
         await self.close()
 
     def __user_host__(self):
-        return "{}@{}".format(self.username, self.hostname) if self.username \
+        return f"{self.username}@{self.hostname}" if self.username \
             else "@" + self.hostname
 
     def __repr__(self):
         text = "" if not self.gateway \
-               else "{} <--> ".format(self.gateway.__user_host__())
+               else f"{self.gateway.__user_host__()} <--> "
         text += self.__user_host__() + " "
-        text += "[no key] " if not self.keys else "[{} keys] ".format(
-            len(self.keys))
+        text += "[no key] " if not self.keys else f"[{len(self.keys)} keys] "
         if self.conn:
             text += "<-SSH->"
         if self.sftp_client:
             text += "<-SFTP->"
-        return "<{} {}>".format(type(self).__name__, text)
+        return f"<{type(self).__name__} {text}>"
 
     def debug_line(self, line):                         # pylint: disable=c0111
         if line.endswith("\n"):
@@ -320,8 +319,7 @@ class SshProxy:                                         # pylint: disable=r0902
             self.debug_line("SSH tunnel connected")
         except asyncssh.misc.ChannelOpenError:
             self.formatter.stderr_line(
-                "Cannot open channel to {}@{}"
-                .format(self.username, self.hostname),
+                f"Cannot open channel to {self.username}@{self.hostname}",
                 self.hostname)
             raise
 
@@ -450,15 +448,15 @@ class SshProxy:                                         # pylint: disable=r0902
         exists = await self.sftp_client.isdir(remotedir)
         if exists:
             self.debug_line(
-                "{} already exists - no need to create".format(remotedir))
+                f"{remotedir} already exists - no need to create")
             return True
         try:
-            self.debug_line("actual creation of {}".format(remotedir))
+            self.debug_line(f"actual creation of {remotedir}")
             await self.sftp_client.mkdir(remotedir)
             return True
         except asyncssh.sftp.SFTPError as exc:
             self.debug_line(
-                "Could not create {} on {}\n{}".format(remotedir, self, exc))
+                f"Could not create {remotedir} on {self}\n{exc}")
             raise exc
 
     # shows up first in doc
@@ -481,7 +479,7 @@ class SshProxy:                                         # pylint: disable=r0902
         await self.sftp_connect_lazy()
         try:
             self.debug_line(
-                "doing SFTP get with {} -> {}".format(remotepaths, localpath))
+                f"doing SFTP get with {remotepaths} -> {localpath}")
             await self.sftp_client.get(remotepaths, localpath, **kwds)
         except asyncssh.sftp.SFTPError as exc:
             self.debug_line(
@@ -510,7 +508,7 @@ class SshProxy:                                         # pylint: disable=r0902
         await self.sftp_connect_lazy()
         try:
             self.debug_line(
-                "doing SFTP put with {} -> {}".format(localpaths, remotepath))
+                f"doing SFTP put with {localpaths} -> {remotepath}")
             await self.sftp_client.put(localpaths, remotepath, **kwds)
         except asyncssh.sftp.SFTPError as exc:
             self.debug_line(

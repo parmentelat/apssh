@@ -20,10 +20,10 @@ class Tests(unittest.TestCase):
 
         for test_name in test_names:
             path = Path.home() / ".ssh" / test_name
-            print("========== importing key from {}".format(path))
+            print(f"========== importing key from {path}")
             sshkey = import_private_key(path)
-            print("-> got {}".format(sshkey))
+            print(f"-> got {sshkey}")
 
     def test_agent(self):
         for key in load_private_keys():
-            print("Found in agent: {}".format(key))
+            print(f"Found in agent: {key}")

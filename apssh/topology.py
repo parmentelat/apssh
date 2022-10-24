@@ -110,7 +110,7 @@ def topology_dot(scheduler):
     for distance in distances:
         for node in dist_dict[distance]:
             upstream = 0 if not node.gateway else indices[node.gateway]
-            result += '{} -> {}\n'.format(upstream, indices[node])
+            result += f'{upstream} -> {indices[node]}\n'
     result += '}\n'
     return result
 
@@ -157,7 +157,7 @@ def topology_as_dotfile(scheduler, filename):
     """
     with open(filename, 'w') as output:
         output.write(topology_dot(scheduler))
-    return "(Over)wrote {}".format(filename)
+    return f"(Over)wrote {filename}"
 
 
 def topology_as_pngfile(scheduler, filename):
@@ -180,9 +180,8 @@ def topology_as_pngfile(scheduler, filename):
     # of the .dot file; that is dangerous when using e.g.
     #    scheduler.export_as_pngfile(__file__)
     import os
-    dotfile = "{}.dot".format(filename)
-    pngfile = "{}.png".format(filename)
+    dotfile = f"{filename}.dot"
+    pngfile = f"{filename}.png"
     topology_as_dotfile(scheduler, dotfile)
-    os.system("dot -Tpng {} -o {}"
-              .format(dotfile, pngfile))
+    os.system(f"dot -Tpng {dotfile} -o {pngfile}")
     return pngfile

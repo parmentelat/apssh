@@ -205,9 +205,9 @@ class Tests(unittest.TestCase):
     ##########
     def test_file_loopback(self, size=20):
         # randomly create a 2**size chars file
-        b1 = "random-{}".format(size)
-        b2 = "loopback-{}".format(size)
-        b3 = "again-{}".format(size)
+        b1 = f"random-{size}"
+        b2 = f"loopback-{size}"
+        b3 = f"again-{size}"
         p1 = "tests/" + b1
         p2 = "tests/" + b2
         p3 = "tests/" + b3

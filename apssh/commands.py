@@ -60,7 +60,7 @@ class AbstractCommand:
         self.allowed_exits = allowed_exits
 
     def __repr__(self):
-        return "<{}: {}>".format(type(self).__name__, self.get_label_line())
+        return f"<{type(self).__name__}: {self.get_label_line()}>"
 
     ###
     async def co_run_remote(self, node):
@@ -100,8 +100,7 @@ class AbstractCommand:
         attempt = self.label_line()                     # pylint: disable=e1111
         if attempt is not None:
             return attempt
-        return "NO-LABEL-LINE (class {})"\
-            .format(type(self).__name__)
+        return f"NO-LABEL-LINE (class {type(self).__name__})"
 
     def label_line(self):
         """
@@ -231,14 +230,14 @@ class Run(AbstractCommand, CapturableMixin, StrLikeMixin):
         """
         self.start_capture()
         command = self._remote_command()
-        self._verbose_message(node, "Run: -> {}".format(command))
+        self._verbose_message(node, f"Run: -> {command}")
         # need an ssh connection
         connected = await node.connect_lazy()
         if not connected:
             return
         node_run = await node.run(command, x11_forwarding=self.x11)
         self._verbose_message(
-            node, "Run: {} <- {}".format(node_run, command))
+            node, f"Run: {node_run} <- {command}")
         self.end_capture()
         return node_run
 
@@ -248,10 +247,10 @@ class Run(AbstractCommand, CapturableMixin, StrLikeMixin):
         """
         self.start_capture()
         command = self._remote_command()
-        self._verbose_message(localnode, "Run: -> {}".format(command))
+        self._verbose_message(localnode, f"Run: -> {command}")
         retcod = await localnode.run(command, ignore_outputs=self.ignore_outputs)
         self._verbose_message(
-            localnode, "Run: {} <- {}".format(retcod, command))
+            localnode, f"Run: {retcod} <- {command}")
         self.end_capture()
         return retcod
 
@@ -361,8 +360,7 @@ class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
             # sequential is good enough
             for include in self.includes:
                 if not Path(include).exists():
-                    print("include file {} not found -- skipped"
-                          .format(include))
+                    print(f"include file {include} not found -- skipped")
                     continue
                 self._verbose_message(
                     node,
@@ -376,10 +374,10 @@ class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
         # trigger it
         self.start_capture()
         command = self._remote_command()
-        self._verbose_message(node, "RunLocalStuff: -> {}".format(command))
+        self._verbose_message(node, f"RunLocalStuff: -> {command}")
         node_run = await node.run(command, x11_forwarding=self.x11)
         self._verbose_message(
-            node, "RunLocalStuff: {} <- {}".format(node_run, command))
+            node, f"RunLocalStuff: {node_run} <- {command}")
         self.end_capture()
         return node_run
 
@@ -434,8 +432,7 @@ class RunScript(RunLocalStuff):
 
     async def co_install(self, node, remote_path):
         if not Path(self.local_script).exists():
-            raise OSError("RunScript : {} not found - bailing out"
-                          .format(self.local_script))
+            raise OSError(f"RunScript : {self.local_script} not found - bailing out")
         if not await node.put_file_s(
                 self.local_script, remote_path,
                 follow_symlinks=True):
@@ -522,12 +519,12 @@ class RunString(RunLocalStuff):
         return truncate_format.format(body)
 
     def label_line(self):
-        return "RunString: {} {}".format(self._truncated(), self._args_line())
+        return f"RunString: {self._truncated()} {self._args_line()}"
 
 
     async def co_install(self, node, remote_path):
         self._verbose_message(
-            node, "RunString: pushing script into {}".format(remote_path))
+            node, f"RunString: pushing script into {remote_path}")
         if not await node.put_string_script(
                 self.script_body, remote_path):
             return
@@ -571,11 +568,10 @@ class Pull(AbstractCommand):
         if len(paths) == 1:
             return paths[0]
         else:
-            return "paths[0] ... ({} total)".format(len(paths))
+            return f"paths[0] ... ({len(paths)} total)"
 
     def label_line(self):
-        return "Pull: {} into {}".\
-            format(self._remote_path(), self.localpath)
+        return f"Pull: {self._remote_path()} into {self.localpath}"
 
     async def co_run_remote(self, node):
         self._verbose_message(node, "Pull: remotepaths={}, localpath={}"
@@ -624,11 +620,10 @@ class Push(AbstractCommand):
         if len(paths) == 1:
             return paths[0]
         else:
-            return "paths[0] ... ({} total)".format(len(paths))
+            return f"paths[0] ... ({len(paths)} total)"
 
     def label_line(self):
-        return "Push: {} onto {}".\
-            format(self._local_path(), self.remotepath)
+        return f"Push: {self._local_path()} onto {self.remotepath}"
 
     async def co_run_remote(self, node):
         self._verbose_message(node, "Push: localpaths={}, remotepath={}"

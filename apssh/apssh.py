@@ -2,9 +2,8 @@
 
 """
 The apssh binary makes a rather straightforward use of the library,
-except maybe for the way it handles the fuzzy notion of targets,
-that can be defined as either hostnames directly, or from files that contain
-hostnames, or from directories that contain files named after hostnames.
+except maybe for the way it handles the fuzzy notion of targets
+which is the puspose of targets.py
 """
 
 # allow catch-all exceptions
@@ -14,7 +13,6 @@ hostnames, or from directories that contain files named after hostnames.
 # import sys
 # sys.path.insert(0, "../../asyncssh/")
 
-import os
 from pathlib import Path
 import argparse
 
@@ -22,17 +20,15 @@ from asynciojobs import Scheduler
 
 from .util import print_stderr
 from .config import (default_time_name, default_timeout, default_username,
-                     default_remote_workdir, local_config_dir)
-from .sshproxy import SshProxy
+                     default_remote_workdir)
 from .formatters import (RawFormatter, ColonFormatter,
                          TimeColonFormatter, SubdirFormatter,
                          TerminalFormatter)
 from .keys import load_private_keys
 from .version import __version__ as apssh_version
 from .sshjob import SshJob
-
 from .commands import Run, RunScript, RunString
-
+from .targets import Targets
 
 class Apssh:
     """
@@ -40,164 +36,15 @@ class Apssh:
     """
 
     def __init__(self):
-        self.proxies = []
         self.formatter = None
         #
+        self.proxies = None
         self.parser = None
         self.parsed_args = None
         self.loaded_private_keys = None
 
     def __repr__(self):
-        return "".join([str(p) for p in self.proxies])
-
-    # returns a valid Path object, or None
-    @staticmethod
-    def locate_file(file):                              # pylint: disable=C0111
-        path = Path(file)
-        if path.exists():
-            return path
-        if not path.is_absolute():
-            in_home = local_config_dir / path
-            # somehow pylints figured in_home is a PurePath
-            if in_home.exists():                        # pylint: disable=E1101
-                return in_home
-        return None
-
-    def analyze_target(self, target):
-        """
-        This function is used to guess the meaning of all the targets passed
-        to the ``apssh`` command through its ``-t/--target`` option.
-
-        Parameters:
-          target: a string passed to ``--target``
-
-        Returns:
-          (bool, list): a tuple, whose meaning is described below.
-
-        A target can be specified as either
-
-        * a **filename**. If it is a relative filename it is also searched
-          in ``~/.apssh``. If an existing file can be located this way,
-          and it can be parsed, then the returned object will be of the form::
-
-              True, [ hostname1, ...]
-
-        * a **directory name**. Here again the search is also done in
-          ``~/.apssh``. If an existing directory can be found,
-          all the simple files that are found immediately under the
-          specified directory are taken as hostnames, and in this case
-          ``analyze_target`` returns::
-
-              True, [ hostname1, ...]
-
-          This is notably for use together with the ``--mark`` option,
-          so that one can easily select reachable nodes only,
-          or just as easily exclude failing nodes.
-
-        * otherwise, the incoming target is then expected to be a string that
-          directly contains the hostnames, and so it is simply split along
-          white spaces, and the return code is then::
-
-              True, [ hostname1, ...]
-
-        * If anything goes wrong, return code is::
-
-              False, []
-
-          for example, this is the case when the file exists
-          but cannot be parsed - in which case it is probably not a hostname.
-
-        """
-        names = []
-        # located is a Path object - or None
-        located = self.locate_file(target)
-        if located:
-            if located.is_dir():
-                # directory
-                onlyfiles = [f for f in os.listdir(target)
-                             if (located / f).is_file()]
-                return True, onlyfiles
-            else:
-                # file
-                try:
-                    with located.open() as inputfile:
-                        for line in inputfile:
-                            line = line.strip()
-                            if line.startswith('#'):
-                                continue
-                            line = line.split()
-                            for token in line:
-                                names += token.split()
-                    return True, names
-                except FileNotFoundError as exc:
-                    return False, None
-                except Exception as exc:
-                    print_stderr(f"Unexpected exception when parsing file {target}, {exc}")
-                    if self.parsed_args.debug:
-                        import traceback
-                        traceback.print_exc()
-                    return False, None
-        else:
-            # string
-            return True, target.split()
-
-    # create tuples username, hostname
-    # use the username if already present in the target,
-    # otherwise the one specified with --username
-    def user_host(self, target):                        # pylint: disable=C0111
-        try:
-            user, hostname = target.split('@')
-            return user, hostname
-        except Exception:
-            return self.parsed_args.login, target
-
-    def create_proxies(self, gateway):                  # pylint: disable=C0111
-        # start with parsing excludes if any
-        excludes = set()
-        for exclude in self.parsed_args.excludes:
-            parsed, cli_excludes = self.analyze_target(exclude)
-            excludes.update(cli_excludes)
-        if self.parsed_args.dry_run:
-            print(f"========== {len(excludes)} excludes found:")
-            for exclude in excludes:
-                print(exclude)
-
-        # gather targets as mentioned in -t -x args
-        hostnames = []
-        actually_excluded = 0
-        # read input file(s)
-        for target in self.parsed_args.targets:
-            parsed, cli_targets = self.analyze_target(target)
-            if not parsed:
-                print(f"WARNING: ignoring target {target}")
-                continue
-            for target2 in cli_targets:
-                if target2 not in excludes:
-                    hostnames.append(target2)
-                else:
-                    actually_excluded += 1
-        if not hostnames:
-            print("it makes no sense to run apssh without any hostname")
-            self.parser.print_help()
-            exit(1)
-
-        if self.parsed_args.dry_run:
-            print(f"========== {len(hostnames)} hostnames selected"
-                  f"({actually_excluded} excluded):")
-            for hostname in hostnames:
-                print(hostname)
-            exit(0)
-
-        # create proxies
-        self.proxies = [SshProxy(hostname, username=username,
-                                 keys=self.loaded_private_keys,
-                                 gateway=gateway,
-                                 formatter=self.get_formatter(),
-                                 timeout=self.parsed_args.timeout,
-                                 debug=self.parsed_args.debug)
-                        for username, hostname in (self.user_host(target)
-                        for target in hostnames)]       # pylint: disable=c0330
-        return self.proxies
+        return "".join(str(p) for p in self.proxies)
 
     def get_formatter(self):                            # pylint: disable=C0111
         if self.formatter is None:
@@ -255,7 +102,7 @@ class Apssh:
             "-x", "--exclude", dest='excludes', action='append', default=[],
             help="""
             like --target, but for specifying exclusions;
-            for now there no wildcard mechanism is supported here;
+            for now no wildcard mechanism is supported here;
             also the order in which --target and --exclude options
             are mentioned does not matter;
             use --dry-run to only check for the list of applicable hosts
@@ -380,25 +227,26 @@ class Apssh:
             exit(1)
 
         # load keys
-        self.loaded_private_keys = load_private_keys(
+        private_keys = load_private_keys(
             self.parsed_args.keys, args.verbose or args.debug)
-        if not self.loaded_private_keys and not args.ok_if_no_key:
+        if not private_keys and not args.ok_if_no_key:
             print("Could not find any usable key - exiting")
             exit(1)
 
-        # initialize a gateway proxy if --gateway is specified
-        gateway = None
-        if args.gateway:
-            gwuser, gwhost = self.user_host(args.gateway)
-            gateway = SshProxy(hostname=gwhost, username=gwuser,
-                               keys=self.loaded_private_keys,
-                               formatter=self.get_formatter(),
-                               timeout=self.parsed_args.timeout,
-                               debug=self.parsed_args.debug)
+        try:
+            self.proxies = (Targets(
+                args.targets, args.gateway,
+                login=args.login, excludes=args.excludes,
+                private_keys=private_keys, formatter=self.get_formatter(),
+                timeout=args.timeout, debug=args.debug, dry_run=args.dry_run)
+            .create_proxies())
+        except ValueError:
+            print("it makes no sense to run apssh without any target")
+            self.parser.print_help()
+            exit(1)
 
-        proxies = self.create_proxies(gateway)
         if args.verbose:
-            print_stderr(f"apssh is working on {len(proxies)} nodes")
+            print_stderr(f"apssh is working on {len(self.proxies)} nodes")
 
         window = self.parsed_args.window
 
@@ -415,12 +263,11 @@ class Apssh:
             script = args.commands[0]
             if not Path(script).exists():
                 if args.verbose:
-                    print("Warning: file not found '{}'\n"
-                          "=> Using RunString instead".
-                          format(script))
+                    print(f"Warning: file not found '{script}'\n"
+                          f"=> Using RunString instead")
                 command_class = RunString
 
-        for proxy in proxies:
+        for proxy in self.proxies:
             scheduler.add(
                 SshJob(node=proxy,
                        critical=False,
@@ -444,7 +291,7 @@ class Apssh:
 
         # details on the individual retcods - a bit hacky
         if self.parsed_args.debug:
-            for proxy, result in zip(proxies, results):
+            for proxy, result in zip(self.proxies, results):
                 print(f"PROXY {proxy.hostname} -> {result}")
         # marks
         names = {0: '0ok', None: '1failed'}
@@ -452,18 +299,18 @@ class Apssh:
             # do we need to create the subdirs
             need_ok = [s for s in results if s == 0]
             if need_ok:
-                os.makedirs(f"{subdir}/{names[0]}", exist_ok=True)
+                (Path(subdir) / names[0]).mkdir(exist_ok=True)
             need_fail = [s for s in results if s != 0]
             if need_fail:
-                os.makedirs(f"{subdir}/{names[None]}", exist_ok=True)
+                (Path(subdir) / names[None]).mkdir(exist_ok=True)
 
-            for proxy, result in zip(proxies, results):
+            for proxy, result in zip(self.proxies, results):
                 prefix = names[0] if result == 0 else names[None]
                 mark_path = Path(subdir) / prefix / proxy.hostname
                 with mark_path.open("w") as mark:
                     mark.write(f"{result}\n")
 
-        # xxx - when in gateway mode, the gateway proxy never gets disconnected
+        # xxx - when in gateway mode, the gateway proxy never gets disconnected # pylint: disable=fixme
         # which probably is just fine
 
         # return 0 only if all hosts have returned 0

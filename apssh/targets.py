@@ -1,20 +1,49 @@
 """
-This internal class is in charge of dealing with the scope of a apssh session
-that can be defined as either hostnames directly, or from files that contain
-hostnames, or from directories that contain files named after hostnames.
+the Targets class
 """
 
 from pathlib import Path
+from collections import namedtuple
 
 from .util import print_stderr
 from .sshproxy import SshProxy
 from .config import local_config_dir
 
+# note explicit-direct
+# if we call apssh -t None->box -g gateway it means we want to
+# to go direct to box and bypass gateway
+# in that case we will use Endpoint(None, None) to describe the
+# gateway part of the Hop2 instance that goes with the None->box target
+Endpoint = namedtuple('Endpoint', ['hostname', 'username'])
+Hop2 = namedtuple('Hop2', ['final', 'gateway'])
+
+
 class Targets:
     """
-    from the main CLI options, and notably --target --gateway --exclude and --login,
+    This internal class is in charge of dealing with the scope of a apssh session
+
+    From the main CLI options, and notably --target --gateway --exclude and --login,
     this class can build a collection of the SshProxy (SshNode actually)
     instances that are targetted
+
+    * in its most simple form, a target is just a hostname
+
+    * when needed it can also be extended and use a syntax like this one
+    gwuser@gateway->user@hostname
+    which means reach account user on host hostname but in 2 hops, passing through
+    account gwuser on gateway
+
+    * there are also mechanisms that let define scopes in files (that contain targets)
+    or directories (whose simple files represent targets)
+    for deciding if a target is a hostname or a filename or a dirname, we simply search
+    for a file or directory with that name, either from ., or if it is a relative filename
+    it is also searched in ``~/.apssh``.
+
+    this feature with directories is notably for use together
+    with the ``--mark`` option, so that one can easily select
+    reachable nodes only, or just as easily exclude failing nodes.
+
+
     """
 
     def __init__(self, target_strs, gateway_str, *, login, excludes,
@@ -32,14 +61,44 @@ class Targets:
         #
         self.proxies = []
 
-        # initialize a gateway proxy if --gateway is specified
-        self.gateway = None
+        self.gateway_endpoint = None
         if gateway_str:
-            gwuser, gwhost = self.user_host(gateway_str)
-            self.gateway = SshProxy(
-                hostname=gwhost, username=gwuser,
-                keys=private_keys, formatter=formatter,
-                timeout=timeout, debug=debug)
+            self.gateway_endpoint = self.parse_endpoint(gateway_str)
+
+
+    # create a EndPoint (parse something like username@hostname)
+    # use the username if already present in the target,
+    # otherwise the one specified with --login
+    def parse_endpoint(self, target):                   # pylint: disable=C0111
+        if target == "None":
+            # explicit-direct
+            # this is how we mark that there is an explicit choice
+            # to go direct
+            return Endpoint(None, None)
+        try:
+            username, hostname = target.split('@')
+            return Endpoint(hostname, username)
+        except ValueError:
+            return Endpoint(target, self.login)
+
+    # create a Hop2 (parse something like gwuser@gwhostname->username@hostname)
+    def parse_hop2(self, target):
+        left, middle, right = target.partition('->')
+        if not middle:
+            left, middle, right = target.partition('→')
+        if not middle:
+            return Hop2(self.parse_endpoint(target), None)
+        else:
+            return Hop2(self.parse_endpoint(right), self.parse_endpoint(left))
+
+
+    @staticmethod
+    def split(text):
+        """
+        split along spaces or commas
+        """
+        return [x for commas in text.split(' ') for x in commas.split(',')]
+
 
     # returns a valid Path object, or None
     @staticmethod
@@ -64,50 +123,24 @@ class Targets:
           target: a string passed to ``--target``
 
         Returns:
-          (bool, list): a tuple, whose meaning is described below.
-
-        A target can be specified as either
-
-        * a **filename**. If it is a relative filename it is also searched
-          in ``~/.apssh``. If an existing file can be located this way,
-          and it can be parsed, then the returned object will be of the form::
-
-              True, [ hostname1, ...]
-
-        * a **directory name**. Here again the search is also done in
-          ``~/.apssh``. If an existing directory can be found,
-          all the simple files that are found immediately under the
-          specified directory are taken as hostnames, and in this case
-          ``analyze_target`` returns::
-
-              True, [ hostname1, ...]
-
-          This is notably for use together with the ``--mark`` option,
-          so that one can easily select reachable nodes only,
-          or just as easily exclude failing nodes.
-
-        * otherwise, the incoming target is then expected to be a string that
-          directly contains the hostnames, and so it is simply split along
-          white spaces, and the return code is then::
-
-              True, [ hostname1, ...]
-
-        * If anything goes wrong, return code is::
-
-              False, []
+          a list of Hop2 tuples
+          an empty list means something went wrong, and the target
+          could not be resolved
 
           for example, this is the case when the file exists
           but cannot be parsed - in which case it is probably not a hostname.
 
         """
-        names = []
+        targets = []
         # located is a Path object - or None
         located = self.locate_file(target)
         if located:
             if located.is_dir():
                 # directory
                 onlyfiles = [str(f.name) for f in located.iterdir() if f.is_file()]
-                return True, onlyfiles
+                return [Hop2(Endpoint(filename, self.login),
+                             self.gateway_endpoint)
+                        for filename in onlyfiles]
             else:
                 # file
                 try:
@@ -118,74 +151,98 @@ class Targets:
                                 continue
                             line = line.split()
                             for token in line:
-                                names += token.split()
-                    return True, names
+                                targets += token.split()
+                    return [self.parse_hop2(target) for target in targets]
                 except FileNotFoundError:
-                    return False, None
+                    return []
                 except Exception as exc:                     # pylint: disable=broad-except
                     print_stderr(f"Unexpected exception when parsing file {target}, {exc}")
                     if self.debug:
                         import traceback          # pylint: disable=import-outside-toplevel
                         traceback.print_exc()
-                    return False, None
+                    return []
         else:
             # string
-            return True, target.split()
+            return [self.parse_hop2(x) for x in self.split(target)]
 
 
-    # create tuples username, hostname
-    # use the username if already present in the target,
-    # otherwise the one specified with --username
-    def user_host(self, target):                        # pylint: disable=C0111
-        try:
-            user, hostname = target.split('@')
-            return user, hostname
-        except ValueError:
-            return self.login, target
-
-
-    def create_proxies(self):                  # pylint: disable=C0111
-        # start with parsing excludes if any
+    def create_proxies(self):                           # pylint: disable=C0111
+        # a set of endpoints (disregard gateways in the exclusion lists)
         excludes = set()
         for exclude in self.excludes:
-            parsed, cli_excludes = self.analyze_target(exclude)
-            excludes.update(cli_excludes)
+            excluded_endpoints = {hop2.final for hop2 in self.analyze_target(exclude)}
+            excludes.update(excluded_endpoints)
         if self.dry_run:
             print(f"========== {len(excludes)} excludes found:")
             for exclude in excludes:
                 print(exclude)
 
         # gather targets as mentioned in -t -x args
-        hostnames = []
+        hop2_s = []
         actually_excluded = 0
         # read input file(s)
         for target in self.target_strs:
-            parsed, cli_targets = self.analyze_target(target)
-            if not parsed:
+            target_hop2_s = self.analyze_target(target)
+            if not target_hop2_s:
                 print(f"WARNING: ignoring target {target}")
                 continue
-            for target2 in cli_targets:
-                if target2 not in excludes:
-                    hostnames.append(target2)
+            for hop2 in target_hop2_s:
+                if hop2.final not in excludes:
+                    hop2_s.append(hop2)
                 else:
                     actually_excluded += 1
-        if not hostnames:
+        if not hop2_s:
             raise ValueError("empty targets")
 
         if self.dry_run:
-            print(f"========== {len(hostnames)} hostnames selected"
-                  f"({actually_excluded} excluded):")
-            for hostname in hostnames:
-                print(hostname)
+            print(f"========== {len(hop2_s)} hostnames selected"
+                  f" ({actually_excluded} excluded):")
+            for hop2 in hop2_s:
+                print(hop2)
             exit(0)
 
+        # lazily create gateways
+        # explicit-direct
+        cache = {}
+
+        def lazy_create_gateway(endpoint):
+            hostname, username = endpoint
+            # explicit-direct
+            if hostname is None and username is None:
+                return None
+            cached = cache.get((hostname, username), None)
+            if cached:
+                return cached
+            gateway = SshProxy(
+                hostname=hostname, username=username,
+                keys=self.private_keys, formatter=self.formatter,
+                timeout=self.timeout, debug=self.debug)
+            cache[(hostname, username)] = gateway
+            return gateway
+
+
         # create proxies
-        self.proxies = [SshProxy(hostname, username=username,
-                                 keys=self.private_keys,
-                                 gateway=self.gateway,
-                                 formatter=self.formatter,
-                                 timeout=self.timeout,
-                                 debug=self.debug)
-                        for username, hostname in (self.user_host(target)
-                        for target in hostnames)]       # pylint: disable=c0330
+        self.proxies = []
+
+        for hop2 in hop2_s:
+            # print(f"dealing with {hop2=}")
+            hostname, username = hop2.final
+            gateway = None
+            if hop2.gateway:
+                gateway = lazy_create_gateway(hop2.gateway)
+            elif self.gateway_endpoint:
+                gateway = lazy_create_gateway(self.gateway_endpoint)
+            # xxx still buggy at this point:
+            # if there is a default gateway provided with -g
+            # and then one of the targets actually wants to override this
+            # and use a direct connection, then we're screwed
+
+            self.proxies.append(
+                SshProxy(hostname, username=username,
+                         keys=self.private_keys,
+                         gateway=gateway,
+                         formatter=self.formatter,
+                         timeout=self.timeout,
+                         debug=self.debug))
+
         return self.proxies

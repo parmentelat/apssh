@@ -1,4 +1,4 @@
-# pylint: disable=c0111
+# pylint: disable=c0111, unspecified-encoding
 
 from pathlib import Path
 

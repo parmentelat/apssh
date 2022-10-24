@@ -2,7 +2,7 @@
 the bulk of the tests for apssh
 """
 
-# pylint: disable=c0111,c0103,r0201,r0904,w0106
+# pylint: disable=c0111,c0103,r0201,r0904,w0106, unspecified-encoding
 
 import unittest
 
@@ -24,10 +24,10 @@ from .util import localuser, localhostname
 
 class Tests(unittest.TestCase):
 
-    def gateway(self, capture=False):
+    def localnode(self, capture=False, username=None):
         formatter = ColonFormatter() if not capture else CaptureFormatter()
         return SshNode(hostname='localhost',
-                       username=localuser(),
+                       username=username or localuser(),
                        # this is the default in fact
                        keys=load_private_keys(),
                        formatter=formatter)
@@ -47,17 +47,23 @@ class Tests(unittest.TestCase):
         else:
             self.assertNotEqual(job.result(), 0)
 
+    # is the local box properly configured ?
+    def test_local_users(self):
+        self.run_one_job(SshJob(node=self.localnode(username="root"), command="id"))
+        self.run_one_job(SshJob(node=self.localnode(username="apsshuser"), command="id"))
+
+
     # singular command =
     def test_s1(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=["echo", "SshJob with s1 command singular",
                             "$(hostname)"],
                    label='s1'))
 
     def test_s2(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=Run(
                        "echo", "SshJob with s2 command singular", "$(hostname)"
                        ),
@@ -65,7 +71,7 @@ class Tests(unittest.TestCase):
 
     def test_s3(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=[
                        Run("echo", "SshJob with s3 command singular",
                            "$(hostname)")],
@@ -73,55 +79,55 @@ class Tests(unittest.TestCase):
 
     def test_s4(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command="echo SshJob with s4 command singular $(hostname)",
                    label='s4'))
 
     # plural commands =
     def test_p1(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    commands=[
                        "echo", "SshJob p1 commands plural", "$(hostname)"],
                    label='p1'))
 
     def test_p2(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    commands=Run(
                        "echo", "SshJob p2 commands plural", "$(hostname)"),
                    label='p2'))
 
     def test_p3(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    commands=[Run(
                        "echo", "SshJob p3 commands plural", "$(hostname)")],
                    label='p3'))
 
     def test_p4(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    commands="echo SshJob with p4 commands plural $(hostname)",
                    label='p4'))
 
     # RunScript stuff
     def test_local_script(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=RunScript("tests/script.sh"),
                    label='script'))
 
     def test_local_script_includes(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=RunScript("tests/needsinclude.sh",
                                      includes=["tests/inclusion.sh"]),
                    label='script_includes'))
 
     def test_local_script_args(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=RunScript(
                        "tests/script-with-args.sh", "foo", "bar", "tutu"),
                    label='script'))
@@ -130,7 +136,7 @@ class Tests(unittest.TestCase):
     def test_mixed_commands(self):
         includes = ["tests/inclusion.sh"]
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    commands=[
                        RunScript("tests/needsinclude.sh",
                                  "run1", includes=includes),
@@ -149,7 +155,7 @@ class Tests(unittest.TestCase):
         with open("tests/script-with-args.sh") as reader:
             my_script = reader.read()
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=RunString(my_script, "foo", "bar", "tutu"),
                    label="test_local_string"))
 
@@ -157,7 +163,7 @@ class Tests(unittest.TestCase):
         with open("tests/needsinclude.sh") as reader:
             my_script = reader.read()
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    command=RunString(my_script, "some", "'more text'",
                                      remote_name="run-script-sample.sh",
                                      includes=["tests/inclusion.sh"]),
@@ -165,7 +171,7 @@ class Tests(unittest.TestCase):
 
     ##########
     def test_capture(self):
-        node = self.gateway(capture=True)
+        node = self.localnode(capture=True)
         self.run_one_job(
             SshJob(node=node,
                    command="hostname",
@@ -176,7 +182,7 @@ class Tests(unittest.TestCase):
 
     def test_logic1(self):
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    critical=False,
                    commands=[Run("false"),
                              Run("true")],
@@ -184,7 +190,7 @@ class Tests(unittest.TestCase):
             expected=False)
 
     def test_logic2(self):
-        todo = SshJob(node=self.gateway(),
+        todo = SshJob(node=self.localnode(),
                       commands=[Run("true"),
                                 Run("false")],
                       label="should fail")
@@ -208,7 +214,7 @@ class Tests(unittest.TestCase):
         self.random_file(p1, size)
 
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    commands=[
                        Run("mkdir -p apssh-tests"),
                        Push(localpaths=p1, remotepath="apssh-tests"),
@@ -225,7 +231,7 @@ class Tests(unittest.TestCase):
 
         # pull it again in another ssh connection
         self.run_one_job(
-            SshJob(node=self.gateway(),
+            SshJob(node=self.localnode(),
                    commands=[
                        Run("mkdir -p apssh-tests"),
                        Pull(remotepaths="apssh-tests/" +
@@ -269,7 +275,7 @@ class Tests(unittest.TestCase):
         scheduler = Scheduler()
         Sequence(
             SshJob(
-                node=self.gateway(),
+                node=self.localnode(),
                 verbose=True,
                 commands=[
                     Run("hostname"),
@@ -292,7 +298,7 @@ class Tests(unittest.TestCase):
     def test_x11(self):
         self.run_one_job(
             job=SshJob(
-                node=self.gateway(),
+                node=self.localnode(),
                 commands=[
                     Run("echo DISPLAY=$DISPLAY", x11=True),
                     Run("xlsfonts | head -5", x11=True),
@@ -301,7 +307,7 @@ class Tests(unittest.TestCase):
     def test_x11_shell(self):
         self.run_one_job(
             job=SshJob(
-                node=self.gateway(),
+                node=self.localnode(),
                 command=[
                     Run("echo DISPLAY=$DISPLAY", x11=True),
                     RunString("""#!/bin/bash
@@ -331,16 +337,16 @@ xterm
 
     # on faraday
     def xterm_1hop(self):
-        self._run_xterm_node_shell(self.gateway(), False)
+        self._run_xterm_node_shell(self.localnode(), False)
 
     def xterm_1hop_shell(self):
-        self._run_xterm_node_shell(self.gateway(), True)
+        self._run_xterm_node_shell(self.localnode(), True)
 
     # fit23 must be turned on
     def node_2hops(self):
         return SshNode(hostname="localhost",
                        username=localuser(),
-                       gateway=self.gateway())
+                       gateway=self.localnode())
 
     def xterm_2hops(self):
         self._run_xterm_node_shell(self.node_2hops(), False)
@@ -349,8 +355,10 @@ xterm
         self._run_xterm_node_shell(self.node_2hops(), True)
 
     def run_apssh(self, command_line_as_list):
-        exitcode = Apssh().main(*command_line_as_list)
+        apssh = Apssh()
+        exitcode = apssh.main(*command_line_as_list)
         self.assertEqual(exitcode, 0)
+        return apssh
 
     def test_targets1(self):
         argv = []
@@ -398,14 +406,131 @@ xterm
         self.run_apssh(argv)
 
     def test_targets6(self):
-        dir = Path("TARGETS-DIR")
-        dir.mkdir(exist_ok=True)
+        folder = Path("TARGETS-DIR")
+        folder.mkdir(exist_ok=True)
         names = ['localhost', '127.0.0.1']
         for name in names:
-            with (dir / name).open('w'):
+            with (folder / name).open('w'):
                 pass
         argv = []
-        argv += ['-l', localuser()]
-        argv += ['-t', str(dir)]
-        argv += ['hostname']
+        argv += ['-l', "apsshuser"]
+        argv += ['-t', str(folder)]
+        argv += ['id']
         self.run_apssh(argv)
+
+    # gwt = gateway-related targets
+    def test_gwt1(self):
+        argv = []
+        argv += ['-t', "localhost"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway, None)
+        self.assertEqual(apssh.proxies[0].hostname, "localhost")
+        self.assertEqual(apssh.proxies[0].username, localuser())
+
+    def test_gwt2(self):
+        argv = []
+        argv += ['-t', "localhost"]
+        argv += ['-l', "apsshuser"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway, None)
+        self.assertEqual(apssh.proxies[0].hostname, "localhost")
+        self.assertEqual(apssh.proxies[0].username, "apsshuser")
+
+    def test_gwt3(self):
+        argv = []
+        argv += ['-t', "localhost"]
+        argv += ['-g', "127.0.0.1"]
+        argv += ['--debug']
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway.hostname, "127.0.0.1")
+        self.assertEqual(apssh.proxies[0].gateway.username, localuser())
+        self.assertEqual(apssh.proxies[0].hostname, "localhost")
+        self.assertEqual(apssh.proxies[0].username, localuser())
+
+    def test_gwt4(self):
+        argv = []
+        argv += ['-t', "localhost"]
+        argv += ['-l', "apsshuser"]
+        argv += ['-g', "127.0.0.1"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway.hostname, "127.0.0.1")
+        self.assertEqual(apssh.proxies[0].gateway.username, "apsshuser")
+        self.assertEqual(apssh.proxies[0].hostname, "localhost")
+        self.assertEqual(apssh.proxies[0].username, "apsshuser")
+
+    def test_gwt5(self):
+        argv = []
+        argv += ['-t', "root@localhost"]
+        argv += ['-g', "root@127.0.0.1"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway.hostname, "127.0.0.1")
+        self.assertEqual(apssh.proxies[0].gateway.username, "root")
+        self.assertEqual(apssh.proxies[0].hostname, "localhost")
+        self.assertEqual(apssh.proxies[0].username, "root")
+
+    def test_gwt6(self):
+        argv = []
+        argv += ['-t', "127.0.0.1,127.0.0.3->127.0.0.2"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway, None)
+        self.assertEqual(apssh.proxies[0].hostname, "127.0.0.1")
+        self.assertEqual(apssh.proxies[0].username, localuser())
+
+        self.assertEqual(apssh.proxies[1].gateway.hostname, "127.0.0.3")
+        self.assertEqual(apssh.proxies[1].gateway.username, localuser())
+        self.assertEqual(apssh.proxies[1].hostname, "127.0.0.2")
+        self.assertEqual(apssh.proxies[1].username, localuser())
+
+    def test_gwt7(self):
+        argv = []
+        argv += ['-t', "127.0.0.1 127.0.0.3->127.0.0.2"]
+        argv += ['-g', "apsshuser@127.0.0.10"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway.hostname, "127.0.0.10")
+        self.assertEqual(apssh.proxies[0].gateway.username, "apsshuser")
+        self.assertEqual(apssh.proxies[0].hostname, "127.0.0.1")
+        self.assertEqual(apssh.proxies[0].username, localuser())
+
+        self.assertEqual(apssh.proxies[1].gateway.hostname, "127.0.0.3")
+        self.assertEqual(apssh.proxies[1].gateway.username, localuser())
+        self.assertEqual(apssh.proxies[1].hostname, "127.0.0.2")
+        self.assertEqual(apssh.proxies[1].username, localuser())
+
+    def test_gwt8(self):
+        argv = []
+        # this would mean use a direct connection for the first node
+        argv += ['-t', "None->127.0.0.1 127.0.0.3->127.0.0.2"]
+        argv += ['-g', "apsshuser@127.0.0.10"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway, None)
+        self.assertEqual(apssh.proxies[0].hostname, "127.0.0.1")
+        self.assertEqual(apssh.proxies[0].username, localuser())
+
+        self.assertEqual(apssh.proxies[1].gateway.hostname, "127.0.0.3")
+        self.assertEqual(apssh.proxies[1].gateway.username, localuser())
+        self.assertEqual(apssh.proxies[1].hostname, "127.0.0.2")
+        self.assertEqual(apssh.proxies[1].username, localuser())
+
+    def test_gwt9(self):
+        argv = []
+        # this would mean use a direct connection for the first node
+        argv += ['-t', "None→127.0.0.1 127.0.0.3→127.0.0.2"]
+        argv += ['-g', "apsshuser@127.0.0.10"]
+        argv += ['id']
+        apssh = self.run_apssh(argv)
+        self.assertEqual(apssh.proxies[0].gateway, None)
+        self.assertEqual(apssh.proxies[0].hostname, "127.0.0.1")
+        self.assertEqual(apssh.proxies[0].username, localuser())
+
+        self.assertEqual(apssh.proxies[1].gateway.hostname, "127.0.0.3")
+        self.assertEqual(apssh.proxies[1].gateway.username, localuser())
+        self.assertEqual(apssh.proxies[1].hostname, "127.0.0.2")
+        self.assertEqual(apssh.proxies[1].username, localuser())

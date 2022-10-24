@@ -313,7 +313,7 @@ class Apssh:
                 with mark_path.open("w") as mark:
                     mark.write(f"{result}\n")
 
-        # xxx - when in gateway mode, the gateway proxy never gets disconnected # pylint: disable=fixme
+        # xxx - when in gateway mode, the gateway proxy never gets disconnected
         # which probably is just fine
 
         # return 0 only if all hosts have returned 0

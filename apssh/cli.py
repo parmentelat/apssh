@@ -154,6 +154,8 @@ class Apssh(CliWithFormatterOptions):
             are mentioned does not matter;
             use --dry-run to only check for the list of applicable hosts
             """)
+        parser.add_argument("-L", "--list-targets", default=False, action='store_true',
+                            help="just lists the targets and exits")
         # global settings
         parser.add_argument(
             "-w", "--window", type=int, default=0,
@@ -263,6 +265,11 @@ class Apssh(CliWithFormatterOptions):
             print("it makes no sense to run apssh without any target")
             self.parser.print_help()
             sys.exit(1)
+
+        if args.list_targets:
+            for proxy in self.proxies:
+                print(proxy)
+            sys.exit(0)
 
         if args.verbose:
             print_stderr(f"apssh is working on {len(self.proxies)} nodes")

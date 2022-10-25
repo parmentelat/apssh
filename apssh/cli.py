@@ -31,7 +31,57 @@ from .sshjob import SshJob
 from .commands import Run, RunScript, RunString
 from .targets import Targets
 
-class Apssh:
+
+class CliWithFormatterOptions:
+    def __init__(self):
+        self.formatter = None
+
+    def add_formatter_options(self, parser):
+        parser.add_argument(
+            "-r", "--raw-format", default=False, action='store_true',
+            help="""
+            produce raw result, incoming lines are shown as-is without hostname
+            """)
+        parser.add_argument(
+            "-tc", "--time-colon-format", default=False, action='store_true',
+            help="equivalent to --format '@time@:@host@:@line@")
+        parser.add_argument(
+            "-f", "--format", default=None, action='store',
+            help="""specify output format, which may include
+* `strftime` formats like e.g. %%H-%%M, and one of the following:
+* @user@ for the remote username,
+* @host@ for the target hostname,
+* @line@ for the actual line output (which contains the actual newline)
+* @time@ is a shorthand for %%H-%%M-%%S""")
+        parser.add_argument(
+            "-o", "--out-dir", default=None,
+            help="specify directory where to store results")
+        parser.add_argument(
+            "-d", "--date-time", default=None, action='store_true',
+            help="use date-based directory to store results")
+
+    def _get_formatter(self, parsed_args):
+        if self.formatter is None:
+            verbose = parsed_args.verbose
+            if parsed_args.format:
+                self.formatter = TerminalFormatter(
+                    parsed_args.format, verbose=verbose)
+            elif parsed_args.raw_format:
+                self.formatter = RawFormatter(verbose=verbose)
+            elif parsed_args.time_colon_format:
+                self.formatter = TimeColonFormatter(verbose=verbose)
+            elif parsed_args.date_time:
+                run_name = default_time_name
+                self.formatter = SubdirFormatter(run_name, verbose=verbose)
+            elif parsed_args.out_dir:
+                self.formatter = SubdirFormatter(parsed_args.out_dir,
+                                                 verbose=verbose)
+            else:
+                self.formatter = ColonFormatter(verbose=verbose)
+        return self.formatter
+
+
+class Apssh(CliWithFormatterOptions):
     """
     Main class for apssh utility
     """
@@ -43,31 +93,12 @@ class Apssh:
         self.parser = None
         self.parsed_args = None
         self.loaded_private_keys = None
+        super().__init__()
 
     def __repr__(self):
         return "".join(str(p) for p in self.proxies)
 
-    def get_formatter(self):                            # pylint: disable=C0111
-        if self.formatter is None:
-            verbose = self.parsed_args.verbose
-            if self.parsed_args.format:
-                self.formatter = TerminalFormatter(
-                    self.parsed_args.format, verbose=verbose)
-            elif self.parsed_args.raw_format:
-                self.formatter = RawFormatter(verbose=verbose)
-            elif self.parsed_args.time_colon_format:
-                self.formatter = TimeColonFormatter(verbose=verbose)
-            elif self.parsed_args.date_time:
-                run_name = default_time_name
-                self.formatter = SubdirFormatter(run_name, verbose=verbose)
-            elif self.parsed_args.out_dir:
-                self.formatter = SubdirFormatter(self.parsed_args.out_dir,
-                                                 verbose=verbose)
-            else:
-                self.formatter = ColonFormatter(verbose=verbose)
-        return self.formatter
-
-    def main(self, *test_argv):  # pylint: disable=r0915,r0912,r0914,c0111
+    def main(self, *test_argv):       # pylint: disable=r0915,r0912,r0914,c0111
         self.parser = parser = argparse.ArgumentParser()
         # scope - on what hosts
         parser.add_argument(
@@ -106,6 +137,15 @@ class Apssh:
             see e.g. the --mark option
             """)
         parser.add_argument(
+            "-l", "--login", default=default_username,
+            help=f"remote user name - default is {default_username}")
+        parser.add_argument(
+            "-g", "--gateway", default=None,
+            help="""
+            specify a gateway for 2-hops ssh
+            - either hostname or username@hostname
+            """)
+        parser.add_argument(
             "-x", "--exclude", dest='excludes', action='append', default=[],
             help="""
             like --target, but for specifying exclusions;
@@ -127,9 +167,6 @@ class Apssh:
             help=f"specify connection timeout, default is {default_timeout}s")
         # ssh settings
         parser.add_argument(
-            "-l", "--login", default=default_username,
-            help=f"remote user name - default is {default_username}")
-        parser.add_argument(
             "-k", "--key", dest='keys',
             default=None, action='append', type=str,
             help="""
@@ -146,38 +183,10 @@ class Apssh:
             even with no key available.
             """
             )
-        parser.add_argument(
-            "-g", "--gateway", default=None,
-            help="""
-            specify a gateway for 2-hops ssh
-            - either hostname or username@hostname
-            """)
         # how to store results
-        # terminal
-        parser.add_argument(
-            "-r", "--raw-format", default=False, action='store_true',
-            help="""
-            produce raw result, incoming lines are shown as-is without hostname
-            """)
-        parser.add_argument(
-            "-tc", "--time-colon-format", default=False, action='store_true',
-            help="equivalent to --format '@time@:@host@:@line@")
-        parser.add_argument(
-            "-f", "--format", default=None, action='store',
-            help="""specify output format, which may include
-* `strftime` formats like e.g. %%H-%%M, and one of the following:
-* @user@ for the remote username,
-* @host@ for the target hostname,
-* @line@ for the actual line output (which contains the actual newline)
-* @time@ is a shorthand for %%H-%%M-%%S""")
-
+        # choice of formatter
+        self.add_formatter_options(parser)
         # filesystem
-        parser.add_argument(
-            "-o", "--out-dir", default=None,
-            help="specify directory where to store results")
-        parser.add_argument(
-            "-d", "--date-time", default=None, action='store_true',
-            help="use date-based directory to store results")
         parser.add_argument(
             "-m", "--mark", default=False, action='store_true',
             help="""
@@ -234,8 +243,7 @@ class Apssh:
             sys.exit(1)
 
         # load keys
-        private_keys = load_private_keys(
-            self.parsed_args.keys, args.verbose or args.debug)
+        private_keys = load_private_keys(args.keys, args.verbose or args.debug)
         if not private_keys and not args.ok_if_no_key:
             print("Could not find any usable key - exiting")
             sys.exit(1)
@@ -244,7 +252,8 @@ class Apssh:
             self.proxies = (Targets(
                 args.targets, args.gateway,
                 login=args.login, excludes=args.excludes,
-                private_keys=private_keys, formatter=self.get_formatter(),
+                private_keys=private_keys, 
+                formatter=self._get_formatter(self.parsed_args),
                 timeout=args.timeout, debug=args.debug, dry_run=args.dry_run)
             .create_proxies())
             if args.debug:
@@ -258,7 +267,7 @@ class Apssh:
         if args.verbose:
             print_stderr(f"apssh is working on {len(self.proxies)} nodes")
 
-        window = self.parsed_args.window
+        window = args.window
 
         # populate scheduler
         scheduler = Scheduler(verbose=args.verbose)
@@ -288,33 +297,31 @@ class Apssh:
         scheduler.jobs_window = window
         if not scheduler.run():
             scheduler.debrief()
-        results = [job.result() for job in scheduler.jobs]
+        retcods = [job.result() for job in scheduler.jobs]
 
         ##########
         # print on stdout the name of the output directory
         # useful mostly with -d :
-        subdir = self.get_formatter().run_name \
-            if isinstance(self.get_formatter(), SubdirFormatter) \
+        subdir = self._get_formatter(self.parsed_args).run_name \
+            if isinstance(self._get_formatter(self.parsed_args), SubdirFormatter) \
             else None
         if subdir:
             print(subdir)
 
         # details on the individual retcods - a bit hacky
-        if self.parsed_args.debug:
-            for proxy, result in zip(self.proxies, results):
+        if args.debug:
+            for proxy, result in zip(self.proxies, retcods):
                 print(f"PROXY {proxy.hostname} -> {result}")
         # marks
         names = {0: '0ok', None: '1failed'}
-        if subdir and self.parsed_args.mark:
+        if subdir and args.mark:
             # do we need to create the subdirs
-            need_ok = [s for s in results if s == 0]
-            if need_ok:
+            if any(retcod==0 for retcod in retcods):
                 (Path(subdir) / names[0]).mkdir(exist_ok=True)
-            need_fail = [s for s in results if s != 0]
-            if need_fail:
+            if any(retcod!=0 for retcod in retcods):
                 (Path(subdir) / names[None]).mkdir(exist_ok=True)
 
-            for proxy, result in zip(self.proxies, results):
+            for proxy, result in zip(self.proxies, retcods):
                 prefix = names[0] if result == 0 else names[None]
                 mark_path = Path(subdir) / prefix / proxy.hostname
                 with mark_path.open("w") as mark:
@@ -325,6 +332,4 @@ class Apssh:
 
         # return 0 only if all hosts have returned 0
         # otherwise, return 1
-        failures = [r for r in results if r != 0]
-        overall = 0 if not failures else 1
-        return overall
+        return 0 if all(retcod == 0 for retcod in retcods) else 1

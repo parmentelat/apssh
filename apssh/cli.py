@@ -20,8 +20,7 @@ import argparse
 from asynciojobs import Scheduler
 
 from .util import print_stderr
-from .config import (default_time_name, default_timeout, default_username,
-                     default_remote_workdir)
+from .config import (default_time_name, default_timeout, default_remote_workdir)
 from .formatters import (RawFormatter, ColonFormatter,
                          TimeColonFormatter, SubdirFormatter,
                          TerminalFormatter)
@@ -32,11 +31,14 @@ from .commands import Run, RunScript, RunString
 from .targets import Targets
 
 
-class CliWithFormatterOptions:
+class CliWithFormatterOptions:         # pylint: disable=too-few-public-methods
+    """
+    the code that deals with formatter-related options
+    """
     def __init__(self):
         self.formatter = None
 
-    def add_formatter_options(self, parser):
+    def add_formatter_options(self, parser): # pylint: disable=missing-function-docstring
         parser.add_argument(
             "-r", "--raw-format", default=False, action='store_true',
             help="""
@@ -100,60 +102,8 @@ class Apssh(CliWithFormatterOptions):
 
     def main(self, *test_argv):       # pylint: disable=r0915,r0912,r0914,c0111
         self.parser = parser = argparse.ArgumentParser()
-        # scope - on what hosts
-        parser.add_argument(
-            "-s", "--script", action='store_true', default=False,
-            help=f"""If this flag is present, the first element of the remote
-            command is assumed to be either the name of a local script, or,
-            if this is not found, the body of a local script, that will be
-            copied over before being executed remotely.
-            In this case it should be executable.
-
-            On the remote boxes it will be installed
-            and run in the {default_remote_workdir} directory.
-            """)
-        parser.add_argument(
-            "-i", "--includes", dest='includes', default=[], action='append',
-            help="""for script mode only : a list of local files that are
-            pushed remotely together with the local script,
-            and in the same location; useful when you want to
-            to run remotely a shell script that sources other files;
-            remember that on the remote end all files (scripts and includes)
-            end up in the same location""")
-        parser.add_argument(
-            "-t", "--target", dest='targets', action='append', default=[],
-            help="""
-            specify targets (additive); at least one is required
-
-            a basic target can be either
-            * hostname
-            * username@hostname
-            * gwuser@gwhost->username@hostname
-
-            complex targets can be
-            * a space- or comma- separated list of targets
-            * the name of a file containing targets
-            * the name of a directory containing files named after hostnames;
-            see e.g. the --mark option
-            """)
-        parser.add_argument(
-            "-l", "--login", default=default_username,
-            help=f"remote user name - default is {default_username}")
-        parser.add_argument(
-            "-g", "--gateway", default=None,
-            help="""
-            specify a gateway for 2-hops ssh
-            - either hostname or username@hostname
-            """)
-        parser.add_argument(
-            "-x", "--exclude", dest='excludes', action='append', default=[],
-            help="""
-            like --target, but for specifying exclusions;
-            for now no wildcard mechanism is supported here;
-            also the order in which --target and --exclude options
-            are mentioned does not matter;
-            use --dry-run to only check for the list of applicable hosts
-            """)
+        targets = Targets()
+        targets.add_target_options(parser)
         parser.add_argument("-L", "--list-targets", default=False, action='store_true',
                             help="just lists the targets and exits")
         # global settings
@@ -185,10 +135,9 @@ class Apssh(CliWithFormatterOptions):
             even with no key available.
             """
             )
-        # how to store results
-        # choice of formatter
+        # how to store results - choice of formatter
         self.add_formatter_options(parser)
-        # filesystem
+        # the mark option - not quite sure if that's going to stick
         parser.add_argument(
             "-m", "--mark", default=False, action='store_true',
             help="""
@@ -216,6 +165,26 @@ class Apssh(CliWithFormatterOptions):
             "-V", "--version",
             action='store_true', default=False)
 
+        # script mode
+        parser.add_argument(
+            "-s", "--script", action='store_true', default=False,
+            help=f"""If this flag is present, the first element of the remote
+            command is assumed to be either the name of a local script, or,
+            if this is not found, the body of a local script, that will be
+            copied over before being executed remotely.
+            In this case it should be executable.
+
+            On the remote boxes it will be installed
+            and run in the {default_remote_workdir} directory.
+            """)
+        parser.add_argument(
+            "-i", "--includes", dest='includes', default=[], action='append',
+            help="""for script mode only : a list of local files that are
+            pushed remotely together with the local script,
+            and in the same location; useful when you want to
+            to run remotely a shell script that sources other files;
+            remember that on the remote end all files (scripts and includes)
+            end up in the same location""")
         # the commands to run
         parser.add_argument(
             "commands", nargs=argparse.REMAINDER, type=str,
@@ -250,14 +219,10 @@ class Apssh(CliWithFormatterOptions):
             print("Could not find any usable key - exiting")
             sys.exit(1)
 
+        targets.init_from_args(args, private_keys, self._get_formatter(args))
+
         try:
-            self.proxies = (Targets(
-                args.targets, args.gateway,
-                login=args.login, excludes=args.excludes,
-                private_keys=private_keys, 
-                formatter=self._get_formatter(self.parsed_args),
-                timeout=args.timeout, debug=args.debug, dry_run=args.dry_run)
-            .create_proxies())
+            self.proxies = targets.create_proxies()
             if args.debug:
                 for proxy in self.proxies:
                     print(f"using target {proxy}")

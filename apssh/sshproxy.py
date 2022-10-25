@@ -221,13 +221,19 @@ class SshProxy:                                         # pylint: disable=r0902
         return text
 
     def __repr__(self):
-        text = self.__str__()
-        text += " [no key] " if not self.keys else f"[{len(self.keys)} keys] "
+        text = self.__str__() + " "
+        text += "[no key] " if not self.keys else f"[{len(self.keys)} keys] "
         if self.conn:
             text += "<-SSH->"
         if self.sftp_client:
             text += "<-SFTP->"
         return f"<{type(self).__name__} {text}>"
+
+    def __str__(self):
+        text = ("" if not self.gateway
+                else f"{self.gateway.__user_host__()} -> ")
+        text += self.__user_host__()
+        return text
 
     def debug_line(self, line):                         # pylint: disable=c0111
         if line.endswith("\n"):

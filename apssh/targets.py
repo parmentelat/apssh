@@ -2,9 +2,16 @@
 the Targets class
 """
 
+# we need an instance to add parser options, but at that point
+# we do not yet have the values to initialize this object
+# so it's kind of a 2-step init
+# pylint: disable=attribute-defined-outside-init
+
 import sys
 from pathlib import Path
 from collections import namedtuple
+
+from .config import default_username
 
 from .util import print_stderr
 from .sshproxy import SshProxy
@@ -43,31 +50,68 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
     this feature with directories is notably for use together
     with the ``--mark`` option, so that one can easily select
     reachable nodes only, or just as easily exclude failing nodes.
-
-
     """
 
-    def __init__(self, target_strs, gateway_str, *, login, excludes,
-                 private_keys, formatter,
-                 timeout, debug, dry_run):
-        self.target_strs = target_strs
-        self.gateway_str = gateway_str
-        self.login = login
-        self.excludes = excludes
-        self.private_keys = private_keys
-        self.formatter = formatter
-        self.timeout = timeout
-        self.debug = debug
-        self.dry_run = dry_run
-        #
+    def __init__(self):
         self.proxies = []
 
+
+    def add_target_options(self, parser): # pylint: disable=missing-function-docstring
+        parser.add_argument(
+            "-t", "--target", dest='targets', action='append', default=[],
+            help="""
+            specify targets (additive); at least one is required
+
+            a basic target can be either
+            * hostname
+            * username@hostname
+            * gwuser@gwhost->username@hostname
+
+            complex targets can be
+            * a space- or comma- separated list of targets
+            * the name of a file containing targets
+            * the name of a directory containing files named after hostnames;
+            see e.g. the --mark option
+            """)
+        parser.add_argument(
+            "-l", "--login", default=default_username,
+            help=f"remote user name - default is {default_username}")
+        parser.add_argument(
+            "-g", "--gateway", default=None,
+            help="""
+            specify a gateway for 2-hops ssh
+            - either hostname or username@hostname
+            """)
+        parser.add_argument(
+            "-x", "--exclude", dest='excludes', action='append', default=[],
+            help="""
+            like --target, but for specifying exclusions;
+            for now no wildcard mechanism is supported here;
+            also the order in which --target and --exclude options
+            are mentioned does not matter;
+            use --dry-run to only check for the list of applicable hosts
+            """)
+
+
+    # args is the output of a parser.parse_args()
+    def init_from_args(self, args, private_keys, formatter):
+        """
+        actual initialization, once parser.parse_args has been called
+        """
+        self.args = args
+        self.private_keys = private_keys
+        self.formatter = formatter
+        self.timeout = args.timeout
+        self.debug = args.debug
+        self.dry_run = args.dry_run
+        #
+
         self.gateway_endpoint = None
-        if gateway_str:
-            self.gateway_endpoint = self.parse_endpoint(gateway_str)
+        if self.args.gateway:
+            self.gateway_endpoint = self.parse_endpoint(self.args.gateway)
 
 
-    # create a EndPoint (parse something like username@hostname)
+    # create an EndPoint (parse something like [username@]hostname)
     # use the username if already present in the target,
     # otherwise the one specified with --login
     def parse_endpoint(self, target):                   # pylint: disable=C0111
@@ -80,9 +124,9 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
             username, hostname = target.split('@')
             return Endpoint(hostname, username)
         except ValueError:
-            return Endpoint(target, self.login)
+            return Endpoint(target, self.args.login)
 
-    # create a Hop2 (parse something like gwuser@gwhostname->username@hostname)
+    # create a Hop2 (parse something like [[gwuser@]gwhostname->][username@]hostname)
     def parse_hop2(self, target):                       # pylint: disable=C0111
         left, middle, right = target.partition('->')
         if not middle:
@@ -139,7 +183,7 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
             if located.is_dir():
                 # directory
                 onlyfiles = [str(f.name) for f in located.iterdir() if f.is_file()]
-                return [Hop2(Endpoint(filename, self.login),
+                return [Hop2(Endpoint(filename, self.args.login),
                              self.gateway_endpoint)
                         for filename in onlyfiles]
             else:
@@ -173,7 +217,7 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
         """
         # a set of endpoints (disregard gateways in the exclusion lists)
         excludes = set()
-        for exclude in self.excludes:
+        for exclude in self.args.excludes:
             excluded_endpoints = {hop2.final for hop2 in self.analyze_target(exclude)}
             excludes.update(excluded_endpoints)
         if self.dry_run:
@@ -185,7 +229,7 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
         hop2_s = []
         actually_excluded = 0
         # read input file(s)
-        for target in self.target_strs:
+        for target in self.args.targets:
             target_hop2_s = self.analyze_target(target)
             if not target_hop2_s:
                 print(f"WARNING: ignoring target {target}")

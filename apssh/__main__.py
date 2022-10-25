@@ -4,10 +4,12 @@
 The entry point for the apssh command
 """
 
+# pylint: disable=missing-function-docstring
+
 import sys
 
-from apssh.apssh import Apssh
+from apssh.cli import Apssh
 
 
-def main():                                             # pylint: disable=C0111
+def apssh():
     sys.exit(Apssh().main())

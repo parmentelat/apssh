@@ -18,7 +18,7 @@ from apssh import load_private_keys
 
 from apssh import ColonFormatter, CaptureFormatter
 
-from apssh.apssh import Apssh
+from apssh.cli import Apssh
 
 from .util import localuser, localhostname
 

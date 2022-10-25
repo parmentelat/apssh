@@ -81,5 +81,5 @@ Tools to deal with keys
 The apssh binary implementation
 ----------------------------------------
 
-.. automodule:: apssh.apssh
+.. automodule:: apssh.cli
 		:members:

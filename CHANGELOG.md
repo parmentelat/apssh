@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.21.1 - 2022 Oct 25
+
+* same but pylint'ed
+
 ## 0.21.0 - 2022 Oct 25
 
 * refactored the way targets are managed - in a separate targets module

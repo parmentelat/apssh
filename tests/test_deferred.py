@@ -61,7 +61,7 @@ class Tests(unittest.TestCase):
             run1=$(ssh localhost echo from-first-run)
             final=$(ssh localhost echo ${run1})
 
-        the 'final' variable is only needed 
+        the 'final' variable is only needed
         for checking everything went well
         """
 

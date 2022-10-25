@@ -2,6 +2,7 @@
 the Targets class
 """
 
+import sys
 from pathlib import Path
 from collections import namedtuple
 
@@ -18,7 +19,7 @@ Endpoint = namedtuple('Endpoint', ['hostname', 'username'])
 Hop2 = namedtuple('Hop2', ['final', 'gateway'])
 
 
-class Targets:
+class Targets:                   # pylint: disable=too-many-instance-attributes
     """
     This internal class is in charge of dealing with the scope of a apssh session
 
@@ -166,7 +167,10 @@ class Targets:
             return [self.parse_hop2(x) for x in self.split(target)]
 
 
-    def create_proxies(self):                           # pylint: disable=C0111
+    def create_proxies(self):               # pylint: disable=too-many-branches
+        """
+        build the proxies associated with that set of targets
+        """
         # a set of endpoints (disregard gateways in the exclusion lists)
         excludes = set()
         for exclude in self.excludes:
@@ -199,7 +203,7 @@ class Targets:
                   f" ({actually_excluded} excluded):")
             for hop2 in hop2_s:
                 print(hop2)
-            exit(0)
+            sys.exit(0)
 
         # lazily create gateways
         # explicit-direct

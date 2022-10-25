@@ -1,5 +1,6 @@
 # pylint: disable=c0111
 
+import os
 import asyncio
 
 from collections import defaultdict
@@ -78,7 +79,6 @@ async def co_close_ssh_in_scheduler(scheduler, manage_gateways=True):
         close_tasks = [node.close() for node in nodes]
         await asyncio.gather(*close_tasks)
 
-    # xxx what should this return ?
     return
 
 
@@ -105,8 +105,8 @@ def topology_dot(scheduler):
         for node in dist_dict[distance]:
             index += 1
             indices[node] = index
-            result += '{} [style="rounded", label="{}", shape="box"]\n'\
-                      .format(index, node.__user_host__())
+            result += (f'{index} [style="rounded",'
+                       f' label="{node.__user_host__()}", shape="box"]\n')
     for distance in distances:
         for node in dist_dict[distance]:
             upstream = 0 if not node.gateway else indices[node.gateway]
@@ -143,7 +143,7 @@ def topology_graph(scheduler):
       pip3 install graphviz     # for the python bindings
     """
 
-    from graphviz import Source
+    from graphviz import Source       # pylint: disable=import-outside-toplevel
     return Source(source=topology_dot(scheduler))
 
 
@@ -179,7 +179,6 @@ def topology_as_pngfile(scheduler, filename):
     # because with that method we cannot control the location
     # of the .dot file; that is dangerous when using e.g.
     #    scheduler.export_as_pngfile(__file__)
-    import os
     dotfile = f"{filename}.dot"
     pngfile = f"{filename}.png"
     topology_as_dotfile(scheduler, dotfile)

@@ -47,11 +47,11 @@ class _LineBasedSession(asyncssh.SSHClientSession):
             self.buffer += data
             # not adding a \n since it's already in there
             if self.proxy.debug:
-                print_stderr('BS {} DR: -> {} [[of type {}]]'.
-                             format(self.proxy.hostname, data, self.name))
-            chunks = [x for x in data.split("\n")]
+                print_stderr(
+                    f'BS {self.proxy.hostname} DR: -> {data} [[of type {self.name}]]')
+            chunks = list(data.split("\n"))
             # len(chunks) cannot be 0
-            assert chunks != [], "unexpected data received"
+            assert chunks, "unexpected data received"
             # what goes in the current line, if any
             current_line = chunks.pop(0)
             self.line += current_line
@@ -379,11 +379,12 @@ class SshProxy:                                         # pylint: disable=r0902
             self.conn = None
             try:
                 preserve.close()
+            # xxx harsh here too
             except Exception:
                 pass
 
             await preserve.wait_closed()
-            if self.client._connection_lost:
+            if self.client._connection_lost:  # pylint: disable=protected-access
                 raise ConnectionError("Close connection went wrong")
     async def close(self):
         """
@@ -483,8 +484,8 @@ class SshProxy:                                         # pylint: disable=r0902
             await self.sftp_client.get(remotepaths, localpath, **kwds)
         except asyncssh.sftp.SFTPError as exc:
             self.debug_line(
-                "Could not SFTP GET remotes {} to local {} - exception={}".
-                format(remotepaths, localpath, exc))
+                f"Could not SFTP GET remotes {remotepaths} to local {localpath}"
+                f" - exception={exc}")
             raise exc
         return True
 
@@ -512,8 +513,8 @@ class SshProxy:                                         # pylint: disable=r0902
             await self.sftp_client.put(localpaths, remotepath, **kwds)
         except asyncssh.sftp.SFTPError as exc:
             self.debug_line(
-                "Could not SFTP PUT local {} to remote {} - exception={}".
-                format(localpaths, remotepath, exc))
+                f"Could not SFTP PUT local {localpaths} to remote {remotepath}"
+                f" - exception={exc}")
             raise exc
         return True
 
@@ -543,7 +544,7 @@ class SshProxy:                                         # pylint: disable=r0902
                                              **kwds) as writer:
                 await writer.write(script_body)
         except Exception as exc:
-            self.debug_line("Could not create remotefile {} - exception={}"
-                            .format(remotefile, exc))
+            self.debug_line(
+                f"Could not create remotefile {remotefile} - exception={exc}")
             raise exc
         return True

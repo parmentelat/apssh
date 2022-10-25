@@ -1,4 +1,4 @@
-# pylint: disable=c0111
+# pylint: disable=too-many-locals
 
 import unittest
 
@@ -34,7 +34,7 @@ class Tests(unittest.TestCase):
                     core_sched = Scheduler()
                 top_sched = core_sched
                 current_sched = core_sched
-                for i in range(nested-1):
+                for _ in range(nested-1):
                     top_sched = Scheduler()
                     top_sched.add(current_sched)
                     current_sched = top_sched
@@ -92,7 +92,6 @@ class Tests(unittest.TestCase):
         verbose(f"AFTER RUN in={in1} out={out1}")
         self.assertEqual(in1-in0, expected)
         self.assertEqual(out1-out0, expected)
-        arg = nodes
 
         # cleanup
         close_ssh_in_scheduler(scheduler)
@@ -241,7 +240,7 @@ class Tests(unittest.TestCase):
                   nested_sched=(2, 1))
 
     def test_hop1_multi_sched_nested12(self):
-      self.hop1(c1=4, commands=4,
+        self.hop1(c1=4, commands=4,
                 nested_sched=(1, 2))
 
     def test_hop1_multi_sched_nested22(self):
@@ -313,7 +312,7 @@ class Tests(unittest.TestCase):
                   nested_sched=(1, 1))
 
     def test_hop2_222_sched_nested21(self):
-      self.hop2(c1=2, c2=2, commands=2,
+        self.hop2(c1=2, c2=2, commands=2,
                 nested_sched=(2, 1))
 
     def test_hop2_222_sched_nested12(self):

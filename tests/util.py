@@ -14,7 +14,7 @@ def localuser():
 
 def localhostname():
     command = "hostname"
-    completed = subprocess.run(command, stdout=subprocess.PIPE)
+    completed = subprocess.run(command, stdout=subprocess.PIPE, check=False)
     return (completed.stdout
             .decode(encoding='utf-8')
             .replace("\n", ""))
@@ -26,7 +26,7 @@ def localhostname():
 def produce_svg(scheduler, name):
     produce_graphic(scheduler, name, format="svg")
 
-def produce_graphic(scheduler, name, format):
+def produce_graphic(scheduler, name, format): # pylint: disable=redefined-builtin
 
     tests_dir = Path('tests')
     if tests_dir.exists():
@@ -99,10 +99,10 @@ def count_ssh_connections(incoming:bool, outgoing:bool):
     command = []
     command.append("ss")
     command += "-o state established".split()
-    filter = "( " + " or ".join(filters) + " )"
-    command.append(filter)
+    filter_text = "( " + " or ".join(filters) + " )"
+    command.append(filter_text)
 #    print(" ".join(command))
-    completed = subprocess.run(command, stdout=subprocess.PIPE)
+    completed = subprocess.run(command, stdout=subprocess.PIPE, check=False)
     count = 0
 #    lines = completed.stdout.decode(encoding='utf8').split('\n')
     for line in completed.stdout.split(b"\n"):

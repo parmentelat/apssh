@@ -121,7 +121,7 @@ class SshJob(AbstractJob):
             print(
                 "WARNING: SshJob created with command and commands"
                 " - keeping the latter only")
-            commands = commands
+            pass # commands = commands
         elif command:
             commands = command
         else:
@@ -166,10 +166,10 @@ class SshJob(AbstractJob):
         assert len(self.commands) >= 1
         assert all(isinstance(c, AbstractCommand) for c in self.commands)
 
-        # xxx assign a back-reference from commands to node
+        # assign a back-reference from commands to node
         # for the capture mechanism
-        for command in self.commands:
-          command.node = self.node
+        for actual_command in self.commands:
+            actual_command.node = self.node
 
         # used in repr_result() to show which command has failed
         self._errors = []

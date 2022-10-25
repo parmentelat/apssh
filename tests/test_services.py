@@ -1,5 +1,7 @@
 # pylint: disable=c0111, unspecified-encoding
 
+import time
+import os
 from pathlib import Path
 
 from unittest import TestCase
@@ -73,7 +75,6 @@ class Tests(TestCase):
         close_ssh_in_scheduler(scheduler)
 
         # let it settle for a short while, and check the process space
-        import time
         time.sleep(0.5)
         monitor.difference()
 
@@ -81,7 +82,6 @@ class Tests(TestCase):
         if news:
             print(f"we have {len(news)} new processes, {news}")
             ps_command = "ps " + "".join(str(pid) for pid in news)
-            import os
             os.system(ps_command)
 
         self.assertEqual(len(news), 0)

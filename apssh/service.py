@@ -4,8 +4,6 @@ The service module defines the ``Service`` helper class.
 
 # pylint: disable=r1705, r0902
 
-import random
-
 from .commands import Run
 from .deferred import Deferred
 
@@ -181,6 +179,9 @@ class Service:
     # since : see journalctl options
     # e.g. since="10 seconds ago"
     def journal_command(self, *, label=None, since=None, **kwds):
+        """
+        the command to run
+        """
         command = f"journalctl --unit {self.service_id}"
         if since:
             command += f' --since "{since}"'

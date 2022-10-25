@@ -61,7 +61,7 @@ class LocalNode:
     # pylint: disable=c0111
 
     def lines(self, bytes_chunk, datatype):
-        # xxx encoding should not be hard-wired
+        # encoding should probably not be hard-wired
         str_chunk = bytes_chunk.decode("utf-8")
         if str_chunk:
             if str_chunk[-1] == "\n":

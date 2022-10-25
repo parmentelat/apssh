@@ -85,8 +85,7 @@ class AbstractCommand:
 
     # extra messages go to stderr and are normally formatted
     def _verbose_message(self, node, message):
-        if not hasattr(self, 'verbose') \
-                or not self.verbose:                    # pylint: disable=E1101
+        if not hasattr(self, 'verbose') or not self.verbose: # pylint: disable=no-member
             return
         if not message.endswith("\n"):
             message += "\n"
@@ -124,13 +123,13 @@ class CapturableMixin:
     def __init__(self, capture: Capture):
         self.capture = capture
 
-    def start_capture(self):
+    def start_capture(self):       # pylint: disable=missing-function-docstring
         if self.capture:
             # store the node's formatter and set aside for later
             self.previous_formatter = self.node.formatter
             self.node.formatter = CaptureFormatter()
 
-    def end_capture(self):
+    def end_capture(self):         # pylint: disable=missing-function-docstring
         if self.capture:
             # get result from transient formatter
             captured = self.node.formatter.get_capture()
@@ -178,7 +177,7 @@ class Run(AbstractCommand, CapturableMixin, StrLikeMixin):
       x11 (bool): if set, will enable X11 forwarding, so that a X11 program
         running remotely ends on the local DISPLAY.
       ignore_outputs(bool): this flag is currently used only when running on a LocalNode();
-        in that case, the stdout and stderr of the forked process are bound to /dev/null, 
+        in that case, the stdout and stderr of the forked process are bound to /dev/null,
         and no attempt is made to read them; this has turned out a useful trick when
         spawning port-forwarding ssh sessions
 
@@ -328,9 +327,9 @@ class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
         Abstract method to explain how to remotely install
         a local script before we can invoke it
         """
-        print("coroutine method co_install"
-              " needs to be redefined on your RunLocalStuff subclass"
-              " args are {} and {}".format(node, remote_path))
+        print(f"coroutine method co_install"
+              f" needs to be redefined on your RunLocalStuff subclass"
+              f" args are {node} and {remote_path}")
 
     async def co_run_remote(self, node):
         """
@@ -364,8 +363,7 @@ class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
                     continue
                 self._verbose_message(
                     node,
-                    "RunLocalStuff: pushing include {} in {}"
-                    .format(include, default_remote_workdir))
+                    f"RunLocalStuff: pushing include {include} in {default_remote_workdir}")
                 if not await node.put_file_s(
                         include, default_remote_workdir + "/",
                         follow_symlinks=True):
@@ -574,8 +572,9 @@ class Pull(AbstractCommand):
         return f"Pull: {self._remote_path()} into {self.localpath}"
 
     async def co_run_remote(self, node):
-        self._verbose_message(node, "Pull: remotepaths={}, localpath={}"
-                              .format(self.remotepaths, self.localpath))
+        self._verbose_message(
+            node,
+            f"Pull: remotepaths={self.remotepaths}, localpath={self.localpath}")
         await node.sftp_connect_lazy()
         await node.get_file_s(self.remotepaths, self.localpath,
                               *self.args, **self.kwds)
@@ -626,8 +625,9 @@ class Push(AbstractCommand):
         return f"Push: {self._local_path()} onto {self.remotepath}"
 
     async def co_run_remote(self, node):
-        self._verbose_message(node, "Push: localpaths={}, remotepath={}"
-                              .format(self.localpaths, self.remotepath))
+        self._verbose_message(
+            node,
+            f"Push: localpaths={self.localpaths}, remotepath={self.remotepath}")
         await node.sftp_connect_lazy()
         await node.put_file_s(self.localpaths, self.remotepath,
                               *self.args, **self.kwds)

@@ -1,7 +1,8 @@
+"""
+the YamlLoader class - how to create objects in YAML
+"""
+
 from pathlib import Path
-from platform import node
-import re
-from webbrowser import get
 
 import yaml
 
@@ -10,7 +11,7 @@ from jinja2 import Template, DebugUndefined
 
 from asynciojobs import Scheduler
 import apssh
-from apssh import Run, RunScript, RunString, SshJob, formatters, Push, Pull
+from apssh import SshJob, formatters # , Run, RunScript, RunString, Push, Pull
 from apssh.nodes import SshNode
 
 
@@ -80,7 +81,7 @@ class YamlLoader:
             yaml_input = WARNING.format(original=self.path) + yaml_input
 
             # save this intermediate form for debugging or documentation
-            if save_intermediate is None or save_intermediate == False:
+            if save_intermediate is None or save_intermediate is False:
                 pass
             elif isinstance(save_intermediate, (str, Path)):
                 if isinstance(save_intermediate, str):
@@ -101,12 +102,12 @@ class YamlLoader:
                     print(f"save_intermediate: (over)wrote plain YAML {intermediate_path}")
 
 
-        D = yaml.safe_load(yaml_input)
+        D = yaml.safe_load(yaml_input)           # pylint: disable=invalid-name
 
         if 'nodes' not in D:
-            raise ValueError(f"file {self.filename} has no 'nodes' key")
+            raise ValueError(f"file {self.path} has no 'nodes' key")
         if 'jobs' not in D:
-            raise ValueError(f"file {self.filename} has no 'jobs' key")
+            raise ValueError(f"file {self.path} has no 'jobs' key")
 
         nodes_map = self._load_nodes(D['nodes'])
 
@@ -115,7 +116,7 @@ class YamlLoader:
 
 
     @staticmethod
-    def _dict_to_class(D, cls, mandatories, optionals):
+    def _dict_to_class(D, cls, mandatories, optionals): # pylint: disable=invalid-name
         """
         translate a dict to a class object
 
@@ -151,7 +152,7 @@ class YamlLoader:
             if transformer:
                 value = transformer(value)
             constructor_args[key] = value
-        object = cls(**constructor_args)
+        obj = cls(**constructor_args)
         # assign optionals
         for key, transformer in optionals.items():
             if key not in D:
@@ -159,9 +160,9 @@ class YamlLoader:
             value = D[key]
             if transformer:
                 value = transformer(value)
-            setattr(object, key, value)
+            setattr(obj, key, value)
 
-        return (D['id'], object)
+        return (D['id'], obj)
 
 
     def _load_nodes(self, nodes_list):
@@ -192,8 +193,8 @@ class YamlLoader:
             'verbose': None,
         }
         for node_dict in nodes_list:
-            id, node = self._dict_to_class(node_dict, SshNode, mandatories, optionals)
-            nodes_map[id] = node
+            job_id, node = self._dict_to_class(node_dict, SshNode, mandatories, optionals)
+            nodes_map[job_id] = node
 
         return nodes_map
 
@@ -212,7 +213,7 @@ class YamlLoader:
                 return {jobs_map[req_id] for req_id in req_id_s}
 
         def create_commands(commands_list):
-            def get_and_delete_key(D, k, default=None):
+            def get_and_delete_key(D, k, default=None): # pylint: disable=invalid-name
                 if k in D:
                     result = D[k]
                     del D[k]
@@ -240,13 +241,13 @@ class YamlLoader:
                         argv = get_and_delete_key(command_dict, 'argv')
                         command_instance = cls(*argv, **command_dict)
                     elif classname == 'RunScript':
-                        p1 = get_and_delete_key(command_dict, 'local_script')
+                        text = get_and_delete_key(command_dict, 'local_script')
                         args = get_and_delete_key(command_dict, 'args', [])
-                        command_instance = cls(p1, *args, **command_dict)
+                        command_instance = cls(text, *args, **command_dict)
                     elif classname == 'RunString':
-                        p1 = get_and_delete_key(command_dict, 'script_body')
+                        text = get_and_delete_key(command_dict, 'script_body')
                         args = get_and_delete_key(command_dict, 'args', [])
-                        command_instance = cls(p1, *args, **command_dict)
+                        command_instance = cls(text, *args, **command_dict)
                 elif classname in ('Push, Pull'):
                     command_instance = cls(**command_dict)
 
@@ -268,8 +269,8 @@ class YamlLoader:
         }
 
         for job_dict in jobs_list:
-            id, job = self._dict_to_class(job_dict, SshJob, mandatories, optionals)
-            jobs_map[id] = job
+            job_id, job = self._dict_to_class(job_dict, SshJob, mandatories, optionals)
+            jobs_map[job_id] = job
 
         scheduler = Scheduler()
         # insert jobs in scheduler

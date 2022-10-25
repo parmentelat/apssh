@@ -13,6 +13,7 @@ which is the puspose of targets.py
 # import sys
 # sys.path.insert(0, "../../asyncssh/")
 
+import sys
 from pathlib import Path
 import argparse
 
@@ -224,20 +225,20 @@ class Apssh:
         # helpers
         if args.version:
             print(f"apssh version {apssh_version}")
-            exit(0)
+            sys.exit(0)
 
         # manual check for REMAINDER
         if not args.commands:
             print("You must provide a command to be run remotely")
             parser.print_help()
-            exit(1)
+            sys.exit(1)
 
         # load keys
         private_keys = load_private_keys(
             self.parsed_args.keys, args.verbose or args.debug)
         if not private_keys and not args.ok_if_no_key:
             print("Could not find any usable key - exiting")
-            exit(1)
+            sys.exit(1)
 
         try:
             self.proxies = (Targets(
@@ -252,7 +253,7 @@ class Apssh:
         except ValueError:
             print("it makes no sense to run apssh without any target")
             self.parser.print_help()
-            exit(1)
+            sys.exit(1)
 
         if args.verbose:
             print_stderr(f"apssh is working on {len(self.proxies)} nodes")
@@ -319,8 +320,8 @@ class Apssh:
                 with mark_path.open("w") as mark:
                     mark.write(f"{result}\n")
 
-        # xxx - when in gateway mode, the gateway proxy never gets disconnected
-        # which probably is just fine
+        # xxx - when in gateway mode, the gateway proxy # pylint: disable=fixme
+        # never gets disconnected, which probably is just fine
 
         # return 0 only if all hosts have returned 0
         # otherwise, return 1

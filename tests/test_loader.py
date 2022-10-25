@@ -45,7 +45,8 @@ class Tests(unittest.TestCase):
             },
         }
 
-        nodes_map, jobs_map, s = YamlLoader(p).load_with_maps(jinja_variables)
+        nodes_map, jobs_map, s = (            # pylint: disable=unused-variable
+            YamlLoader(p).load_with_maps(jinja_variables))
 
         self.assertTrue( len(s) == 8)
         init_demo = jobs_map['init_demo']
@@ -79,8 +80,9 @@ class Tests(unittest.TestCase):
                 print(f"removing {e}")
                 e.unlink()
 
-        nodes_map, jobs_map, s = YamlLoader(p).load_with_maps(
-            jinja_variables, save_intermediate=True)
+        nodes_map, jobs_map, s = (            # pylint: disable=unused-variable
+            YamlLoader(p).load_with_maps(
+                jinja_variables, save_intermediate=True))
         e1, e2 = expected()
         self.assertTrue(e1.exists())
 

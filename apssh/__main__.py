@@ -4,8 +4,10 @@
 The entry point for the apssh command
 """
 
+import sys
+
 from apssh.apssh import Apssh
 
 
 def main():                                             # pylint: disable=C0111
-    exit(Apssh().main())
+    sys.exit(Apssh().main())

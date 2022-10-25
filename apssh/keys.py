@@ -49,7 +49,7 @@ def import_private_key(filename):
                 except asyncssh.KeyImportError:
                     print("Wrong passphrase")
         except Exception:                               # pylint: disable=w0703
-            import traceback
+            import traceback          # pylint: disable=import-outside-toplevel
             traceback.print_exc()
         return sshkey
 

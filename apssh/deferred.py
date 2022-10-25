@@ -103,7 +103,7 @@ class Deferred:
         return (f"Deferred with template {self.template} "
                 f"and variables {self.variables} ")
 
-    def replace(self, old, new):
+    def replace(self, old, new):   # pylint: disable=missing-function-docstring
 
         # NOTE: this method is **not** meant to be called explicitly
         #
@@ -125,7 +125,7 @@ class Deferred:
 
 
 # will become a dataclass
-class Capture:
+class Capture:                         # pylint: disable=too-few-public-methods
     """
     this class has no logic in itself, it is only a convenience so that
     one can specify where a Run command should store it's captured output

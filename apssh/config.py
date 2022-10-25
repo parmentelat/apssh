@@ -3,7 +3,7 @@ default config for apssh
 """
 
 # it's not desirable to change these names to uppercase
-# pylint: disable=c0103, c0326
+# pylint: disable=c0103
 
 import os
 import pwd

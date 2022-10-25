@@ -7,6 +7,7 @@ In its capture form, it allows to retain this output
 in memory instead of printing on the fly.
 """
 
+import sys
 import time
 import os
 from pathlib import Path
@@ -270,10 +271,10 @@ class SubdirFormatter(VerboseFormatter):
                     out.write(f"Connected ({msg}) to {username}@{hostname}\n")
         except OSError as exc:
             print_stderr(f"File permission problem {exc}")
-            exit(1)
+            sys.exit(1)
         except Exception as exc:                        # pylint: disable=W0703
             print_stderr(f"Unexpected error {type(exc)} {exc}")
-            exit(1)
+            sys.exit(1)
 
     def line(self, line, datatype, hostname):
         filename = self.filename(hostname, datatype)

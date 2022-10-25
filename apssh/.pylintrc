@@ -1,0 +1,10 @@
+# https://www.codeac.io/documentation/pylint-configuration.html
+
+[MESSAGES CONTROL]
+
+disable=
+    unspecified-encoding,
+    f-string-without-interpolation,
+    no-else-return,
+    no-else-raise,
+    unnecessary-pass

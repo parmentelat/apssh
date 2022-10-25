@@ -2,7 +2,7 @@
 Testing basic functions of apssh
 """
 
-# pylint: disable=c0111,c0103, r0201
+# pylint: disable=c0103
 
 import unittest
 

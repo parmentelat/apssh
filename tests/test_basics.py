@@ -2,7 +2,7 @@
 the bulk of the tests for apssh
 """
 
-# pylint: disable=c0111,c0103,r0201,r0904,w0106, unspecified-encoding
+# pylint: disable=c0111,c0103,r0904,w0106, unspecified-encoding
 
 import unittest
 

@@ -91,10 +91,16 @@ class Apssh:
         parser.add_argument(
             "-t", "--target", dest='targets', action='append', default=[],
             help="""
-            specify targets (additive); at least one is required;
-            each target can be either
-            * a space-separated list of hostnames
-            * the name of a file containing hostnames
+            specify targets (additive); at least one is required
+
+            a basic target can be either
+            * hostname
+            * username@hostname
+            * gwuser@gwhost->username@hostname
+
+            complex targets can be
+            * a space- or comma- separated list of targets
+            * the name of a file containing targets
             * the name of a directory containing files named after hostnames;
             see e.g. the --mark option
             """)

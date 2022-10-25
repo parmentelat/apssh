@@ -82,7 +82,7 @@ class Targets:
             return Endpoint(target, self.login)
 
     # create a Hop2 (parse something like gwuser@gwhostname->username@hostname)
-    def parse_hop2(self, target):
+    def parse_hop2(self, target):                       # pylint: disable=C0111
         left, middle, right = target.partition('->')
         if not middle:
             left, middle, right = target.partition('→')
@@ -232,10 +232,6 @@ class Targets:
                 gateway = lazy_create_gateway(hop2.gateway)
             elif self.gateway_endpoint:
                 gateway = lazy_create_gateway(self.gateway_endpoint)
-            # xxx still buggy at this point:
-            # if there is a default gateway provided with -g
-            # and then one of the targets actually wants to override this
-            # and use a direct connection, then we're screwed
 
             self.proxies.append(
                 SshProxy(hostname, username=username,

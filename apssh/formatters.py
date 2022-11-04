@@ -44,7 +44,7 @@ class Formatter:
 
     * ``RawFormatter``:    shortcut for ``TerminalFormatter("@line@")``.
 
-    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("@host@:@line@")``.
+    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("@host-short@:@line@")``.
 
     * ``SubdirFormatter``: stores in ``<subdir>/<hostname>``
       all outputs from that host.
@@ -59,9 +59,27 @@ class Formatter:
         self.format = custom_format.replace("@time@", self.time_format)
 
     def _formatted_line(self, line, hostname=None, username=None):
+        # for issue #18 - rather use shortname (like hostname -s)
+        def shorten(hostname):
+            if not hostname:
+                return ""
+            short = hostname.split('.')[0]
+            if not short:
+                return ""
+            # do not modify IP addresses
+            try:
+                int(short)
+                # it looks like an IP
+                return hostname
+            except ValueError:
+                # not an IP, use it
+                return short
+
+        hostname_short = shorten(hostname)
         return (time.strftime(self.format)
                    .replace("@line@", line)
                    .replace("@host@", hostname or "")
+                   .replace("@host-short@", hostname_short or "")
                    .replace("@user@", f"{username}@" if username else ""))
 
     # pylint: disable=c0111
@@ -173,6 +191,7 @@ class TerminalFormatter(VerboseFormatter):
 
     * ``@line@`` the raw contents as sent over the wire
     * ``@host@@`` the remote hostname
+    * ``@host-short@@`` the remote hostname (short version, domain name stripped)
     * ``@user@`` the remote username
     * ``%H`` and similar time-oriented formats, applied to the time
       of local reception; refer to strftime_ for
@@ -200,20 +219,20 @@ class RawFormatter(TerminalFormatter):
 
 class ColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="@host@:@line@")
+    TerminalFormatter(format="@host-short@:@line@")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "@user@@host@:@line@", verbose)
+        TerminalFormatter.__init__(self, "@user@@host-short@:@line@", verbose)
 
 
 class TimeColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="%H-%M-%S:@host@:@line@")
+    TerminalFormatter(format="%H-%M-%S:@host-short@:@line@")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "@time@:@host@:@line@", verbose)
+        TerminalFormatter.__init__(self, "@time@:@host-short@:@line@", verbose)
 
 ########################################
 

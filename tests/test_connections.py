@@ -101,7 +101,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(in1-in0, 0)
         self.assertEqual(out1-out0, 0)
 
-    def hop2(self, hostname='localhost', username=None,
+    def hop2(self, hostname='localhost.localdomain', username=None,
              *, c1=1, c2=1, commands=1, s_command='echo hop2-{}-{}-{}',
              nested_sched=(0, 1)):
         """

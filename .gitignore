@@ -5,3 +5,12 @@ graphic-loader*
 tests/test_*
 apssh.egg-info
 tests/service*
+20*
+TARGET*
+.vscode
+dist
+examples
+RANDOM*
+dummy*
+loopback*
+again-*

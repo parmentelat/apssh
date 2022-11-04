@@ -231,7 +231,7 @@ class SshProxy:                                         # pylint: disable=r0902
 
     def __str__(self):
         text = ("" if not self.gateway
-                else f"{self.gateway.__user_host__()} -> ")
+                else f"{self.gateway.__user_host__()}->")
         text += self.__user_host__()
         return text
 

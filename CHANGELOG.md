@@ -1,5 +1,12 @@
 # ChangeLog
 
+## 0.22.0 - 2022 Nov 4
+
+* (issue #16) option -L to list targets
+* (issue #17) failed connections are notified on stderr
+* (issue #18) use short hostname (no domain name) to display outputs
+* issues cleanup
+
 ## 0.21.1 - 2022 Oct 25
 
 * same but pylint'ed

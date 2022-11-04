@@ -24,6 +24,21 @@ def ensure_visible(exc):                                # pylint: disable=c0111
         exc = repr(exc)
     return exc
 
+def shorten_hostname(hostname):
+    if not hostname:
+        return ""
+    short = hostname.split('.')[0]
+    if not short:
+        return ""
+    # do not modify IP addresses
+    try:
+        int(short)
+        # it looks like an IP
+        return hostname
+    except ValueError:
+        # not an IP, use it
+        return short
+
 ##############################
 
 
@@ -60,22 +75,7 @@ class Formatter:
 
     def _formatted_line(self, line, hostname=None, username=None):
         # for issue #18 - rather use shortname (like hostname -s)
-        def shorten(hostname):
-            if not hostname:
-                return ""
-            short = hostname.split('.')[0]
-            if not short:
-                return ""
-            # do not modify IP addresses
-            try:
-                int(short)
-                # it looks like an IP
-                return hostname
-            except ValueError:
-                # not an IP, use it
-                return short
-
-        hostname_short = shorten(hostname)
+        hostname_short = shorten_hostname(hostname)
         return (time.strftime(self.format)
                    .replace("@line@", line)
                    .replace("@host@", hostname or "")

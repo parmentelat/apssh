@@ -23,7 +23,7 @@ from .util import print_stderr
 from .config import (default_time_name, default_timeout, default_remote_workdir)
 from .formatters import (RawFormatter, ColonFormatter,
                          TimeColonFormatter, SubdirFormatter,
-                         TerminalFormatter)
+                         TerminalFormatter, shorten_hostname)
 from .keys import load_private_keys
 from .version import __version__ as apssh_version
 from .sshjob import SshJob
@@ -280,10 +280,6 @@ class Apssh(CliWithFormatterOptions):
         if subdir:
             print(subdir)
 
-        # details on the individual retcods - a bit hacky
-        if args.debug:
-            for proxy, result in zip(self.proxies, retcods):
-                print(f"PROXY {proxy.hostname} -> {result}")
         # marks
         names = {0: '0ok', None: '1failed'}
         if subdir and args.mark:
@@ -299,7 +295,15 @@ class Apssh(CliWithFormatterOptions):
                 with mark_path.open("w") as mark:
                     mark.write(f"{result}\n")
 
-        # xxx - when in gateway mode, the gateway proxy # pylint: disable=fixme
+        # details on the individual retcods - a bit hacky
+        for proxy, result in zip(self.proxies, retcods):
+            if result is None:
+                print_stderr(f"{shorten_hostname(proxy.hostname)}: apssh WARNING - no result !")
+            elif args.debug:
+                print(f"DEBUG: PROXY {proxy.hostname} -> {result}")
+
+
+        # when in gateway mode, the gateway proxy # pylint: disable=fixme
         # never gets disconnected, which probably is just fine
 
         # return 0 only if all hosts have returned 0

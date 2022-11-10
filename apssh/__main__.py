@@ -8,8 +8,11 @@ The entry point for the apssh command
 
 import sys
 
-from apssh.cli import Apssh
+from apssh.cli import Apssh, Appush
 
 
 def apssh():
     sys.exit(Apssh().main())
+
+def appush():
+    sys.exit(Appush().main())

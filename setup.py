@@ -54,6 +54,7 @@ setuptools.setup(
     entry_points={
         'console_scripts': [
             'apssh = apssh.__main__:apssh',
+            'appush = apssh.__main__:appush',
         ]
     },
 

@@ -16,6 +16,7 @@ which is the purpose of targets.py
 import sys
 from pathlib import Path
 import argparse
+import re
 
 from asynciojobs import Scheduler
 
@@ -27,7 +28,7 @@ from .formatters import (RawFormatter, ColonFormatter,
 from .keys import load_private_keys
 from .version import __version__ as apssh_version
 from .sshjob import SshJob
-from .commands import Run, RunScript, RunString
+from .commands import Run, RunScript, RunString, Push
 from .targets import Targets
 
 
@@ -92,16 +93,13 @@ class Apssh(CliWithFormatterOptions):
         self.formatter = None
         #
         self.proxies = None
-        self.parser = None
-        self.parsed_args = None
-        self.loaded_private_keys = None
         super().__init__()
 
     def __repr__(self):
         return "".join(str(p) for p in self.proxies)
 
     def main(self, *test_argv):       # pylint: disable=r0915,r0912,r0914,c0111
-        self.parser = parser = argparse.ArgumentParser()
+        parser = argparse.ArgumentParser()
         targets = Targets()
         targets.add_target_options(parser)
         parser.add_argument("-L", "--list-targets", default=False, action='store_true',
@@ -113,11 +111,11 @@ class Apssh(CliWithFormatterOptions):
             specify how many connections can run simultaneously;
             default is no limit
             """)
+        # ssh settings
         parser.add_argument(
             "-c", "--connect-timeout", dest='timeout',
             type=float, default=default_timeout,
             help=f"specify connection timeout, default is {default_timeout}s")
-        # ssh settings
         parser.add_argument(
             "-k", "--key", dest='keys',
             default=None, action='append', type=str,
@@ -198,9 +196,9 @@ class Apssh(CliWithFormatterOptions):
             """)
 
         if test_argv:
-            args = self.parsed_args = parser.parse_args(test_argv)
+            args = parser.parse_args(test_argv)
         else:
-            args = self.parsed_args = parser.parse_args()
+            args = parser.parse_args()
 
         # helpers
         if args.version:
@@ -228,7 +226,7 @@ class Apssh(CliWithFormatterOptions):
                     print(f"using target {proxy}")
         except ValueError:
             print("it makes no sense to run apssh without any target")
-            self.parser.print_help()
+            parser.print_help()
             sys.exit(1)
 
         if args.list_targets:
@@ -274,8 +272,8 @@ class Apssh(CliWithFormatterOptions):
         ##########
         # print on stdout the name of the output directory
         # useful mostly with -d :
-        subdir = self._get_formatter(self.parsed_args).run_name \
-            if isinstance(self._get_formatter(self.parsed_args), SubdirFormatter) \
+        subdir = self._get_formatter(args).run_name \
+            if isinstance(self._get_formatter(args), SubdirFormatter) \
             else None
         if subdir:
             print(subdir)
@@ -309,3 +307,129 @@ class Apssh(CliWithFormatterOptions):
         # return 0 only if all hosts have returned 0
         # otherwise, return 1
         return 0 if all(retcod == 0 for retcod in retcods) else 1
+
+
+class Copy:
+    """
+    the common ancestor for Appush and Appull
+    """
+
+    re_remote = re.compile(r"\{\w*\}:(?P<remote>.*)")
+
+    @staticmethod
+    def is_remote(location):
+        """
+        check if location contains a {h}: magic string and if so,
+        returns the remote location
+        """
+        if match := Copy.re_remote.match(location):
+            return match.group('remote')
+        else:
+            return None
+
+
+class Appush(CliWithFormatterOptions, Copy):
+
+    def __init__(self):
+        self.formatter = None
+        #
+        self.proxies =  None
+
+    def main(self):
+        parser = argparse.ArgumentParser()
+        targets = Targets()
+        targets.add_target_options(parser)
+        # global settings
+        parser.add_argument(
+            "-w", "--window", type=int, default=0,
+            help="""
+            specify how many connections can run simultaneously;
+            default is no limit
+            """)
+        # ssh settings
+        parser.add_argument(
+            "-c", "--connect-timeout", dest='timeout',
+            type=float, default=default_timeout,
+            help=f"specify connection timeout, default is {default_timeout}s")
+        parser.add_argument(
+            "-k", "--key", dest='keys',
+            default=None, action='append', type=str,
+            help="""
+            The default is for apssh to locate an ssh-agent
+            through the SSH_AUTH_SOCK environment variable.
+            If this cannot be found, or has an empty set of keys,
+            then the user should specify private key file(s) - additive
+            """)
+        # how to store results - choice of formatter
+        self.add_formatter_options(parser)
+
+        # usual stuff
+        parser.add_argument(
+            "-n", "--dry-run", default=False, action='store_true',
+            help="Only show details on selected hostnames")
+        parser.add_argument(
+            "-v", "--verbose",
+            action='store_true', default=False)
+        parser.add_argument(
+            "-D", "--debug", action='store_true', default=False)
+        ### xxx todo add other relevant options
+
+
+        parser.add_argument(
+            "local_files", nargs='+',
+            help="the local file(s) to transfer")
+        parser.add_argument(
+            "remote_location", nargs=1,
+            help="where to transfer them on the remote targets;"
+                 " must be of the form {}:remote-location;"
+                 " if several local files are provided,"
+                 " should be an existing directory"
+        )
+
+
+        args = parser.parse_args()
+
+        # if args.version:
+        #     print(f"apssh version {apssh_version}")
+        #     sys.exit(0)
+
+        # check files
+        if not (remote := self.is_remote(args.remote_location[0])):
+            print(f"{args.remote_location} is not remote (should contain {{}}:)")
+            parser.print_help()
+            sys.exit(1)
+
+        local_files = args.local_files
+
+        private_keys = load_private_keys(args.keys, args.verbose)
+        if not private_keys and not args.ok_if_no_key:
+            print("Could not find any usable key - exiting")
+            sys.exit(1)
+
+        targets.init_from_args(args, private_keys, self._get_formatter(args))
+        try:
+            self.proxies = targets.create_proxies()
+            if args.debug:
+                for proxy in self.proxies:
+                    print(f"using target {proxy}")
+        except ValueError:
+            print("it makes no sense to run apssh without any target")
+            parser.print_help()
+            sys.exit(1)
+
+        window = args.window
+
+        # populate scheduler
+        scheduler = Scheduler(verbose=args.verbose)
+        for proxy in self.proxies:
+            scheduler.add(
+                SshJob(node=proxy,
+                       critical=False,
+                       command=Push(local_files, remote,
+                       verbose=args.verbose or args.debug)))
+
+        # pylint: disable=w0106
+        scheduler.jobs_window = window
+        if not scheduler.run():
+            scheduler.debrief()
+        retcods = [job.result() for job in scheduler.jobs]

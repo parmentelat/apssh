@@ -3,7 +3,7 @@
 """
 The apssh CLI command makes a rather straightforward use of the library,
 except maybe for the way it handles the fuzzy notion of targets
-which is the puspose of targets.py
+which is the purpose of targets.py
 """
 
 # allow catch-all exceptions

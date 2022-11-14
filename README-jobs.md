@@ -9,7 +9,7 @@ Originally, the idea presented here addresses the needs of experimental research
 ## `asynciojobs`
 `asynciojobs` is a microscopic orchestration scheduler for asyncio-based jobs - [see this link for details](https://github.com/parmentelat/asynciojobs/blob/master/README.ipynb). This is the part that handles the temporal relationships.
 
-## `apssh.SshJob`
+## `apssh`
 
 `apssh` ships with a few classes that allow you to write jobs in the `asynciojobs`  sense, that will actually run on ssh:
 

@@ -119,7 +119,7 @@ then if you run
 it will cause the `true` command to be run on hosts `host1`, `host2`, `host3`,
 `foo`, `bar`, `toto` and `tutu`.
 
-### Excluding names : the `-x` or `--exclude` option    
+### Excluding names : the `-x` or `--exclude` option
 
 You can specify exclusions, the logic is exactly the same; exclusions are parsed
 first, and then hostnames from `--target` will be actually added only if they
@@ -152,7 +152,7 @@ $ apssh -w 50 -t tons-of-nodes true
 
 ## Users and keys
 
-### Running under a different user       
+### Running under a different user
 
 Use `-l` or `--login` to specify a specific username globally; or give a
 specific user on a given hostname with `@`

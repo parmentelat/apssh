@@ -297,7 +297,7 @@ class Apssh(CliWithFormatterOptions):
         # details on the individual retcods - a bit hacky
         for proxy, result in zip(self.proxies, retcods):
             if result is None:
-                print_stderr(f"{shorten_hostname(proxy.hostname)}: apssh WARNING - no result !")
+                print_stderr(f"{proxy.hostname}: apssh WARNING - no result !")
             elif args.debug:
                 print(f"DEBUG: PROXY {proxy.hostname} -> {result}")
 

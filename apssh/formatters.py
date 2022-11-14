@@ -59,7 +59,7 @@ class Formatter:
 
     * ``RawFormatter``:    shortcut for ``TerminalFormatter("{line}")``.
 
-    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("{host-short}:{line}")``.
+    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("{host}:{line}")``.
 
     * ``SubdirFormatter``: stores in ``<subdir>/<hostname>``
       all outputs from that host.
@@ -78,8 +78,8 @@ class Formatter:
         hostname_short = shorten_hostname(hostname)
         return (time.strftime(self.format)
                    .replace("{line}", line)
-                   .replace("{host}", hostname or "")
-                   .replace("{host-short}", hostname_short or "")
+                   .replace("{fqdn}", hostname or "")
+                   .replace("{host}", hostname_short or "")
                    .replace("{user}", f"{username}@" if username else ""))
 
     # pylint: disable=c0111
@@ -190,8 +190,8 @@ class TerminalFormatter(VerboseFormatter):
     that are expanded when actual traffic occurs.
 
     * ``{line}`` the raw contents as sent over the wire
-    * ``{host}`` the remote hostname
-    * ``{host-short}`` the remote hostname (short version, domain name stripped)
+    * ``{fqdn}`` the remote hostname
+    * ``{host}`` the remote hostname (short version, domain name stripped)
     * ``{user}`` the remote username
     * ``%H`` and similar time-oriented formats, applied to the time
       of local reception; refer to strftime_ for
@@ -219,20 +219,20 @@ class RawFormatter(TerminalFormatter):
 
 class ColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="{host-short}:{line}")
+    TerminalFormatter(format="{host}:{line}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "{user}{host-short}:{line}", verbose)
+        TerminalFormatter.__init__(self, "{user}{host}:{line}", verbose)
 
 
 class TimeColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="%H-%M-%S:{host-short}:{line}")
+    TerminalFormatter(format="%H-%M-%S:{host}:{line}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "{time}:{host-short}:{line}", verbose)
+        TerminalFormatter.__init__(self, "{time}:{host}:{line}", verbose)
 
 ########################################
 

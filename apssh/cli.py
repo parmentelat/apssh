@@ -53,7 +53,8 @@ class CliWithFormatterOptions:         # pylint: disable=too-few-public-methods
             help="""specify output format, which may include
 * `strftime` formats like e.g. %%H-%%M, and one of the following:
 * {user} for the remote username,
-* {host} for the target hostname,
+* {fqdn} for the target hostname,
+* {host} for the target hostname with its domain stripped,
 * {line} for the actual line output (which contains the actual newline)
 * {time} is a shorthand for %%H-%%M-%%S""")
         parser.add_argument(

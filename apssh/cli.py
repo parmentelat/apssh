@@ -47,15 +47,15 @@ class CliWithFormatterOptions:         # pylint: disable=too-few-public-methods
             """)
         parser.add_argument(
             "-tc", "--time-colon-format", default=False, action='store_true',
-            help="equivalent to --format '@time@:@host@:@line@")
+            help="equivalent to --format '{time}:{host}:{line}")
         parser.add_argument(
             "-f", "--format", default=None, action='store',
             help="""specify output format, which may include
 * `strftime` formats like e.g. %%H-%%M, and one of the following:
-* @user@ for the remote username,
-* @host@ for the target hostname,
-* @line@ for the actual line output (which contains the actual newline)
-* @time@ is a shorthand for %%H-%%M-%%S""")
+* {user} for the remote username,
+* {host} for the target hostname,
+* {line} for the actual line output (which contains the actual newline)
+* {time} is a shorthand for %%H-%%M-%%S""")
         parser.add_argument(
             "-o", "--out-dir", default=None,
             help="specify directory where to store results")

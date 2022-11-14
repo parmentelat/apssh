@@ -57,9 +57,9 @@ class Formatter:
     * ``TerminalFormatter``: prints out line based on a format
       (time, hostname, actual line...).
 
-    * ``RawFormatter``:    shortcut for ``TerminalFormatter("@line@")``.
+    * ``RawFormatter``:    shortcut for ``TerminalFormatter("{line}")``.
 
-    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("@host-short@:@line@")``.
+    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("{host-short}:{line}")``.
 
     * ``SubdirFormatter``: stores in ``<subdir>/<hostname>``
       all outputs from that host.
@@ -71,16 +71,16 @@ class Formatter:
     time_format = "%H-%M-%S"
 
     def __init__(self, custom_format):
-        self.format = custom_format.replace("@time@", self.time_format)
+        self.format = custom_format.replace("{time}", self.time_format)
 
     def _formatted_line(self, line, hostname=None, username=None):
         # for issue #18 - rather use shortname (like hostname -s)
         hostname_short = shorten_hostname(hostname)
         return (time.strftime(self.format)
-                   .replace("@line@", line)
-                   .replace("@host@", hostname or "")
-                   .replace("@host-short@", hostname_short or "")
-                   .replace("@user@", f"{username}@" if username else ""))
+                   .replace("{line}", line)
+                   .replace("{host}", hostname or "")
+                   .replace("{host-short}", hostname_short or "")
+                   .replace("{user}", f"{username}@" if username else ""))
 
     # pylint: disable=c0111
 
@@ -189,14 +189,14 @@ class TerminalFormatter(VerboseFormatter):
     The ``custom_format`` attribute can contain the following keywords,
     that are expanded when actual traffic occurs.
 
-    * ``@line@`` the raw contents as sent over the wire
-    * ``@host@@`` the remote hostname
-    * ``@host-short@@`` the remote hostname (short version, domain name stripped)
-    * ``@user@`` the remote username
+    * ``{line}`` the raw contents as sent over the wire
+    * ``{host}`` the remote hostname
+    * ``{host-short}`` the remote hostname (short version, domain name stripped)
+    * ``{user}`` the remote username
     * ``%H`` and similar time-oriented formats, applied to the time
       of local reception; refer to strftime_ for
       a list of supported formats.
-    * ``@time@`` is a shortcut for ``"%H-%M-%S"``.
+    * ``{time}`` is a shortcut for ``"%H-%M-%S"``.
 
     .. _strftime: https://docs.python.org/\
 3/library/datetime.html#strftime-and-strptime-behavior
@@ -210,29 +210,29 @@ class TerminalFormatter(VerboseFormatter):
 
 class RawFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="@line@")
+    TerminalFormatter(format="{line}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "@line@", verbose)
+        TerminalFormatter.__init__(self, "{line}", verbose)
 
 
 class ColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="@host-short@:@line@")
+    TerminalFormatter(format="{host-short}:{line}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "@user@@host-short@:@line@", verbose)
+        TerminalFormatter.__init__(self, "{user}{host-short}:{line}", verbose)
 
 
 class TimeColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="%H-%M-%S:@host-short@:@line@")
+    TerminalFormatter(format="%H-%M-%S:{host-short}:{line}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "@time@:@host-short@:@line@", verbose)
+        TerminalFormatter.__init__(self, "{time}:{host-short}:{line}", verbose)
 
 ########################################
 
@@ -259,7 +259,7 @@ class SubdirFormatter(VerboseFormatter):
 
     def __init__(self, run_name, *, verbose=True):
         self.run_name = run_name
-        VerboseFormatter.__init__(self, "@line@", verbose)
+        VerboseFormatter.__init__(self, "{line}", verbose)
         self._dir_checked = False
 
     # pylint: disable=c0111
@@ -327,7 +327,7 @@ class CaptureFormatter(VerboseFormatter):
 
     """
 
-    def __init__(self, custom_format="@line@", verbose=True):
+    def __init__(self, custom_format="{line}", verbose=True):
         VerboseFormatter.__init__(self, custom_format, verbose)
         self.start_capture()
 

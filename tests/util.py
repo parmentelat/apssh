@@ -108,7 +108,6 @@ def count_ssh_connections(incoming:bool, outgoing:bool):
     for line in completed.stdout.split(b"\n"):
         if not line or b"Netid" in line:
             continue
-#        print(f"counting line {line}")
         count += 1
     return count
 

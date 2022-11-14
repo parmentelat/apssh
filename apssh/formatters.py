@@ -57,9 +57,9 @@ class Formatter:
     * ``TerminalFormatter``: prints out line based on a format
       (time, hostname, actual line...).
 
-    * ``RawFormatter``:    shortcut for ``TerminalFormatter("{line}")``.
+    * ``RawFormatter``:    shortcut for ``TerminalFormatter("{linenl}")``.
 
-    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("{host}:{line}")``.
+    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("{host}:{linenl}")``.
 
     * ``SubdirFormatter``: stores in ``<subdir>/<hostname>``
       all outputs from that host.
@@ -73,11 +73,16 @@ class Formatter:
     def __init__(self, custom_format):
         self.format = custom_format.replace("{time}", self.time_format)
 
-    def _formatted_line(self, line, hostname=None, username=None):
-        # for issue #18 - rather use shortname (like hostname -s)
+    def _formatted_line(self, linenl, hostname=None, username=None):
         hostname_short = shorten_hostname(hostname)
+        if linenl and linenl[-1] == "\n":
+            line = linenl[:-1]
+        else:
+            line = linenl
         return (time.strftime(self.format)
                    .replace("{line}", line)
+                   .replace("{linenl}", linenl)
+                   .replace("{nl}", "\n")
                    .replace("{fqdn}", hostname or "")
                    .replace("{host}", hostname_short or "")
                    .replace("{user}", f"{username}@" if username else ""))
@@ -189,7 +194,9 @@ class TerminalFormatter(VerboseFormatter):
     The ``custom_format`` attribute can contain the following keywords,
     that are expanded when actual traffic occurs.
 
-    * ``{line}`` the raw contents as sent over the wire
+    * ``{linenl}`` the raw contents as sent over the wire
+    * ``{line}`` like {linenl} but without the trailing newline
+    * ``{nl}`` a litteral newline
     * ``{fqdn}`` the remote hostname
     * ``{host}`` the remote hostname (short version, domain name stripped)
     * ``{user}`` the remote username
@@ -210,29 +217,29 @@ class TerminalFormatter(VerboseFormatter):
 
 class RawFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="{line}")
+    TerminalFormatter(format="{linenl}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "{line}", verbose)
+        TerminalFormatter.__init__(self, "{linenl}", verbose)
 
 
 class ColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="{host}:{line}")
+    TerminalFormatter(format="{host}:{linenl}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "{user}{host}:{line}", verbose)
+        TerminalFormatter.__init__(self, "{user}{host}:{linenl}", verbose)
 
 
 class TimeColonFormatter(TerminalFormatter):
     """
-    TerminalFormatter(format="%H-%M-%S:{host}:{line}")
+    TerminalFormatter(format="%H-%M-%S:{host}:{linenl}")
     """
 
     def __init__(self, *, verbose=True):
-        TerminalFormatter.__init__(self, "{time}:{host}:{line}", verbose)
+        TerminalFormatter.__init__(self, "{time}:{host}:{linenl}", verbose)
 
 ########################################
 
@@ -259,7 +266,7 @@ class SubdirFormatter(VerboseFormatter):
 
     def __init__(self, run_name, *, verbose=True):
         self.run_name = run_name
-        VerboseFormatter.__init__(self, "{line}", verbose)
+        VerboseFormatter.__init__(self, "{linenl}", verbose)
         self._dir_checked = False
 
     # pylint: disable=c0111
@@ -327,7 +334,7 @@ class CaptureFormatter(VerboseFormatter):
 
     """
 
-    def __init__(self, custom_format="{line}", verbose=True):
+    def __init__(self, custom_format="{linenl}", verbose=True):
         VerboseFormatter.__init__(self, custom_format, verbose)
         self.start_capture()
 

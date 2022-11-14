@@ -47,7 +47,7 @@ class CliWithFormatterOptions:         # pylint: disable=too-few-public-methods
             """)
         parser.add_argument(
             "-tc", "--time-colon-format", default=False, action='store_true',
-            help="equivalent to --format '{time}:{host}:{line}")
+            help="equivalent to --format '{time}:{host}:{linenl}")
         parser.add_argument(
             "-f", "--format", default=None, action='store',
             help="""specify output format, which may include
@@ -55,7 +55,9 @@ class CliWithFormatterOptions:         # pylint: disable=too-few-public-methods
 * {user} for the remote username,
 * {fqdn} for the target hostname,
 * {host} for the target hostname with its domain stripped,
-* {line} for the actual line output (which contains the actual newline)
+* {linenl} for the actual line output (which contains the actual newline)
+* {line} for the actual line output (without the newline)
+* {nl} for adding a newline
 * {time} is a shorthand for %%H-%%M-%%S""")
         parser.add_argument(
             "-o", "--out-dir", default=None,

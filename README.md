@@ -249,10 +249,10 @@ on *stdout*.
 You can specify a format with the `--format` option (see `apssh --help`); there
 also are a few predefined formats for convenience:
 
-* `-r/--raw` (equivalent to `--format '{line}'`) output is produced as it comes
+* `-r/--raw` (equivalent to `--format '{linenl}'`) output is produced as it comes
  from the host, with no annotation as to which node the line is originating
  from.
-* `-tc/--time-colon-format` is equivalent to `--format '%H-%M-%S:{host}:{line}'`.
+* `-tc/--time-colon-format` is equivalent to `--format '%H-%M-%S:{host}:{linenl}'`.
 
 ### Subdir : store outputs individually in a dedicated dir
 

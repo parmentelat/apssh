@@ -317,18 +317,26 @@ class Copy:
     the common ancestor for Appush and Appull
     """
 
-    re_remote = re.compile(r"\{\w*\}:(?P<remote>.*)")
-
     @staticmethod
     def is_remote(location):
         """
-        check if location contains a {h}: magic string and if so,
+        check if location contains a @: magic string and if so,
         returns the remote location
         """
-        if match := Copy.re_remote.match(location):
-            return match.group('remote')
+        if location.startswith("@:"):
+            return location[2:]
         else:
             return None
+
+    @staticmethod
+    def instantiate(template, proxy):
+        fqdn = proxy.hostname
+        host = shorten_hostname(proxy.hostname)
+        user = proxy.username
+        return (template
+                   .replace("{fqdn}", fqdn or "")
+                   .replace("{host}", host or "")
+                   .replace("{user}", f"{user}@" if user else ""))
 
 
 class Appush(CliWithFormatterOptions, Copy):
@@ -384,7 +392,7 @@ class Appush(CliWithFormatterOptions, Copy):
         parser.add_argument(
             "remote_location", nargs=1,
             help="where to transfer them on the remote targets;"
-                 " must be of the form {}:remote-location;"
+                 " must be of the form @:remote-location;"
                  " if several local files are provided,"
                  " should be an existing directory"
         )
@@ -398,7 +406,7 @@ class Appush(CliWithFormatterOptions, Copy):
 
         # check files
         if not (remote := self.is_remote(args.remote_location[0])):
-            print(f"{args.remote_location} is not remote (should contain {{}}:)")
+            print(f"{args.remote_location} is not remote - should start with @:")
             parser.print_help()
             sys.exit(1)
 
@@ -426,13 +434,21 @@ class Appush(CliWithFormatterOptions, Copy):
         scheduler = Scheduler(verbose=args.verbose)
         for proxy in self.proxies:
             scheduler.add(
-                SshJob(node=proxy,
-                       critical=False,
-                       command=Push(local_files, remote,
-                       verbose=args.verbose or args.debug)))
+                SshJob(
+                    node=proxy,
+                    critical=False,
+                    command=Push(
+                        [self.instantiate(local, proxy)
+                            for local in local_files],
+                        self.instantiate(remote, proxy),
+                        verbose=args.verbose or args.debug)))
 
         # pylint: disable=w0106
         scheduler.jobs_window = window
         if not scheduler.run():
             scheduler.debrief()
         retcods = [job.result() for job in scheduler.jobs]
+
+        # return 0 only if all hosts have returned 0
+        # otherwise, return 1
+        return 0 if all(retcod == 0 for retcod in retcods) else 1

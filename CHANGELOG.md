@@ -1,5 +1,20 @@
 # ChangeLog
 
+## 0.23.0 - 2022 Nov 14
+
+* first rough version of appush in line with
+  <https://github.com/parmentelat/apssh/issues/19>
+* formats revisited to use {} instead of @@ and with
+  a more consistent list of specials
+  * strftime-compliant formats like e.g. `%H-%M`
+  * {user} for the remote username,
+  * {fqdn} for the target hostname,
+  * {host} for the target hostname with its domain stripped,
+  * {linenl} for the actual line output (which contains the actual newline)
+  * {line} for the actual line output (without the newline)
+  * {nl} for adding a newline
+  * {time} is a shorthand for %%H-%%M-%%S
+
 ## 0.22.0 - 2022 Nov 4
 
 * (issue #16) option -L to list targets

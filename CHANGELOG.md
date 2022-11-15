@@ -1,5 +1,11 @@
 # ChangeLog
 
+## 0.23.1 - 2022 Nov 14
+
+* close issue #23: can no use LocalNode both with
+  * RunScript and RunString commands
+  * and the YAML loader
+
 ## 0.23.0 - 2022 Nov 14
 
 * first rough version of appush in line with

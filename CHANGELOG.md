@@ -1,8 +1,17 @@
 # ChangeLog
 
+## 0.23.2 - 2022 Nov 14
+
+* close #24, yaml loader has more helpful error reporting
+  * more clearly says where the issues are found
+    not line numbers, but typically the failing dict
+  * more clearly says what key is missing
+  * when a command creation fails, reminds that one can use
+    'command' or the lower-level name, like e.g. local_script for RunScript
+
 ## 0.23.1 - 2022 Nov 14
 
-* close issue #23: can no use LocalNode both with
+* close issue #23: can now use LocalNode both with
   * RunScript and RunString commands
   * and the YAML loader
 

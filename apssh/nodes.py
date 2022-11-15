@@ -5,17 +5,14 @@ a ``node`` attribute to describe on which node to run commands.
 """
 
 import asyncio
-
 import os
-
 from subprocess import PIPE, DEVNULL
+from pathlib import Path
 
 from asyncssh import EXTENDED_DATA_STDERR
 
 from .formatters import ColonFormatter
-
 from .sshproxy import SshProxy
-
 from .keys import load_private_keys, load_agent_keys
 
 

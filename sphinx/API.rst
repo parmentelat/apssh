@@ -48,6 +48,14 @@ Deferred evaluation classes
 
 -----
 
+YAML loader
+------------------------------
+
+.. automodule:: apssh.yaml_loader
+		:members: YamlLoader
+
+-----
+
 Utilities
 ------------------------------
 

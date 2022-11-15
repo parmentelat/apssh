@@ -21,6 +21,18 @@ WARNING = """
 #
 """
 
+# for error management, provide more context in the exception
+def build_instance(cls, *args, **kwds):
+    try:
+        return cls(*args, **kwds)
+    except TypeError as exc:
+        args = [
+            f"when trying to build instance of {cls.__name__}",
+            f"with {args=}",
+            f"and {kwds=}"
+        ]
+        raise TypeError(*args, *exc.args)
+
 class YamlLoader:
 
     """
@@ -109,10 +121,15 @@ class YamlLoader:
         if 'jobs' not in D:
             raise ValueError(f"file {self.path} has no 'jobs' key")
 
-        nodes_map = self._load_nodes(D['nodes'])
+        try:
+            nodes_map = self._load_nodes(D['nodes'])
 
-        jobs_map, scheduler = self._load_jobs(D['jobs'], nodes_map)
-        return nodes_map, jobs_map, scheduler
+            jobs_map, scheduler = self._load_jobs(D['jobs'], nodes_map)
+            return nodes_map, jobs_map, scheduler
+        except (ValueError, TypeError) as exc:
+            print("\n".join(exc.args))
+            print(f"FATAL - aborting with an empty scheduler")
+            return {}, {}, Scheduler()
 
 
     @staticmethod
@@ -152,7 +169,7 @@ class YamlLoader:
             if transformer:
                 value = transformer(value)
             constructor_args[key] = value
-        obj = cls(**constructor_args)
+        obj = build_instance(cls, **constructor_args)
         # assign optionals
         for key, transformer in optionals.items():
             if key not in D:
@@ -231,7 +248,9 @@ class YamlLoader:
                     del D[k]
                     return result
                 if default is None:
-                    raise ValueError(f"missing key {k}")
+                    raise ValueError(
+                        f"builing a command from {D}\n"
+                        f"you need to define either 'command' or '{k}'")
                 return default
 
             result = []
@@ -246,22 +265,22 @@ class YamlLoader:
                     if 'command' in command_dict:
                         argv = command_dict['command'].split()
                         del command_dict['command']
-                        command_instance = cls(*argv, **command_dict)
+                        command_instance = build_instance(cls, *argv, **command_dict)
                     # however in some cases the 'split' approach may not work
                     # as desired
                     elif classname == 'Run':
                         argv = get_and_delete_key(command_dict, 'argv')
-                        command_instance = cls(*argv, **command_dict)
+                        command_instance = build_instance(cls, *argv, **command_dict)
                     elif classname == 'RunScript':
                         text = get_and_delete_key(command_dict, 'local_script')
                         args = get_and_delete_key(command_dict, 'args', [])
-                        command_instance = cls(text, *args, **command_dict)
+                        command_instance = build_instance(cls, text, *args, **command_dict)
                     elif classname == 'RunString':
                         text = get_and_delete_key(command_dict, 'script_body')
                         args = get_and_delete_key(command_dict, 'args', [])
-                        command_instance = cls(text, *args, **command_dict)
+                        command_instance = build_instance(cls, text, *args, **command_dict)
                 elif classname in ('Push, Pull'):
-                    command_instance = cls(**command_dict)
+                    command_instance = build_instance(cls, **command_dict)
 
                 result.append(command_instance)
             return result

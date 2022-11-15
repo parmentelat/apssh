@@ -28,7 +28,7 @@ class Tests(unittest.TestCase):
         util.produce_svg(s1, "graphic-loader1-file")
         util.produce_svg(s2, "graphic-loader1-path")
 
-    def test_loader_2(self):
+    def test_loader_2_1(self):
         """
         load a yaml + jinja2
         """
@@ -54,7 +54,7 @@ class Tests(unittest.TestCase):
 
         util.produce_svg(s, "graphic-loader2")
 
-    def test_loader_3(self):
+    def test_loader_2_2(self):
         """
         check save_intermediate with True or a str
         """
@@ -94,3 +94,13 @@ class Tests(unittest.TestCase):
 
         with e1.open() as f1, e2.open() as f2:
             self.assertEqual(f1.read(), f2.read())
+
+    def test_loader_3(self):
+        """
+        localnode in yaml
+        """
+        f = "tests/loader3.yaml"
+        s = YamlLoader(f).load()
+
+        self.assertEqual(len(s), 4)
+        util.produce_svg(s, "graphic-loader3")

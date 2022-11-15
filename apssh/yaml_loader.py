@@ -12,7 +12,7 @@ from jinja2 import Template, DebugUndefined
 from asynciojobs import Scheduler
 import apssh
 from apssh import SshJob, formatters # , Run, RunScript, RunString, Push, Pull
-from apssh.nodes import SshNode
+from apssh.nodes import SshNode, LocalNode
 
 
 WARNING = """
@@ -181,10 +181,10 @@ class YamlLoader:
             cls = getattr(formatters, clsname)
             return cls()
 
-        mandatories = {
+        node_mandatories = {
             'hostname': None,
         }
-        optionals = {
+        node_optionals = {
             # the gateway field refers to an id defined beforehand
             'gateway': locate_node_from_id,
             'username': None,
@@ -192,9 +192,21 @@ class YamlLoader:
             'formatter': locate_formatter,
             'verbose': None,
         }
+        local_mandatories = {
+        }
+        local_optionals = {
+            'formatter': locate_formatter,
+            'verbose': None,
+        }
         for node_dict in nodes_list:
-            job_id, node = self._dict_to_class(node_dict, SshNode, mandatories, optionals)
-            nodes_map[job_id] = node
+            if 'localnode' in node_dict:
+                del node_dict['localnode']
+                node_id, node = self._dict_to_class(node_dict, LocalNode,
+                                                    local_mandatories, local_optionals)
+            else:
+                node_id, node = self._dict_to_class(node_dict, SshNode,
+                                                    node_mandatories, node_optionals)
+            nodes_map[node_id] = node
 
         return nodes_map
 

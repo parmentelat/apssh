@@ -1,0 +1,43 @@
+nodes:
+  - id: faraday
+    hostname: faraday.inria.fr
+    formatter: TimeColonFormatter
+    verbose: True
+  - id: thisbox
+    localnode: true
+    formatter: TimeColonFormatter
+    verbose: True
+
+jobs:
+  - id: remote-run
+    node: faraday
+    critical: False
+    verbose: True
+    label: remote node on Run
+    commands:
+      - type: Run
+        command: hostname
+  - id: remote-runscript
+    node: faraday
+    critical: False
+    verbose: True
+    label: remote node on RunScript
+    commands:
+      - type: RunScript
+        command: tests/script-with-args.sh arg1 arg2
+  - id: local-run
+    node: thisbox
+    critical: False
+    verbose: True
+    label: local node on Run
+    commands:
+      - type: Run
+        command: hostname
+  - id: local-runscript
+    node: thisbox
+    critical: False
+    verbose: True
+    label: local node on RunScript
+    commands:
+      - type: RunScript
+        command: tests/script-with-args.sh arg1 arg2

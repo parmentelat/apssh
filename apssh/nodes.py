@@ -82,11 +82,15 @@ class LocalNode:
                 return
             self.lines(line, datatype)
 
-    async def run(self, command, ignore_outputs=False):
+    async def run(self, command, *, ignore_outputs=False, cwd=None):
+        # pass cwd= to create_subprocess_shell when cwd is provided
+        kwds = {}
+        if cwd is not None:
+            kwds['cwd'] = cwd
         try:
             if not ignore_outputs:
                 process = await asyncio.create_subprocess_shell(
-                    command, stdout=PIPE, stderr=PIPE)
+                    command, stdout=PIPE, stderr=PIPE, **kwds)
                 # multiplex stdout and stderr on the terminal
                 _, _ = await asyncio.gather(
                     self.read_and_display(process.stdout, 0),
@@ -95,7 +99,7 @@ class LocalNode:
                 return retcod
             else:
                 process = await asyncio.create_subprocess_shell(
-                    command, stdout=DEVNULL, stderr=DEVNULL)
+                    command, stdout=DEVNULL, stderr=DEVNULL, **kwds)
                 # nothing to read
                 self.lines(f"IGNORING (ignore_outputs=True) with `{command}`".encode(),
                            EXTENDED_DATA_STDERR)

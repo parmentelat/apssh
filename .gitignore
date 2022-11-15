@@ -1,5 +1,6 @@
+__pycache__
 *.pyc
-sphinx/_build/*
+sphinx/
 build/
 graphic-loader*
 tests/test_*
@@ -14,3 +15,8 @@ RANDOM*
 dummy*
 loopback*
 again-*
+*.dot
+*.svg
+*.png
+loader2.yaml
+issue*.py

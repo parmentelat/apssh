@@ -12,7 +12,8 @@ Contents:
    :maxdepth: 2
 
    API
-   README
+   README-apssh
+   README-appush
 
 History:
 

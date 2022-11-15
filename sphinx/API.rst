@@ -1,4 +1,4 @@
-The apssh API
+The ``apssh`` API
 ========================================
 
 Most symbols can be imported directly from the ``apssh`` package, e.g.

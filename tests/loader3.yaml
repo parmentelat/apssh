@@ -1,6 +1,7 @@
 nodes:
   - id: faraday
     hostname: faraday.inria.fr
+    username: root
     formatter: TimeColonFormatter
     verbose: True
   - id: thisbox

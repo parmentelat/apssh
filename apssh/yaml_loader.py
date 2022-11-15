@@ -41,11 +41,22 @@ class YamlLoader:
     In addition to using the regular YAML syntax
     (current implementation uses pyyaml, which supports YAML v1.1)
     the input can optionnally pass through Jinja2 templating;
-    to that end, provide a non-empty `env` parameter, that will specify
+    to that end, call the ``load*`` methods with a non-empty ``env``
+    parameter, that will specify
     templating variables
 
     Parameters:
       filename(str): the input file (can be a Path as well)
+
+    Example:
+      a simple example can be found `in github repo fit-r2lab/demos <https://github.com/fit-r2lab/r2lab-demos/tree/master/my-first-nepi-ng-script>`_
+      where the same script is written
+
+      * `once in demo-v1.py using pure Python <https://github.com/fit-r2lab/r2lab-demos/blob/master/my-first-nepi-ng-script/demo-v1.py>`_
+      * and `a second time in demo-v2.py <https://github.com/fit-r2lab/r2lab-demos/blob/master/my-first-nepi-ng-script/demo-v2.py>`_
+        using `this script definition in YAML <https://github.com/fit-r2lab/r2lab-demos/blob/master/my-first-nepi-ng-script/demo-v2.yaml.j2>`_
+
+      <https://github.com/fit-r2lab/r2lab-demos/tree/master/my-first-nepi-ng-script>
     """
 
     def __init__(self, filename):

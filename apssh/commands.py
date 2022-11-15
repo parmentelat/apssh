@@ -290,12 +290,14 @@ class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
                  label=None, allowed_exits=None,
                  includes=None, remote_basename=None,
                  x11=False, verbose=False,
+                 ignore_outputs=False,
                  capture: Capture=None):
         self.args = args
         self.includes = includes if includes is not None else []
         self.remote_basename = remote_basename
         self.x11 = x11
         self.verbose = verbose
+        self.ignore_outputs = ignore_outputs
         AbstractCommand.__init__(self, label=label,
                                  allowed_exits=allowed_exits)
         CapturableMixin.__init__(self, capture)
@@ -333,7 +335,6 @@ class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
 
     async def co_run_remote(self, node):
         """
-
         Implemented to satisfy the requirement of ``AbstractCommand``.
         The common behaviour for both classes is to first invoke
         :meth:`co_install()` to push the local material
@@ -378,6 +379,33 @@ class RunLocalStuff(AbstractCommand, CapturableMixin, StrLikeMixin):
             node, f"RunLocalStuff: {node_run} <- {command}")
         self.end_capture()
         return node_run
+
+    # virtual method that needs to be implemented on each subclass
+    def _actual_contents(self) -> str:
+        print(f"_actual_contents needs to be redefined on {type(self)}")
+        pass
+
+    async def co_run_local(self, localnode):
+        """
+        the behaviour of these commands when run LocalNode instance
+        """
+        # doing a local copy is mandatory anyway for RunString
+        # also this way we can do chmod +x on it
+        local_copy = Path.home() / default_remote_workdir / self.remote_basename
+        with local_copy.open('w') as writer:
+            writer.write(self._actual_contents())
+        # make executable
+        local_copy.chmod(0o700)
+
+
+        self.start_capture()
+        command = f"{Path.home()}/{self._remote_command()}"
+        self._verbose_message(localnode, f"Run: -> {command}")
+        retcod = await localnode.run(command, ignore_outputs=self.ignore_outputs)
+        print(f"{retcod=}")
+        self._verbose_message(localnode, f"Run: {retcod} <- {command}")
+        self.end_capture()
+        return retcod
 
 
 # same but using a script that is available as a local file
@@ -435,6 +463,10 @@ class RunScript(RunLocalStuff):
                 self.local_script, remote_path,
                 follow_symlinks=True):
             return
+
+    def _actual_contents(self) -> str:
+        with open(self.local_script) as feed:
+            return feed.read()
 
 #####
 
@@ -526,6 +558,9 @@ class RunString(RunLocalStuff):
         if not await node.put_string_script(
                 self.script_body, remote_path):
             return
+
+    def _actual_contents(self) -> str:
+        return self.script_body
 
 ####
 

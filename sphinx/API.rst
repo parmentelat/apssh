@@ -83,11 +83,3 @@ Tools to deal with keys
 
 .. automodule:: apssh.keys
 		:members:
-
------
-
-The apssh binary implementation
-----------------------------------------
-
-.. automodule:: apssh.cli
-		:members:

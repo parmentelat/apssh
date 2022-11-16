@@ -83,7 +83,7 @@ Note that in this mode:
 `apssh` returns 0 if and only if all remote commands complete and return 0
 themselves; otherwise it returns 1.
 
-## Scope selection
+## Targets selection
 
 ### Adding names : the `-t` or `--target` option
 
@@ -98,15 +98,26 @@ As a matter of fact you can use the `--target` option to refer to
 
 * the name of **an existing file**: in this case, the file is read, lines
   with a `#` are considered comments and ignored, all the rest is considered
-  a list of hostnames; you can have several hostnames on one line if you want;
+  a list of litteral targets (see below);
+  you can have several hostnames on one line if you want;
 * the name of **an existing directory**: in this case, all the simple files
   present in this directory are considered hostnames (see the `--mark` option
   below to see how this feature allows to easily select nodes that are actually
   online and reachable);
-* otherwise, the string is considered a hostname itself, or possibly several
-  space-separated hostnames.
+* otherwise, the string is considered a litteral target; in that case it can be
+  * a space- or comma- separated list of litteral targets
+  * a simple hostname
+  * a target of the form `username@hostname`
+  * a dual-hop target of the form `user1@gw->user2@hostname`
 * **NOTE** that files and directories are also searched in `~/.apssh`,
   so that these shorthands can be defined globally.
+* **NOTE** also that the gateway and username can also be changed globally using
+  the `-g` or `-u` options respectively; however these are taken from the
+  litteral target when specified explcitly in it
+
+### `-t` examples 
+
+#### with files and dirs
 
 So in practice, assuming that:
 * directory `hosts.outputs` contains only 2 files named `tutu` and `toto`, and
@@ -114,10 +125,27 @@ So in practice, assuming that:
 
 then if you run
 
-```apssh -t host1 -t "host2 host3" -t hosts.file -t hosts.dir true```
+```bash
+apssh -t host1 -t "host2 host3" -t hosts.file -t hosts.dir true
+```
 
 it will cause the `true` command to be run on hosts `host1`, `host2`, `host3`,
 `foo`, `bar`, `toto` and `tutu`.
+
+
+#### using litteral targets
+
+also you may run e.g.
+
+```bash
+apssh -t 'foo,user@bar,user1@gw->user2@tutu` true
+```
+
+which would run the `true` command on 3 ssh endpoints:
+
+* host `foo` with current username
+* host `bar` with user `bar`
+* host `tutu` logging in as `user2` but going through gateway `gw` logging in as `user1`
 
 ### Excluding names : the `-x` or `--exclude` option
 
@@ -240,14 +268,15 @@ planetlab1.xeno.cl.cam.ac.uk:VERSION_ID=23
 planetlab2.xeno.cl.cam.ac.uk:VERSION_ID=23
 ```
 
-In the above trasnscript, there were 5 target hostnames, one of which being
+In the above transcript, there were 5 target hostnames, one of which being
 unreachable. The line with `Permission denied` goes on *stderr*, the other ones
 on *stdout*.
 
 ### Your own format
 
-You can specify a format with the `--format` option (see `apssh --help`); there
-also are a few predefined formats for convenience:
+You can specify a format with the `--format` option <a
+href="API.html#module-apssh.formatters">(see the page on formatters about how to
+define a format)</a>; there also are a few predefined formats for convenience:
 
 * `-r/--raw` (equivalent to `--format '{linenl}'`) output is produced as it comes
  from the host, with no annotation as to which node the line is originating
@@ -353,14 +382,10 @@ $ apssh -l root -t PLE.alive.5 -tc uname -r \; hostname
 
 ## TODO
 
-* brewing something like `appush` and `appull` sounds pretty straightforward,
-  and could turn out most useful; some day probably
 * current output system can only properly handle commands output that are
   **text-based**; if your remote command produces binary data instead,
   you must redirect its output on the remote system, and fetch the results
-  later on; note that the binary command `apssh` has no option for doing that,
-  but the API has 2 objects `Pull` and `Push` for doing this in a more
-  elaborate scenario (see README-jobs.md).
+  later on;
 * better tests coverage would not hurt !?!
 * probably a lot more features are required for more advanced usages,
  feel free to fill in issues at <https://github.com/parmentelat/apssh>.

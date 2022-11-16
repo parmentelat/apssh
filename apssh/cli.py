@@ -28,7 +28,7 @@ from .formatters import (RawFormatter, ColonFormatter,
 from .keys import load_private_keys
 from .version import __version__ as apssh_version
 from .sshjob import SshJob
-from .commands import Run, RunScript, RunString, Push
+from .commands import Run, RunScript, RunString, Push, Pull
 from .targets import Targets
 
 
@@ -198,6 +198,7 @@ class Apssh(CliWithFormatterOptions):
             to the remote system and serves as the command for remote execution
             """)
 
+        # should allow to run with --version and no more arg
         if test_argv:
             args = parser.parse_args(test_argv)
         else:
@@ -210,8 +211,8 @@ class Apssh(CliWithFormatterOptions):
 
         # manual check for REMAINDER
         if not args.commands:
-            print("You must provide a command to be run remotely")
-            parser.print_help()
+            print("apssh: You must provide a command to be run remotely")
+            # parser.print_help()
             sys.exit(1)
 
         # load keys
@@ -228,8 +229,8 @@ class Apssh(CliWithFormatterOptions):
                 for proxy in self.proxies:
                     print(f"using target {proxy}")
         except ValueError:
-            print("it makes no sense to run apssh without any target")
-            parser.print_help()
+            print("apssh: it makes no sense to run apssh without any target")
+            # parser.print_help()
             sys.exit(1)
 
         if args.list_targets:
@@ -312,13 +313,13 @@ class Apssh(CliWithFormatterOptions):
         return 0 if all(retcod == 0 for retcod in retcods) else 1
 
 
-class Copy:
+class Copy(CliWithFormatterOptions):
     """
     the common ancestor for Appush and Appull
     """
 
     @staticmethod
-    def is_remote(location):
+    def remote_path(location):
         """
         check if location contains a @: magic string and if so,
         returns the remote location
@@ -339,11 +340,13 @@ class Copy:
                    .replace("{user}", f"{user}@" if user else ""))
 
 
-class Appush(CliWithFormatterOptions, Copy):
+    def __init__(self, mode):
+        """
+        mode being 'push' or 'pull'
+        """
+        self.mode = mode
 
-    def __init__(self):
         self.formatter = None
-        #
         self.proxies =  None
 
     def main(self):
@@ -376,6 +379,9 @@ class Appush(CliWithFormatterOptions, Copy):
 
         # usual stuff
         parser.add_argument(
+            "-V", "--version",
+            action='store_true', default=False)
+        parser.add_argument(
             "-n", "--dry-run", default=False, action='store_true',
             help="Only show details on selected hostnames")
         parser.add_argument(
@@ -385,36 +391,61 @@ class Appush(CliWithFormatterOptions, Copy):
             "-D", "--debug", action='store_true', default=False)
         ### xxx todo add other relevant options
 
+        if self.mode == 'push':
+            parser.add_argument(
+                "local_files", nargs='+',
+                help="the local file(s) to transfer")
+            parser.add_argument(
+                "remote_location", nargs=1,
+                help="where to transfer them on the remote targets;"
+                     " must be of the form @:remote-location;"
+                     " if several local files are provided,"
+                     " should be an existing directory")
+        else:
+            parser.add_argument(
+                "remote_files", nargs='+',
+                help="the remote file(s) to transfer; "
+                     " must be of the form @:remote-location;")
+            parser.add_argument(
+                "local_destination", nargs=1,
+                help="where to transfer them on the local box;"
+                     " if several remote local files are provided,"
+                     " should be an existing directory")
 
-        parser.add_argument(
-            "local_files", nargs='+',
-            help="the local file(s) to transfer")
-        parser.add_argument(
-            "remote_location", nargs=1,
-            help="where to transfer them on the remote targets;"
-                 " must be of the form @:remote-location;"
-                 " if several local files are provided,"
-                 " should be an existing directory"
-        )
+        def command(proxy):
+            if self.mode == 'push':
+                remote = self.remote_path(args.remote_location[0])
+                return Push([ self.instantiate(local, proxy) for local in args.local_files ],
+                            self.instantiate(remote, proxy),
+                            verbose=args.verbose or args.debug)
+            else:
+                remotes = [self.remote_path(remote) for remote in args.remote_files]
+                return Pull([self.instantiate(remote, proxy) for remote in remotes],
+                            self.instantiate(args.local_destination[0], proxy),
+                            verbose=args.verbose or args.debug)
 
-
+        # should allow to run with --version and no more arg
         args = parser.parse_args()
 
-        # if args.version:
-        #     print(f"apssh version {apssh_version}")
-        #     sys.exit(0)
+        if args.version:
+            print(f"ap{self.mode} version {apssh_version}")
+            sys.exit(0)
 
-        # check files
-        if not (remote := self.is_remote(args.remote_location[0])):
-            print(f"{args.remote_location} is not remote - should start with @:")
-            parser.print_help()
-            sys.exit(1)
+        # check remote files
+        if self.mode == 'push':
+            remotes = args.remote_location
+        else:
+            remotes = args.remote_files
+        for remote in remotes:
+            if not (self.remote_path(remote)):
+                print(f"ap{self.mode}: {remote} is not remote - should start with @:")
+                # parser.print_help()
+                sys.exit(1)
 
-        local_files = args.local_files
-
+        #
         private_keys = load_private_keys(args.keys, args.verbose)
         if not private_keys and not args.ok_if_no_key:
-            print("Could not find any usable key - exiting")
+            print(f"ap{self.mode}Could not find any usable key - exiting")
             sys.exit(1)
 
         targets.init_from_args(args, private_keys, self._get_formatter(args))
@@ -424,27 +455,17 @@ class Appush(CliWithFormatterOptions, Copy):
                 for proxy in self.proxies:
                     print(f"using target {proxy}")
         except ValueError:
-            print("it makes no sense to run apssh without any target")
-            parser.print_help()
+            print(f"ap{self.mode}: it makes no sense to run without any target")
+            # parser.print_help()
             sys.exit(1)
-
-        window = args.window
 
         # populate scheduler
         scheduler = Scheduler(verbose=args.verbose)
         for proxy in self.proxies:
-            scheduler.add(
-                SshJob(
-                    node=proxy,
-                    critical=False,
-                    command=Push(
-                        [self.instantiate(local, proxy)
-                            for local in local_files],
-                        self.instantiate(remote, proxy),
-                        verbose=args.verbose or args.debug)))
+            scheduler.add(SshJob(node=proxy, critical=False, command=command(proxy)))
 
         # pylint: disable=w0106
-        scheduler.jobs_window = window
+        scheduler.jobs_window = args.window
         if not scheduler.run():
             scheduler.debrief()
         retcods = [job.result() for job in scheduler.jobs]
@@ -452,3 +473,14 @@ class Appush(CliWithFormatterOptions, Copy):
         # return 0 only if all hosts have returned 0
         # otherwise, return 1
         return 0 if all(retcod == 0 for retcod in retcods) else 1
+
+class Appush(Copy):
+
+    def __init__(self):
+        super().__init__(mode='push')
+
+class Appull(Copy):
+
+    def __init__(self):
+        super().__init__(mode='pull')
+

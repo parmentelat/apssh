@@ -55,6 +55,7 @@ setuptools.setup(
         'console_scripts': [
             'apssh = apssh.__main__:apssh',
             'appush = apssh.__main__:appush',
+            'appull = apssh.__main__:appull',
         ]
     },
 

@@ -24,7 +24,7 @@ from .sshproxy import SshProxy
 # how to format outputs
 from .formatters import (
     RawFormatter, TerminalFormatter,
-    ColonFormatter, TimeColonFormatter, CaptureFormatter
+    HostFormatter, TimeHostFormatter, CaptureFormatter
 )
 
 from .commands import Run, RunScript, RunString, Push, Pull

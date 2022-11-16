@@ -8,20 +8,20 @@
 nodes:
   - id: faraday
     hostname: {{gateway}}
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: {{verbose}}
   - id: leader
     hostname: {{leader}}
     gateway: faraday
     username: r2lab
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: {{verbose}}
   {% for function, hostname in nodes.items() %}
   - id: {{function}}
     hostname: {{hostname}}
     gateway: faraday
     username: root
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: {{verbose}}
   {% endfor %}
 

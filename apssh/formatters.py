@@ -59,7 +59,7 @@ class Formatter:
 
     * ``RawFormatter``:    shortcut for ``TerminalFormatter("{linenl}")``.
 
-    * ``ColonFormatter``:  shortcut for ``TerminalFormatter("{host}:{linenl}")``.
+    * ``HostFormatter``:  shortcut for ``TerminalFormatter("{host}:{linenl}")``.
 
     * ``SubdirFormatter``: stores in ``<subdir>/<hostname>``
       all outputs from that host.
@@ -224,7 +224,7 @@ class RawFormatter(TerminalFormatter):
         TerminalFormatter.__init__(self, "{linenl}", verbose)
 
 
-class ColonFormatter(TerminalFormatter):
+class HostFormatter(TerminalFormatter):
     """
     TerminalFormatter(format="{host}:{linenl}")
     """
@@ -233,7 +233,7 @@ class ColonFormatter(TerminalFormatter):
         TerminalFormatter.__init__(self, "{user}{host}:{linenl}", verbose)
 
 
-class TimeColonFormatter(TerminalFormatter):
+class TimeHostFormatter(TerminalFormatter):
     """
     TerminalFormatter(format="%H-%M-%S:{host}:{linenl}")
     """

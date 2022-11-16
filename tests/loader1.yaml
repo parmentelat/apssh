@@ -1,25 +1,25 @@
 nodes:
   - id: faraday
     hostname: faraday.inria.fr
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: True
   - id: leader
     hostname: sopnode-l1.inria.fr
     gateway: faraday
     username: r2lab
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: True
   - id: amf
     hostname: fit01
     gateway: faraday
     username: root
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: True
   - id: gnb
     hostname: fit02
     gateway: faraday
     username: root
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: True
 
 jobs:

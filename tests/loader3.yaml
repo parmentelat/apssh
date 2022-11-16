@@ -2,11 +2,11 @@ nodes:
   - id: faraday
     hostname: faraday.inria.fr
     username: root
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: True
   - id: thisbox
     localnode: true
-    formatter: TimeColonFormatter
+    formatter: TimeHostFormatter
     verbose: True
 
 jobs:

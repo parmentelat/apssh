@@ -22,8 +22,8 @@ from asynciojobs import Scheduler
 
 from .util import print_stderr
 from .config import (default_time_name, default_timeout, default_remote_workdir)
-from .formatters import (RawFormatter, ColonFormatter,
-                         TimeColonFormatter, SubdirFormatter,
+from .formatters import (RawFormatter, HostFormatter,
+                         TimeHostFormatter, SubdirFormatter,
                          TerminalFormatter, shorten_hostname)
 from .keys import load_private_keys
 from .version import __version__ as apssh_version
@@ -75,7 +75,7 @@ class CliWithFormatterOptions:         # pylint: disable=too-few-public-methods
             elif parsed_args.raw_format:
                 self.formatter = RawFormatter(verbose=verbose)
             elif parsed_args.time_colon_format:
-                self.formatter = TimeColonFormatter(verbose=verbose)
+                self.formatter = TimeHostFormatter(verbose=verbose)
             elif parsed_args.date_time:
                 run_name = default_time_name
                 self.formatter = SubdirFormatter(run_name, verbose=verbose)
@@ -83,7 +83,7 @@ class CliWithFormatterOptions:         # pylint: disable=too-few-public-methods
                 self.formatter = SubdirFormatter(parsed_args.out_dir,
                                                  verbose=verbose)
             else:
-                self.formatter = ColonFormatter(verbose=verbose)
+                self.formatter = HostFormatter(verbose=verbose)
         return self.formatter
 
 

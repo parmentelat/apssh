@@ -16,7 +16,7 @@ from apssh import SshNode, SshJob, LocalNode
 from apssh import Run, RunScript, RunString, Push, Pull
 from apssh import load_private_keys
 
-from apssh import ColonFormatter, CaptureFormatter
+from apssh import HostFormatter, CaptureFormatter
 
 from apssh.cli import Apssh
 
@@ -25,7 +25,7 @@ from .util import localuser, localhostname
 class Tests(unittest.TestCase):
 
     def localnode(self, capture=False, username=None):
-        formatter = ColonFormatter() if not capture else CaptureFormatter()
+        formatter = HostFormatter() if not capture else CaptureFormatter()
         return SshNode(hostname='localhost',
                        username=username or localuser(),
                        # this is the default in fact

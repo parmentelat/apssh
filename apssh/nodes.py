@@ -11,7 +11,7 @@ from pathlib import Path
 
 from asyncssh import EXTENDED_DATA_STDERR
 
-from .formatters import ColonFormatter
+from .formatters import HostFormatter
 from .sshproxy import SshProxy
 from .keys import load_private_keys, load_agent_keys
 
@@ -24,7 +24,7 @@ class LocalNode:
 
     Parameters:
       formatter: a formatter instance, default to an instance of
-        ``ColonFormatter``;
+        ``HostFormatter``;
       verbose: if provided, passed to the formatter instance
 
     Examples:
@@ -42,7 +42,7 @@ class LocalNode:
     """
 
     def __init__(self, formatter=None, verbose=None):
-        self.formatter = formatter or ColonFormatter()
+        self.formatter = formatter or HostFormatter()
         if verbose is not None:
             self.formatter.verbose = verbose
         # could be improved

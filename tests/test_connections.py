@@ -8,7 +8,7 @@ import asyncio
 from asynciojobs import Scheduler
 
 from apssh import close_ssh_in_scheduler
-from apssh import SshNode, SshJob, ColonFormatter
+from apssh import SshNode, SshJob, HostFormatter
 
 from apssh import topology_as_pngfile
 
@@ -71,7 +71,7 @@ class Tests(unittest.TestCase):
         jobs = []
         for n in range(c1):
             node1 = SshNode(hostname, username=username,
-                            formatter=ColonFormatter(verbose=False))
+                            formatter=HostFormatter(verbose=False))
             nodes.append(node1)
             for c in range(commands):
                 jobs.append(SshJob(node=node1,
@@ -124,12 +124,12 @@ class Tests(unittest.TestCase):
         jobs = []
         for n in range(c1):
             node1 = SshNode(hostname, username=username,
-                            formatter=ColonFormatter(verbose=False))
+                            formatter=HostFormatter(verbose=False))
             nodes.append(node1)
             for m in range(c2):
                 node2 = SshNode(hostname, username=username,
                                 gateway=node1,
-                                formatter=ColonFormatter(verbose=False))
+                                formatter=HostFormatter(verbose=False))
                 nodes.append(node2)
                 for c in range(commands):
                     jobs.append(SshJob(node=node2,
@@ -340,7 +340,7 @@ class Tests(unittest.TestCase):
         gateway = None
         for n in range(depth):
             node = SshNode(hostname, gateway=gateway, username=username,
-                           formatter=ColonFormatter(verbose=False))
+                           formatter=HostFormatter(verbose=False))
             nodes.append(node)
             gateway = node
             for c in range(commands):

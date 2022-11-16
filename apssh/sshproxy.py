@@ -12,7 +12,7 @@ import asyncssh
 
 from .util import print_stderr, check_arg_type
 # a dummy formatter
-from .formatters import ColonFormatter
+from .formatters import HostFormatter
 
 
 class _LineBasedSession(asyncssh.SSHClientSession):
@@ -159,7 +159,7 @@ class SshProxy:                                         # pylint: disable=r0902
       formatter: each SshProxy instance has an attached formatter that
         is in charge of rendering the output of the various commands.
         The default is to use an instance of
-        :class:`~apssh.formatters.ColonFormatter`, that
+        :class:`~apssh.formatters.HostFormatter`, that
         outputs lines of the form ``hostname:actual-output``
 
       verbose: allows to get some user-level feedback on ssh
@@ -186,7 +186,7 @@ class SshProxy:                                         # pylint: disable=r0902
         check_arg_type(gateway, (SshProxy, type(None)), "SshProxy.gateway")
         self.gateway = gateway
         # if not specified we use a basic colon formatter
-        self.formatter = formatter or ColonFormatter()
+        self.formatter = formatter or HostFormatter()
         if verbose is not None:
             self.formatter.verbose = verbose
         self.debug = debug

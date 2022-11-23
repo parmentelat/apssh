@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.24.0 - 2022 Nov 16
+
+* new command appull, similar to appush
+* revised documentation
+
 ## 0.23.2 - 2022 Nov 14
 
 * close #24, yaml loader has more helpful error reporting

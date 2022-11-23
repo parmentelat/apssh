@@ -144,7 +144,7 @@ apssh -t 'foo,user@bar,user1@gw->user2@tutu` true
 which would run the `true` command on 3 ssh endpoints:
 
 * host `foo` with current username
-* host `bar` with user `bar`
+* host `bar` with user `user`
 * host `tutu` logging in as `user2` but going through gateway `gw` logging in as `user1`
 
 ### Excluding names : the `-x` or `--exclude` option

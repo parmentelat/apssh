@@ -7,7 +7,7 @@ Most symbols can be imported directly from the ``apssh`` package, e.g.
 
 No need to import module ``apssh.sshjob`` here.
 
-The SshProxy class
+The ``SshProxy`` class
 ------------------------------
 
 .. automodule:: apssh.sshproxy
@@ -15,15 +15,15 @@ The SshProxy class
 
 -----
 
-Command classes
-------------------------------
+Command classes (``Run*``, ``Push``, ``Pull``)
+----------------------------------------------
 
 .. automodule:: apssh.commands
 		:members:
 
-		-----
+-----
 
-Formatter classes
+``*Formatter`` classes
 ------------------------------
 
 .. automodule:: apssh.formatters
@@ -33,7 +33,7 @@ Formatter classes
 
 -----
 
-The Service class
+The ``Service`` class
 ------------------------------
 
 .. automodule:: apssh.service

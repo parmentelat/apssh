@@ -3,6 +3,7 @@
 ## 0.24.0 - 2022 Nov 16
 
 * new command appull, similar to appush
+* brute-force rename ColonFormatter → HostFormatter
 * revised documentation
 
 ## 0.23.2 - 2022 Nov 14

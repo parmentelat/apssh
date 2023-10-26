@@ -260,18 +260,21 @@ class Apssh(CliWithFormatterOptions):
                           f"=> Using RunString instead")
                 command_class = RunString
 
-        for proxy in self.proxies:
-            scheduler.add(
-                SshJob(node=proxy,
-                       critical=False,
-                       command=command_class(*args.commands,
-                                             **extra_kwds_args)))
+        # keep them ordered
+        jobs = [
+            SshJob(node=proxy,
+                    critical=False,
+                    command=command_class(*args.commands, **extra_kwds_args))
+            for proxy in self.proxies
+        ]
+        for job in jobs:
+            scheduler.add(job)
 
         # pylint: disable=w0106
         scheduler.jobs_window = window
         if not scheduler.run():
             scheduler.debrief()
-        retcods = [job.result() for job in scheduler.jobs]
+        retcods = [job.result() for job in jobs]
 
         ##########
         # print on stdout the name of the output directory
@@ -298,11 +301,11 @@ class Apssh(CliWithFormatterOptions):
                     mark.write(f"{result}\n")
 
         # details on the individual retcods - a bit hacky
-        for proxy, result in zip(self.proxies, retcods):
+        for proxy, result, job in zip(self.proxies, retcods, jobs):
             if result is None:
                 print_stderr(f"{proxy.hostname}: apssh WARNING - no result !")
             elif args.debug:
-                print(f"DEBUG: PROXY {proxy.hostname} -> {result}")
+                print(f"DEBUG: PROXY {proxy.hostname} -> {result} ({job.node})")
 
 
         # when in gateway mode, the gateway proxy # pylint: disable=fixme

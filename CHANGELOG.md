@@ -1,5 +1,9 @@
 # ChangeLog
 
+## 0.25.0 - 2023 Nov 26
+
+* offline nodes where not reported accurately - close #25
+
 ## 0.24.0 - 2022 Nov 16
 
 * new command appull, similar to appush

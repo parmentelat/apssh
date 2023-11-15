@@ -23,7 +23,7 @@ Command classes (``Run*``, ``Push``, ``Pull``)
 
 -----
 
-``*Formatter`` classes
+``Formatter`` classes
 ------------------------------
 
 .. automodule:: apssh.formatters

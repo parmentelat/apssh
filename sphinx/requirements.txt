@@ -1,7 +1,6 @@
 sphinx-autodoc-typehints
 asyncssh
 asynciojobs
-orderedset
 jinja2
 myst-parser
 recommonmark

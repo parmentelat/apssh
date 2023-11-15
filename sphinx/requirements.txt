@@ -1,6 +1,4 @@
 sphinx-autodoc-typehints
-sphinxcontrib-napoleon
-sphinxcontrib-asyncio
 asyncssh
 asynciojobs
 orderedset

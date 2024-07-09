@@ -142,7 +142,7 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
         """
         split along spaces or commas
         """
-        return [x for commas in text.split(' ') for x in commas.split(',')]
+        return [x for commas in text.split() for x in commas.split(',')]
 
 
     # returns a valid Path object, or None

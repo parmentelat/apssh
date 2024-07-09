@@ -1,5 +1,10 @@
 # ChangeLog
 
+## 0.26.0 - 2024 Jul 9
+
+* the arg passed to -t can now contain tabs or newlines
+* formatting: {host} and {fqdn} are now aligned in width between all hosts
+
 ## 0.25.0 - 2023 Nov 26
 
 * offline nodes where not reported accurately - close #25

@@ -193,8 +193,8 @@ class Apssh(CliWithFormatterOptions):
             command to run remotely.
 
             If the -s or --script option is provided, the first argument
-            here should denote a (typically script) file **that must exist**
-            on the local filesystem. This script is then copied over
+            here should denote a (typically script) file that must **exist
+            on the local filesystem**. This script is then copied over
             to the remote system and serves as the command for remote execution
             """)
 

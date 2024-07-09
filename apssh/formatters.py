@@ -72,6 +72,9 @@ class Formatter:
 
     def __init__(self, custom_format):
         self.format = custom_format.replace("{time}", self.time_format)
+        self.max_host = 0
+        self.max_fqdn = 0
+        self.max_user = 0
 
     def _formatted_line(self, linenl, hostname=None, username=None):
         hostname_short = shorten_hostname(hostname)
@@ -79,13 +82,18 @@ class Formatter:
             line = linenl[:-1]
         else:
             line = linenl
+        fqdn = hostname or ""
+        host = hostname_short or ""
+        user = f"{username}@" if username else ""
         return (time.strftime(self.format)
                    .replace("{line}", line)
                    .replace("{linenl}", linenl)
                    .replace("{nl}", "\n")
-                   .replace("{fqdn}", hostname or "")
-                   .replace("{host}", hostname_short or "")
-                   .replace("{user}", f"{username}@" if username else ""))
+                   .replace("{fqdn}", f"{fqdn:^{self.max_fqdn}}")
+                   .replace("{host}", f"{host:^{self.max_host}}")
+                   .replace("{user}",
+                            f"{user:^{self.max_user+1}}" if user else "")
+                )
 
     # pylint: disable=c0111
 
@@ -117,6 +125,15 @@ class Formatter:
 
     def stderr_line(self, line, hostname):
         return self.line(line + "\n", EXTENDED_DATA_STDERR, hostname)
+
+    # to record things like max hostname width and similar
+    def adapt_to_proxy(self, proxy: 'SshProxy'):
+        fqdn = proxy.hostname
+        host = shorten_hostname(fqdn)
+        user = proxy.username
+        self.max_fqdn = max(self.max_fqdn, len(fqdn))
+        self.max_host = max(self.max_host, len(host))
+        self.max_user = max(self.max_user, len(user))
 
 ########################################
 SEP = 10 * '='

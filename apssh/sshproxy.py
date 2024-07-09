@@ -185,10 +185,14 @@ class SshProxy:                                         # pylint: disable=r0902
         self.port = int(port)
         check_arg_type(gateway, (SshProxy, type(None)), "SshProxy.gateway")
         self.gateway = gateway
-        # if not specified we use a basic colon formatter
+        # this should not happen
+        if formatter is None:
+            print(f"WARNING: no formatter specified for {self}")
         self.formatter = formatter or HostFormatter()
         if verbose is not None:
             self.formatter.verbose = verbose
+        # allow the formatter to record widths and such
+        self.formatter.adapt_to_proxy(self)
         self.debug = debug
         self.timeout = timeout
         #

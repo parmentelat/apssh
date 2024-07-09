@@ -55,6 +55,9 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
     def __init__(self):
         self.proxies = []
 
+    def __iter__(self):
+        return iter(self.proxies)
+
 
     def add_target_options(self, parser): # pylint: disable=missing-function-docstring
         parser.add_argument(

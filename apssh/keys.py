@@ -99,8 +99,8 @@ def load_agent_keys(agent_path=None):
     agent_path = agent_path or os.environ.get('SSH_AUTH_SOCK', None)
     if agent_path is None:
         return []
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(co_load_agent_keys(agent_path))
+    with asyncio.Runner() as runner:
+        return runner.run(co_load_agent_keys(agent_path))
 
 
 def load_private_keys(command_line_keys=None, verbose=False):

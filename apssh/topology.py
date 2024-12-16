@@ -49,9 +49,8 @@ def close_ssh_in_scheduler(scheduler, manage_gateways=True):
       manage_gateways (bool): passed as-is
 
     """
-    loop = asyncio.get_event_loop()
-    return loop.run_until_complete(
-        co_close_ssh_in_scheduler(scheduler, manage_gateways))
+    with asyncio.Runner() as runner:
+        return runner.run(co_close_ssh_in_scheduler(scheduler, manage_gateways))
 
 
 async def co_close_ssh_in_scheduler(scheduler, manage_gateways=True):

@@ -1,6 +1,0 @@
-sphinx-autodoc-typehints
-asyncssh
-asynciojobs
-jinja2
-myst-parser
-recommonmark

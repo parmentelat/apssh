@@ -1,28 +1,20 @@
-include Makefile.pypi
-
-##############################
-tags:
-	git ls-files | xargs etags
-
-.PHONY: tags
+all: doc
 
 ##########
 # nose no longer maintained
-tests test:
+tests:
 	pytest
 
-.PHONY: tests test
+.PHONY: tests
 
 ########## sphinx
-sphinx doc html:
+doc:
 	$(MAKE) -C sphinx html
 
-sphinx-clean:
+doc-clean:
 	$(MAKE) -C sphinx clean
 
-all-sphinx: readme-clean readme sphinx
-
-.PHONY: sphinx doc html sphinx-clean all-sphinx
+.PHONY: doc doc-clean
 
 ##########
 pyfiles:
@@ -34,11 +26,11 @@ pep8:
 pylint:
 	$(MAKE) pyfiles | xargs pylint
 
-.PHONY: pep8 pylint pyfiles
+.PHONY: pyfiles pep8 pylint
 
 ########## actually install
 infra:
-	apssh -t r2lab.infra pip3 install --upgrade apssh
+	apssh -t r2lab.infra pip install --upgrade apssh
 check:
 	apssh -t r2lab.infra apssh --version
 

@@ -1,5 +1,5 @@
-"""
-package version
-"""
+import importlib
+import importlib.metadata
 
-__version__ = "0.26.0"
+# from pyproject.toml
+__version__ = importlib.metadata.version("apssh")

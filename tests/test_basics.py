@@ -30,7 +30,8 @@ class Tests(unittest.TestCase):
                        username=username or localuser(),
                        # this is the default in fact
                        keys=load_private_keys(),
-                       formatter=formatter)
+                       formatter=formatter,
+                       timeout=1)
 
     # all the ways to create a simple command
 

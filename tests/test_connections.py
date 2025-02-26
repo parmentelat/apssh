@@ -1,5 +1,7 @@
 # pylint: disable=too-many-locals
 
+__package__ = 'tests'
+
 import unittest
 
 import time
@@ -70,8 +72,10 @@ class Tests(unittest.TestCase):
         nodes = []
         jobs = []
         for n in range(c1):
-            node1 = SshNode(hostname, username=username,
-                            formatter=HostFormatter(verbose=False))
+            node1 = SshNode(
+                hostname, username=username,
+                formatter=HostFormatter(verbose=False),
+                timeout=1)
             nodes.append(node1)
             for c in range(commands):
                 jobs.append(SshJob(node=node1,
@@ -123,13 +127,17 @@ class Tests(unittest.TestCase):
         #nodes2 = []
         jobs = []
         for n in range(c1):
-            node1 = SshNode(hostname, username=username,
-                            formatter=HostFormatter(verbose=False))
+            node1 = SshNode(
+                hostname, username=username,
+                formatter=HostFormatter(verbose=False),
+                timeout=1)
             nodes.append(node1)
             for m in range(c2):
-                node2 = SshNode(hostname, username=username,
-                                gateway=node1,
-                                formatter=HostFormatter(verbose=False))
+                node2 = SshNode(
+                    hostname, username=username,
+                    gateway=node1,
+                    formatter=HostFormatter(verbose=False),
+                    timeout=1)
                 nodes.append(node2)
                 for c in range(commands):
                     jobs.append(SshJob(node=node2,
@@ -339,8 +347,10 @@ class Tests(unittest.TestCase):
         jobs = []
         gateway = None
         for n in range(depth):
-            node = SshNode(hostname, gateway=gateway, username=username,
-                           formatter=HostFormatter(verbose=False))
+            node = SshNode(
+                hostname, gateway=gateway, username=username,
+                formatter=HostFormatter(verbose=False),
+                timeout=2)
             nodes.append(node)
             gateway = node
             for c in range(commands):

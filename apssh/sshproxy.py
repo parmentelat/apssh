@@ -397,7 +397,11 @@ class SshProxy:                                         # pylint: disable=r0902
             except Exception:
                 pass
 
-            await preserve.wait_closed()
+            try:
+                await asyncio.wait_for(preserve.wait_closed(), timeout=self.timeout)
+            except asyncio.TimeoutError:
+                print_stderr(f"Timeout ({self.timeout}s) while waiting for {self} to close")
+                pass
             if self.client._connection_lost:  # pylint: disable=protected-access
                 raise ConnectionError("Close connection went wrong")
     async def close(self):

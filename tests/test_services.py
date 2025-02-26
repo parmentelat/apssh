@@ -60,7 +60,7 @@ class Tests(TestCase):
             if path.exists():
                 path.unlink()
             self.assertFalse(path.exists())
-        produce_svg(scheduler, f"service-{forever}")
+        produce_svg(scheduler, f"service-forever={forever}")
 
         self.assertTrue(scheduler.run())
         scheduler.list()

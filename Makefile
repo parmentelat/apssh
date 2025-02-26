@@ -1,8 +1,8 @@
 all: doc
 
 ##########
-# nose no longer maintained
 tests:
+	pip install -e ".[tests]"
 	pytest
 
 .PHONY: tests

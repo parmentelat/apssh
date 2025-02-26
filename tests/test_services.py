@@ -20,7 +20,7 @@ class Tests(TestCase):
 
         # initially this was using tcpdump
         # however it exhibits issued related to
-        # the ownership of the capturefile
+        # the ownership of the capture file
         # which are totally orthogonal to our objective
         # storage = f"/tmp/TCPDUMP-{forever}.pcap"
         # status = f"/tmp/TCPDUMP-{forever}.status"

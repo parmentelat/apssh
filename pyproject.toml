@@ -1,6 +1,6 @@
 [project]
 name = "apssh"
-version = "0.26.0"
+version = "0.27.0"
 description = "Asynchroneous Parallel ssh"
 license = {text = "CC BY-SA 4.0"}
 readme = "README.md"

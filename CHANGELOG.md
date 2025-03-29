@@ -1,5 +1,14 @@
 # ChangeLog
 
+## 0.27.0 - 2025 Mar 29
+
+* asyncssh: keep wait_closed from hanging forever
+* asyncio: synchroneous wrapper to run inside a asyncio.Runner() 
+  instead of looking at get_event_loop()
+* chore: dust off test environment, use UTM and uv
+* chore: update rtd build environment
+* chore: packaging with pyproject.toml instead of setup.py
+
 ## 0.26.0 - 2024 Jul 9
 
 * the arg passed to -t can now contain tabs or newlines

@@ -18,6 +18,8 @@ then on the guest
 ```bash
 cd /media/git/apssh
 source .venv/bin/activate
+# optional
+export PYTHONTRACEMALLOC=1
 pytest
 ```
 

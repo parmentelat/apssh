@@ -3,6 +3,7 @@ all: doc
 ##########
 tests:
 	pip install -e ".[tests]"
+	echo make sure you use the uv virtual env - see tests/AA-SETUP.md
 	pytest
 
 .PHONY: tests

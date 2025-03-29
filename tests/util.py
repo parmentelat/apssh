@@ -7,6 +7,8 @@ from pathlib import Path
 
 import psutil
 
+DEBUG = False
+# DEBUG = True
 
 # environment
 def localuser():
@@ -101,7 +103,9 @@ def count_ssh_connections(incoming:bool, outgoing:bool):
     command += "-o state established".split()
     filter_text = "( " + " or ".join(filters) + " )"
     command.append(filter_text)
-#    print(" ".join(command))
+    if DEBUG:
+        command_str = " ".join(command)
+        print(f"counting ssh connections ({incoming=} and {outgoing=}) with command: {command_str}")
     completed = subprocess.run(command, stdout=subprocess.PIPE, check=False)
     count = 0
 #    lines = completed.stdout.decode(encoding='utf8').split('\n')
@@ -109,6 +113,8 @@ def count_ssh_connections(incoming:bool, outgoing:bool):
         if not line or b"Netid" in line:
             continue
         count += 1
+    if DEBUG:
+        print("counted", count, "ssh connections")
     return count
 
 def incoming_connections():

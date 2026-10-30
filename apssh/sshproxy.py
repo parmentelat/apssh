@@ -173,11 +173,15 @@ class SshProxy:                                         # pylint: disable=r0902
                                 # it is used as an ssh gateway
                  keys=None,     # this class has no smart way to guess for keys
                  known_hosts=None, port=22,
+                 address=None, proxy_command=None,
                  formatter=None, verbose=None,
                  debug=False, timeout=30):
         # early type verifications
         check_arg_type(hostname, str, "SshProxy.hostname")
         self.hostname = hostname
+        # what we actually connect to; hostname is the label used in outputs
+        self.address = address or hostname
+        self.proxy_command = proxy_command
         check_arg_type(username, (str, type(None)), "SshProxy.username")
         self.username = username
         self.known_hosts = known_hosts
@@ -294,9 +298,11 @@ class SshProxy:                                         # pylint: disable=r0902
         self.conn, self.client = \
             await asyncio.wait_for(
                 asyncssh.create_connection(
-                    ClientClosure, self.hostname, port=self.port,
+                    ClientClosure, self.address, port=self.port,
                     username=self.username,
                     known_hosts=self.known_hosts, client_keys=self.keys,
+                    **({'proxy_command': self.proxy_command}
+                       if self.proxy_command else {}),
                     # it is rather crucial that we skip config-loading
                     # at least to be consistent with prevous user-experience
                     config=None,
@@ -325,7 +331,7 @@ class SshProxy:                                         # pylint: disable=r0902
             self.conn, self.client = \
                 await asyncio.wait_for(
                     self.gateway.conn.create_ssh_connection(
-                        ClientClosure, self.hostname, port=self.port,
+                        ClientClosure, self.address, port=self.port,
                         username=self.username,
                         known_hosts=self.known_hosts, client_keys=self.keys
                     ),

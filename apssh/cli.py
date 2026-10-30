@@ -217,10 +217,9 @@ class Apssh(CliWithFormatterOptions):
             sys.exit(1)
 
         # load keys
+        # a missing global key is fine as long as the ssh config
+        # provides IdentityFile(s) - checked once the proxies are known
         private_keys = load_private_keys(args.keys, args.verbose or args.debug)
-        if not private_keys and not args.ok_if_no_key:
-            print("Could not find any usable key - exiting")
-            sys.exit(1)
 
         targets.init_from_args(args, private_keys, self._get_formatter(args))
 
@@ -232,6 +231,9 @@ class Apssh(CliWithFormatterOptions):
         except ValueError:
             print("apssh: it makes no sense to run apssh without any target")
             # parser.print_help()
+            sys.exit(1)
+        if not args.ok_if_no_key and any(not p.keys for p in self.proxies):
+            print("Could not find any usable key - exiting")
             sys.exit(1)
 
         if args.list_targets:
@@ -448,9 +450,6 @@ class Copy(CliWithFormatterOptions):
 
         #
         private_keys = load_private_keys(args.keys, args.verbose)
-        if not private_keys and not args.ok_if_no_key:
-            print(f"ap{self.mode}Could not find any usable key - exiting")
-            sys.exit(1)
 
         targets.init_from_args(args, private_keys, self._get_formatter(args))
         try:
@@ -461,6 +460,9 @@ class Copy(CliWithFormatterOptions):
         except ValueError:
             print(f"ap{self.mode}: it makes no sense to run without any target")
             # parser.print_help()
+            sys.exit(1)
+        if any(not p.keys for p in self.proxies):
+            print(f"ap{self.mode}: could not find any usable key - exiting")
             sys.exit(1)
 
         # populate scheduler

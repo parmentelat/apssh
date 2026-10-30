@@ -54,6 +54,20 @@ As the names may suggest:
 * an `SshJob` instance contains a list of the actual commands to run, that can
   be a mix of remote executions and file transfers.
 
+## using your ssh config
+
+`apssh`, `appush` and `appull` read `~/.ssh/config` (or the file given with `-F`;
+use `--no-config` to ignore it), so that with e.g.
+
+    Host fit*
+      User root
+      ProxyJump gw
+
+`apssh -t fit01 -t fit02 uname -a` reaches both nodes through a single shared
+connection to `gw`. Command-line settings (`-g`, `user@host`, `-l`) take precedence
+over the config. Note that `Host` wildcards are matchers: `-t 'fit*'` is not expanded.
+Use `-n` to see how each target gets resolved.
+
 ## examples
 
 You can see a very simple example of that idea implemented in 2 files

@@ -15,6 +15,8 @@ from .config import default_username
 
 from .util import print_stderr
 from .sshproxy import SshProxy
+from .sshconfig import SshConfig
+from .keys import import_private_key
 from .config import local_config_dir
 
 # note explicit-direct
@@ -77,14 +79,26 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
             see e.g. the --mark option
             """)
         parser.add_argument(
-            "-l", "--login", default=default_username,
-            help=f"remote user name - default is {default_username}")
+            "-l", "--login", default=None,
+            help=f"""remote user name; when not specified, the user
+            is taken from the ssh config if applicable,
+            or else defaults to {default_username}""")
         parser.add_argument(
             "-g", "--gateway", default=None,
             help="""
             specify a gateway for 2-hops ssh
-            - either hostname or username@hostname
+            - either hostname or username@hostname;
+            takes precedence over any ProxyJump in the ssh config
             """)
+        parser.add_argument(
+            "-F", "--config-file", dest='ssh_config_file', default=None,
+            help="""use this ssh client config file
+            instead of ~/.ssh/config""")
+        parser.add_argument(
+            "--no-config", dest='use_ssh_config', action='store_false',
+            default=True,
+            help="""do not read any ssh config file; targets are then used
+            as-is, without name, user, port, key or ProxyJump resolution""")
         parser.add_argument(
             "-x", "--exclude", dest='excludes', action='append', default=[],
             help="""
@@ -107,6 +121,11 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
         self.timeout = args.timeout
         self.debug = args.debug
         self.dry_run = args.dry_run
+        self.ssh_config = SshConfig(args.ssh_config_file,
+                                    enabled=args.use_ssh_config)
+        if args.ssh_config_file and not self.ssh_config.path.exists():
+            print_stderr(f"WARNING: ssh config file {args.ssh_config_file} not found")
+        self._identity_keys = {}
         #
 
         self.gateway_endpoint = None
@@ -245,51 +264,95 @@ class Targets:                   # pylint: disable=too-many-instance-attributes
         if not hop2_s:
             raise ValueError("empty targets")
 
-        if self.dry_run:
-            print(f"========== {len(hop2_s)} hostnames selected"
-                  f" ({actually_excluded} excluded):")
-            for hop2 in hop2_s:
-                print(hop2)
-            sys.exit(0)
-
         # lazily create gateways
         # explicit-direct
         cache = {}
+
+        def host_keys(resolved):
+            """keys for IdentityFile entries of the ssh config, then the global ones"""
+            keys = []
+            for filename in resolved.identity_files:
+                if filename not in self._identity_keys:
+                    self._identity_keys[filename] = import_private_key(filename)
+                if self._identity_keys[filename]:
+                    keys.append(self._identity_keys[filename])
+            if resolved.identities_only and keys:
+                return keys
+            return keys + list(self.private_keys)
+
+        def create_proxy(label, resolved, user, port, gateway):
+            """
+            one SshProxy; label is what shows up in outputs,
+            while the actual connection uses resolved.address
+            """
+            return SshProxy(
+                label,
+                address=resolved.address,
+                username=user or resolved.user or default_username,
+                port=port or resolved.port or 22,
+                proxy_command=None if gateway else resolved.proxy_command,
+                keys=host_keys(resolved),
+                gateway=gateway,
+                formatter=self.formatter,
+                timeout=self.timeout, debug=self.debug)
+
+        def gateway_from_chain(chain):
+            """
+            chain is a list of (resolved, user, port), outermost first;
+            returns the innermost gateway, or None if chain is empty
+            """
+            gateway = None
+            for resolved, user, port in chain:
+                user = user or default_username
+                key = (resolved.address, user, port or resolved.port, gateway)
+                if key not in cache:
+                    cache[key] = create_proxy(
+                        resolved.alias, resolved, user, port, gateway)
+                gateway = cache[key]
+            return gateway
 
         def lazy_create_gateway(endpoint):
             hostname, username = endpoint
             # explicit-direct
             if hostname is None and username is None:
                 return None
-            cached = cache.get((hostname, username), None)
-            if cached:
-                return cached
-            gateway = SshProxy(
-                hostname=hostname, username=username,
-                keys=self.private_keys, formatter=self.formatter,
-                timeout=self.timeout, debug=self.debug)
-            cache[(hostname, username)] = gateway
-            return gateway
-
+            resolved = self.ssh_config.resolve(hostname)
+            chain = self.ssh_config.jump_chain(resolved)
+            chain.append((resolved, username, None))
+            return gateway_from_chain(chain)
 
         # create proxies
         self.proxies = []
 
         for hop2 in hop2_s:
-            # print(f"dealing with {hop2=}")
             hostname, username = hop2.final
-            gateway = None
+            resolved = self.ssh_config.resolve(hostname)
             if hop2.gateway:
                 gateway = lazy_create_gateway(hop2.gateway)
             elif self.gateway_endpoint:
                 gateway = lazy_create_gateway(self.gateway_endpoint)
+            else:
+                gateway = gateway_from_chain(self.ssh_config.jump_chain(resolved))
 
             self.proxies.append(
-                SshProxy(hostname, username=username,
-                         keys=self.private_keys,
-                         gateway=gateway,
-                         formatter=self.formatter,
-                         timeout=self.timeout,
-                         debug=self.debug))
+                create_proxy(hostname, resolved, username, None, gateway))
+
+        if self.dry_run:
+            print(f"========== {len(hop2_s)} hostnames selected"
+                  f" ({actually_excluded} excluded):")
+            def hop(proxy):
+                port = f":{proxy.port}" if proxy.port != 22 else ""
+                return f"{proxy.username}@{proxy.address}{port}"
+
+            for proxy in self.proxies:
+                chain, gateway = [hop(proxy)], proxy.gateway
+                while gateway:
+                    chain.insert(0, hop(gateway))
+                    gateway = gateway.gateway
+                line = f"{proxy.hostname} -> " + " -> ".join(chain)
+                if proxy.proxy_command:
+                    line += f"  (ProxyCommand: {proxy.proxy_command})"
+                print(line)
+            sys.exit(0)
 
         return self.proxies

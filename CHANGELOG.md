@@ -1,9 +1,23 @@
 # ChangeLog
 
+## 0.28.0
+
+* apssh, appush and appull now honour the ssh client config (`~/.ssh/config`):
+  `Host` aliases, `HostName`, `User`, `Port`, `IdentityFile`, `ProxyJump`
+  (mapped onto apssh gateways, so one jump host is shared by all its targets)
+  and `ProxyCommand`
+* new options `-F/--config-file` to use another config file,
+  and `--no-config` to get the previous behaviour
+* `-l/--login` no longer has a default value in the parser: when not given,
+  the ssh config is consulted, and then the local username is used
+* precedence: `-g`, `user@` in a target, `-l` all win over the ssh config
+* `-n/--dry-run` shows the resolved user, address, port and gateways
+* a missing global key is no longer fatal when the ssh config provides `IdentityFile`
+
 ## 0.27.0 - 2025 Mar 29
 
 * asyncssh: keep wait_closed from hanging forever
-* asyncio: synchroneous wrapper to run inside a asyncio.Runner() 
+* asyncio: synchroneous wrapper to run inside a asyncio.Runner()
   instead of looking at get_event_loop()
 * chore: dust off test environment, use UTM and uv
 * chore: update rtd build environment

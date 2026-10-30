@@ -210,7 +210,8 @@ class Apssh(CliWithFormatterOptions):
             sys.exit(0)
 
         # manual check for REMAINDER
-        if not args.commands:
+        # -n/--dry-run and -L only look at the targets
+        if not args.commands and not (args.dry_run or args.list_targets):
             print("apssh: You must provide a command to be run remotely")
             # parser.print_help()
             sys.exit(1)
